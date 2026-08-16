@@ -1,0 +1,536 @@
+/* ---------------- manifest + PDF export ---------------- */
+function withManifestSettingsDefaults(ms){
+  return Object.assign({
+    showNr: true,
+    showCheckpoint: true,
+    showTyp: true,
+    showClue: true,
+    showKoordinaten: true,
+    showPunch: true,
+    headerImage: '',
+    headerImageWidth: 0,
+    headerImageHeight: 0
+  }, ms);
+}
+
+function onSpokeCardImageUpload(fileInput){
+  const file = fileInput.files && fileInput.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const targetAspect = 63.5 / 88.9;
+      const srcAspect = img.width / img.height;
+      let sx, sy, sw, sh;
+      if(srcAspect > targetAspect){
+        sh = img.height; sw = sh * targetAspect; sx = (img.width - sw) / 2; sy = 0;
+      } else {
+        sw = img.width; sh = sw / targetAspect; sx = 0; sy = (img.height - sh) / 2;
+      }
+      const outW = 750, outH = Math.round(outW / targetAspect);
+      const canvas = document.createElement('canvas');
+      canvas.width = outW; canvas.height = outH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+      state.currentEvent.spokeCardImage = canvas.toDataURL('image/jpeg', 0.88);
+      debouncedSave();
+      renderRiders();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  fileInput.value = '';
+}
+function clearSpokeCardImage(){
+  state.currentEvent.spokeCardImage = '';
+  debouncedSave();
+  renderRiders();
+}
+function drawSpokeCardFront(doc, x, y, w, h, evt, rider){
+  if(evt.spokeCardImage){
+    doc.addImage(evt.spokeCardImage, 'JPEG', x, y, w, h, undefined, 'FAST');
+    doc.setFillColor('#17191a');
+    doc.roundedRect(x + w - 19, y + h - 10, 16, 8, 1.5, 1.5, 'F');
+    doc.setTextColor('#f3f1e8');
+    doc.setFont('courier', 'bold'); doc.setFontSize(7.5);
+    doc.text('#' + rider.bib, x + w - 11, y + h - 4.7, {align: 'center'});
+    return;
+  }
+  doc.setFillColor('#eee5cd');
+  doc.roundedRect(x, y, w, h, 3, 3, 'F');
+  doc.setDrawColor('#241f18');
+  doc.setLineWidth(0.5);
+  doc.roundedRect(x, y, w, h, 3, 3, 'S');
+
+  doc.setFillColor('#b23a2e');
+  doc.circle(x + w / 2, y + 20, 9, 'F');
+  doc.setTextColor('#f3f1e8');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+  doc.text('AC', x + w / 2, y + 22.2, {align: 'center'});
+
+  doc.setTextColor('#241f18');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12.5);
+  doc.text(truncateText((evt.name || 'ALLEYCAT').toUpperCase(), 24), x + w / 2, y + 42, {align: 'center', maxWidth: w - 10});
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  doc.setTextColor('#5b5340');
+  doc.text(formatDateOnly(evt.date) || 'Datum folgt', x + w / 2, y + 49, {align: 'center'});
+
+  doc.setDrawColor('#c9bc95');
+  doc.setLineWidth(0.3);
+  doc.line(x + 8, y + h - 16, x + w - 8, y + h - 16);
+
+  doc.setFont('courier', 'bold'); doc.setFontSize(7.5);
+  doc.setTextColor('#5b5340');
+  doc.text('SPOKE CARD', x + w / 2, y + h - 10, {align: 'center'});
+  doc.setFont('courier', 'bold'); doc.setFontSize(11);
+  doc.setTextColor('#241f18');
+  doc.text('#' + rider.bib, x + w / 2, y + h - 5, {align: 'center'});
+}
+function drawSpokeCardBack(doc, x, y, w, h, evt, rider, qrDataUrl){
+  doc.setFillColor('#eee5cd');
+  doc.roundedRect(x, y, w, h, 3, 3, 'F');
+  doc.setDrawColor('#241f18');
+  doc.setLineWidth(0.5);
+  doc.roundedRect(x, y, w, h, 3, 3, 'S');
+
+  if(qrDataUrl){
+    const qrSize = w - 22;
+    doc.addImage(qrDataUrl, 'PNG', x + (w - qrSize) / 2, y + 12, qrSize, qrSize);
+  }
+
+  doc.setFont('courier', 'bold'); doc.setFontSize(18);
+  doc.setTextColor('#241f18');
+  doc.text('#' + rider.bib, x + w / 2, y + h - 20, {align: 'center'});
+
+  if(rider.name){
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    doc.setTextColor('#5b5340');
+    doc.text(truncateText(rider.name, 26), x + w / 2, y + h - 15, {align: 'center', maxWidth: w - 10});
+  }
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+  doc.setTextColor('#5b5340');
+  doc.text(truncateText(evt.name || '', 30), x + w / 2, y + h - 8, {align: 'center'});
+}
+function computeCardGrid(pageW, pageH, cardW, cardH, marginX, marginY, gapX, gapY){
+  const cols = Math.max(1, Math.floor((pageW - marginX * 2 + gapX) / (cardW + gapX)));
+  const rows = Math.max(1, Math.floor((pageH - marginY * 2 + gapY) / (cardH + gapY)));
+  const perPage = cols * rows;
+  const gridW = cols * cardW + (cols - 1) * gapX;
+  const offsetX = marginX + Math.max(0, (pageW - marginX * 2 - gridW) / 2);
+  const pos = (i) => {
+    const idx = i % perPage;
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    return {x: offsetX + col * (cardW + gapX), y: marginY + row * (cardH + gapY)};
+  };
+  return {cols, rows, perPage, pos};
+}
+async function buildSpokeCardsDoc(evt){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit: 'mm', format: 'a4'});
+  const cardW = 63.5, cardH = 88.9;
+  const {perPage, pos} = computeCardGrid(210, 297, cardW, cardH, 10, 8, 6, 5);
+
+  const riders = evt.riders;
+  riders.forEach((r, i) => {
+    if(i > 0 && i % perPage === 0) doc.addPage();
+    const {x, y} = pos(i);
+    drawSpokeCardFront(doc, x, y, cardW, cardH, evt, r);
+  });
+
+  doc.addPage();
+  for(let i = 0; i < riders.length; i++){
+    if(i > 0 && i % perPage === 0) doc.addPage();
+    const {x, y} = pos(i);
+    const qr = await renderQrDataUrl(String(riders[i].bib), 300);
+    drawSpokeCardBack(doc, x, y, cardW, cardH, evt, riders[i], qr);
+  }
+  return doc;
+}
+async function exportSpokeCardsPDF(){
+  const evt = state.currentEvent;
+  if(!evt || !window.jspdf || !evt.riders || !evt.riders.length || state.spokeCardsGenerating) return;
+  state.spokeCardsGenerating = true;
+  renderRiders();
+  const doc = await buildSpokeCardsDoc(evt);
+  doc.save((evt.name || 'spokecards').replace(/\s+/g, '_').toLowerCase() + '-spokecards.pdf');
+  state.spokeCardsGenerating = false;
+  renderRiders();
+}
+async function printSpokeCardsPDF(){
+  const evt = state.currentEvent;
+  if(!evt || !window.jspdf || !evt.riders || !evt.riders.length || state.spokeCardsGenerating) return;
+  const printTab = window.open('', '_blank');
+  state.spokeCardsGenerating = true;
+  state.printPopupBlocked = false;
+  renderRiders();
+  const doc = await buildSpokeCardsDoc(evt);
+  const blobUrl = doc.output('bloburl');
+  if(printTab){
+    printTab.location.href = blobUrl;
+  } else if(!window.open(blobUrl, '_blank')){
+    state.printPopupBlocked = true;
+  }
+  state.spokeCardsGenerating = false;
+  renderRiders();
+}
+async function buildRiderSheetDoc(evt){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit: 'mm', format: 'a4'});
+  const cardW = 63.5, cardH = 88.9;
+  const {perPage, pos} = computeCardGrid(210, 297, cardW, cardH, 10, 8, 6, 5);
+
+  const riders = evt.riders;
+  for(let i = 0; i < riders.length; i++){
+    if(i > 0 && i % perPage === 0) doc.addPage();
+    const {x, y} = pos(i);
+    const qr = await renderQrDataUrl(String(riders[i].bib), 300);
+    drawSpokeCardBack(doc, x, y, cardW, cardH, evt, riders[i], qr);
+  }
+  return doc;
+}
+async function exportRidersPDF(){
+  const evt = state.currentEvent;
+  if(!evt || !window.jspdf || !evt.riders || !evt.riders.length || state.riderSheetGenerating) return;
+  state.riderSheetGenerating = true;
+  renderRiders();
+  const doc = await buildRiderSheetDoc(evt);
+  doc.save((evt.name || 'startnummern').replace(/\s+/g, '_').toLowerCase() + '-startnummern.pdf');
+  state.riderSheetGenerating = false;
+  renderRiders();
+}
+
+
+/* ---------------- manifest export ---------------- */
+function printManifest(){
+  window.print();
+}
+function toggleManifestSettings(){
+  state.manifestSettingsOpen = !state.manifestSettingsOpen;
+  renderManifest();
+}
+function onManifestSettingToggle(key, checked){
+  state.currentEvent.manifestSettings[key] = checked;
+  debouncedSave();
+  renderManifest();
+}
+function onManifestImageUpload(fileInput){
+  const file = fileInput.files && fileInput.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 900;
+      const scale = Math.min(1, maxW / img.width);
+      const outW = Math.round(img.width * scale);
+      const outH = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = outW; canvas.height = outH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, outW, outH);
+      const ms = state.currentEvent.manifestSettings;
+      ms.headerImage = canvas.toDataURL('image/jpeg', 0.85);
+      ms.headerImageWidth = outW;
+      ms.headerImageHeight = outH;
+      debouncedSave();
+      renderManifest();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  fileInput.value = '';
+}
+function clearManifestImage(){
+  const ms = state.currentEvent.manifestSettings;
+  ms.headerImage = '';
+  ms.headerImageWidth = 0;
+  ms.headerImageHeight = 0;
+  debouncedSave();
+  renderManifest();
+}
+async function exportManifestPDF(){
+  const evt = state.currentEvent;
+  if(!evt || !window.jspdf) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'pt', format:'a4'});
+  const marginX = 48;
+  const pageRight = 548;
+  let y = 56;
+  const ms = evt.manifestSettings;
+  const INK = '#241f18', HIVIS = '#ff5f1f', STAMP = '#b23a2e', STEEL = '#5b5340', LINE = '#c9bc95';
+
+  /* Stempel-Badge oben rechts */
+  doc.setDrawColor(STAMP); doc.setLineWidth(1);
+  const stampCx = pageRight - 26, stampCy = 32, stampR = 22;
+  doc.circle(stampCx, stampCy, stampR, 'S');
+  doc.circle(stampCx, stampCy, stampR - 4, 'S');
+  doc.setTextColor(STAMP);
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+  doc.text('MANIFEST', stampCx, stampCy - 3, {align: 'center', angle: -8});
+  doc.setFontSize(6.5);
+  doc.text(evt.checkpoints.length + ' CP', stampCx, stampCy + 7, {align: 'center', angle: -8});
+
+  doc.setTextColor(INK);
+  doc.setFont('helvetica','bold'); doc.setFontSize(20);
+  doc.text('MANIFEST', marginX, y);
+  y += 6;
+  doc.setDrawColor(HIVIS); doc.setLineWidth(1.4);
+  doc.line(marginX, y, pageRight, y);
+  y += 26;
+
+  doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.setTextColor(INK);
+  doc.text(evt.name || 'Unbenanntes Event', marginX, y);
+  y += 16;
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.setTextColor(STEEL);
+  doc.text('Datum: ' + (evt.date || '\u2014'), marginX, y);
+  doc.text('Checkpoints: ' + evt.checkpoints.length, marginX + 200, y);
+  y += 14;
+  const startTxt = evt.startMode === 'scheduled' ? formatDateTime(evt.startTime) : 'Manueller Startknopf';
+  const curfewTxt = 'Curfew: ' + formatDateTime(evt.curfewTime) + (evt.curfewMode === 'soft' ? ' (Soft, +' + (evt.curfewPenaltyPerMin ?? 1) + ' Strafmin/Min)' : ' (Hard Cutoff)');
+  doc.text('Start: ' + startTxt, marginX, y);
+  doc.setTextColor(evt.curfewMode === 'hard' ? STAMP : STEEL);
+  doc.text(curfewTxt, marginX + 200, y);
+  y += 22;
+
+  if(ms.headerImage && ms.headerImageWidth){
+    const imgW = pageRight - marginX;
+    const imgH = imgW * (ms.headerImageHeight / ms.headerImageWidth);
+    if(y + imgH > 770){ doc.addPage(); y = 56; }
+    doc.addImage(ms.headerImage, 'JPEG', marginX, y, imgW, imgH);
+    y += imgH + 20;
+  }
+
+  const columnDefs = [
+    {key: 'nr', flex: 0.07, label: 'NR'},
+    {key: 'checkpoint', flex: 0.22, label: 'CHECKPOINT'},
+    {key: 'typ', flex: 0.13, label: 'TYP'},
+    {key: 'clue', flex: 0.30, label: 'CLUE'},
+    {key: 'koordinaten', flex: 0.18, label: 'KOORDINATEN'},
+    {key: 'punch', flex: 0.10, label: 'PUNCH/ANTW.'}
+  ];
+  const showKey = {nr: 'showNr', checkpoint: 'showCheckpoint', typ: 'showTyp', clue: 'showClue', koordinaten: 'showKoordinaten', punch: 'showPunch'};
+  const visibleCols = columnDefs.filter(c => ms[showKey[c.key]]);
+  if(!visibleCols.length){
+    doc.save((evt.name || 'manifest').replace(/\s+/g, '_').toLowerCase() + '-manifest.pdf');
+    return;
+  }
+  const totalFlex = visibleCols.reduce((s, c) => s + c.flex, 0);
+  const tableWidth = pageRight - marginX;
+  const colX = {};
+  const colW = {};
+  let cx = marginX;
+  visibleCols.forEach(c => {
+    colX[c.key] = cx;
+    colW[c.key] = (c.flex / totalFlex) * tableWidth;
+    cx += colW[c.key];
+  });
+
+  doc.setFont('courier','bold'); doc.setFontSize(8.5);
+  doc.setTextColor(INK);
+  visibleCols.forEach(c => doc.text(c.label, colX[c.key], y));
+  y += 6;
+  doc.setDrawColor(HIVIS); doc.setLineWidth(1);
+  doc.line(marginX, y, pageRight, y);
+  y += 16;
+
+  evt.checkpoints.forEach(cp => {
+    const nameMaxW = colW.checkpoint ? colW.checkpoint - (cp.mandatory ? 6 : 38) : 0;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+    const nameLines = colX.checkpoint !== undefined ? doc.splitTextToSize(cp.name || '—', nameMaxW) : [''];
+    const typMaxW = colW.typ ? colW.typ - 8 : 0;
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+    const typLines = colX.typ !== undefined ? doc.splitTextToSize(typeFullLabel(cp.type), typMaxW) : [''];
+    const clueMaxW = colW.clue ? colW.clue - 6 : 0;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    const clueLines = colX.clue !== undefined ? doc.splitTextToSize(cp.clue || '—', clueMaxW) : [''];
+    const rowLineCount = Math.max(nameLines.length, typLines.length, clueLines.length, 1);
+    const rowHeight = 11 * rowLineCount + 9;
+    if(y + rowHeight > 770){ doc.addPage(); y = 56; }
+    if(colX.nr !== undefined){
+      doc.setFont('courier','bold'); doc.setFontSize(9);
+      doc.setTextColor(INK);
+      doc.text(String(cp.order).padStart(2,'0'), colX.nr, y);
+    }
+    if(colX.checkpoint !== undefined){
+      doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+      doc.setTextColor(INK);
+      doc.text(cp.name || '\u2014', colX.checkpoint, y, {maxWidth: colW.checkpoint - (cp.mandatory ? 6 : 38)});
+      if(!cp.mandatory){
+        const badgeW = 34, badgeX = colX.checkpoint + colW.checkpoint - badgeW - 2, badgeY = y - 8;
+        doc.setDrawColor(STEEL); doc.setLineWidth(0.6);
+        doc.roundedRect(badgeX, badgeY, badgeW, 11, 2, 2, 'S');
+        doc.setFont('helvetica','bold'); doc.setFontSize(6);
+        doc.setTextColor(STEEL);
+        doc.text('BONUS', badgeX + badgeW / 2, badgeY + 7.5, {align: 'center'});
+      }
+    }
+    if(colX.typ !== undefined){
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+      const badgeW = Math.min(colW.typ - 4, Math.max(...typLines.map(l => doc.getTextWidth(l))) + 8);
+      const badgeH = 8 * typLines.length + 4;
+      doc.setDrawColor(LINE); doc.setLineWidth(0.5);
+      doc.roundedRect(colX.typ, y - 8, badgeW, badgeH, 2, 2, 'S');
+      doc.setTextColor(STEEL);
+      doc.text(typLines, colX.typ + 4, y);
+    }
+    if(colX.clue !== undefined){
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.setTextColor(INK);
+      doc.text(cp.clue || '\u2014', colX.clue, y, {maxWidth: colW.clue - 6});
+    }
+    if(colX.koordinaten !== undefined){
+      doc.setFont('courier','normal'); doc.setFontSize(7.5);
+      doc.setTextColor(STEEL);
+      doc.text(cp.lat.toFixed(5) + ', ' + cp.lng.toFixed(5), colX.koordinaten, y);
+    }
+    if(colX.punch !== undefined){
+      const px = colX.punch;
+      const punchType = getCheckpointType(cp.type);
+      doc.setDrawColor(INK);
+      if(punchType.manifestCell === 'answer-line'){
+        doc.setLineWidth(0.6); doc.setLineDash([1.5, 1.5], 0);
+        doc.line(px, y + 5, px + Math.min(colW.punch - 6, 36), y + 5);
+        doc.setLineDash([], 0);
+      } else if(punchType.manifestCell === 'score-line'){
+        doc.setFont('courier', 'normal'); doc.setFontSize(8);
+        doc.setTextColor(INK);
+        doc.text('___ / ' + punchType.scoreMax, px, y + 2);
+      } else {
+        doc.setLineWidth(0.8);
+        doc.rect(px, y - 8, 13, 13);
+      }
+    }
+    y += rowHeight + 6;
+  });
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(7);
+  doc.setTextColor(STEEL);
+  doc.text('ALLEYCAT DISPATCH', marginX, 806);
+  doc.text('Automatisch generiert aus den Checkpoints', pageRight, 806, {align: 'right'});
+
+  doc.save((evt.name || 'manifest').replace(/\s+/g,'_').toLowerCase() + '-manifest.pdf');
+}
+
+
+/* ---------------- render: manifest ---------------- */
+function renderManifest(){
+  const el = document.getElementById('view-manifest');
+  const evt = state.currentEvent;
+  if(!evt){
+    el.innerHTML = `<div class="loading-row">Kein Event ausgew\u00e4hlt.</div>`;
+    return;
+  }
+  const ms = evt.manifestSettings;
+  const colCount = [ms.showNr, ms.showCheckpoint, ms.showTyp, ms.showClue, ms.showKoordinaten, ms.showPunch].filter(Boolean).length;
+
+  const rows = evt.checkpoints.map(cp => {
+    const type = getCheckpointType(cp.type);
+    const punchCellHtml = type.manifestCell === 'answer-line' ? '<div class="answer-line"></div>'
+      : type.manifestCell === 'score-line' ? `<div class="score-line">___ / ${type.scoreMax}</div>`
+      : '<div class="punch-box"></div>';
+    return `
+    <tr>
+      ${ms.showNr ? `<td class="m-no">${String(cp.order).padStart(2,'0')}</td>` : ''}
+      ${ms.showCheckpoint ? `
+      <td>
+        <div class="m-name">${escapeHtml(cp.name)}${cp.mandatory ? '' : '<span class="tag-bonus">BONUS</span>'}</div>
+        ${type.hasCustomQuestion && cp.customQuestion ? `<div style="font-family:'JetBrains Mono'; font-size:10px; color:#8a8065; margin-top:2px;">${escapeHtml(cp.customQuestion)}</div>` : ''}
+        ${cp.timeWindowEnabled ? `<div style="font-family:'JetBrains Mono'; font-size:10px; color:#8a8065; margin-top:2px;">Fenster: ${formatTimeOnly(cp.timeWindowStart)}\u2013${formatTimeOnly(cp.timeWindowEnd)}</div>` : ''}
+      </td>` : ''}
+      ${ms.showTyp ? `<td class="m-type">${escapeHtml(type.fullLabel)}</td>` : ''}
+      ${ms.showClue ? `<td>${escapeHtml(cp.clue || '\u2014')}</td>` : ''}
+      ${ms.showKoordinaten ? `<td class="m-coord">${cp.lat.toFixed(5)}, ${cp.lng.toFixed(5)}</td>` : ''}
+      ${ms.showPunch ? `<td>${punchCellHtml}</td>` : ''}
+    </tr>
+  `;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="manifest-toolbar">
+      <div class="mono" style="color:var(--steel); font-size:11px;">${evt.checkpoints.length} Checkpoint${evt.checkpoints.length===1?'':'s'}</div>
+      <div class="manifest-toolbar-actions">
+        <button class="btn" onclick="toggleManifestSettings()">${state.manifestSettingsOpen ? '\u25be' : '\u25b8'} Anpassen</button>
+        <button class="btn" onclick="printManifest()">Drucken</button>
+        <button class="btn btn-primary" onclick="exportManifestPDF()">Als PDF exportieren</button>
+      </div>
+    </div>
+    ${state.manifestSettingsOpen ? `
+      <div class="manifest-settings-panel">
+        <div class="manifest-settings-cols">
+          <label><input type="checkbox" ${ms.showNr ? 'checked' : ''} onchange="onManifestSettingToggle('showNr', this.checked)"> Nr.</label>
+          <label><input type="checkbox" ${ms.showCheckpoint ? 'checked' : ''} onchange="onManifestSettingToggle('showCheckpoint', this.checked)"> Checkpoint</label>
+          <label><input type="checkbox" ${ms.showTyp ? 'checked' : ''} onchange="onManifestSettingToggle('showTyp', this.checked)"> Typ</label>
+          <label><input type="checkbox" ${ms.showClue ? 'checked' : ''} onchange="onManifestSettingToggle('showClue', this.checked)"> Clue</label>
+          <label><input type="checkbox" ${ms.showKoordinaten ? 'checked' : ''} onchange="onManifestSettingToggle('showKoordinaten', this.checked)"> Koordinaten</label>
+          <label><input type="checkbox" ${ms.showPunch ? 'checked' : ''} onchange="onManifestSettingToggle('showPunch', this.checked)"> Punch/Antwort</label>
+        </div>
+        <div class="manifest-settings-image">
+          <label>Titelbild (optional)</label>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            ${ms.headerImage ? `<img src="${ms.headerImage}" class="manifest-image-preview" alt="Titelbild-Vorschau">` : ''}
+            <input type="file" accept="image/*" onchange="onManifestImageUpload(this)">
+            ${ms.headerImage ? `<button class="btn btn-ghost btn-sm" onclick="clearManifestImage()">Entfernen</button>` : ''}
+          </div>
+        </div>
+      </div>
+    ` : ''}
+    <div id="print-root">
+      <div class="waybill">
+        <div class="waybill-head">
+          <h2>${escapeHtml(evt.name || 'Unbenanntes Event')}</h2>
+          <div class="stamp-tag">Manifest</div>
+        </div>
+        <div class="waybill-meta">
+          <div>Datum: ${escapeHtml(evt.date || '\u2014')}</div>
+          <div>Checkpoints: ${evt.checkpoints.length}</div>
+          <div>Pflicht: ${evt.checkpoints.filter(c=>c.mandatory).length} &middot; Bonus: ${evt.checkpoints.filter(c=>!c.mandatory).length}</div>
+        </div>
+        <div class="waybill-timing">
+          <div>
+            <div class="t-label">Start</div>
+            <div class="t-value">${evt.startMode === 'scheduled' ? formatDateTime(evt.startTime) : 'Manueller Startknopf'}</div>
+            <div class="t-sub">${evt.startMode === 'scheduled' ? 'Fester Zeitpunkt' : 'Admin gibt frei'}</div>
+          </div>
+          <div>
+            <div class="t-label">Curfew</div>
+            <div class="t-value">${formatDateTime(evt.curfewTime)}</div>
+            <div class="t-sub">${evt.curfewMode === 'soft' ? '+' + (evt.curfewPenaltyPerMin ?? 1) + ' Strafmin. / Min. sp\u00e4t' : 'Hard Cutoff \u2014 danach gesperrt'}</div>
+          </div>
+        </div>
+        ${ms.headerImage ? `<img src="${ms.headerImage}" class="manifest-header-image" alt="Titelbild">` : ''}
+        ${evt.checkpoints.length === 0 ? `
+          <div style="font-family:'JetBrains Mono'; font-size:12px; color:#8a8065; padding:20px 0;">Noch keine Checkpoints \u2014 leg welche im Karten-Editor an.</div>
+        ` : colCount === 0 ? `
+          <div style="font-family:'JetBrains Mono'; font-size:12px; color:#8a8065; padding:20px 0;">Alle Spalten ausgeblendet \u2014 unter \u201eAnpassen" mindestens eine Spalte aktivieren.</div>
+        ` : `
+        <div class="manifest-table-scroll">
+        <table class="manifest-table">
+          <thead>
+            <tr>
+              ${ms.showNr ? '<th>Nr</th>' : ''}
+              ${ms.showCheckpoint ? '<th>Checkpoint</th>' : ''}
+              ${ms.showTyp ? '<th>Typ</th>' : ''}
+              ${ms.showClue ? '<th>Clue</th>' : ''}
+              ${ms.showKoordinaten ? '<th>Koordinaten</th>' : ''}
+              ${ms.showPunch ? '<th>Punch/Antwort</th>' : ''}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        </div>
+        `}
+        <div class="waybill-foot">
+          <span>Organizer Manifest</span>
+          <span>Generiert automatisch aus den Checkpoints</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+

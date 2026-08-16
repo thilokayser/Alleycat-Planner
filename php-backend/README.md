@@ -25,4 +25,4 @@ Danach liegen `config.php` (Zugangsdaten + API-Key, per `.htaccess` vor Web-Zugr
 
 ## Verwendung
 
-Die Server-Variante der App, `alleycat-dispatch-server.html` im Repo-Root, spricht diesen Endpunkt bereits an (Setup-Screen fragt beim ersten Start nach API-Endpunkt und -Key).
+Die Server-Variante der App (`node build.js` im Repo-Root ausführen, dann `dist/alleycat-dispatch-server.html` öffnen) spricht diesen Endpunkt bereits an (Setup-Screen fragt beim ersten Start nach API-Endpunkt und -Key).

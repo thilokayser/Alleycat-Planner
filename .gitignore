@@ -3,3 +3,9 @@ php-backend/config.php
 
 # macOS Finder
 .DS_Store
+
+# Build-Output — per `node build.js` aus src/ generiert, nicht versioniert.
+dist/
+
+# Lokaler Cache/Config des Impeccable-Design-Review-Hooks.
+.impeccable/

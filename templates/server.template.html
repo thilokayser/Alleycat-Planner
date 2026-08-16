@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALLEYCAT DISPATCH</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+{{THEMES_CSS}}
+{{BASE_CSS}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">AC</div>
+      <div>
+        <h1>Alleycat Dispatch</h1>
+        <span class="sub" id="topbar-sub">Organizer Backend</span>
+      </div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <span class="save-status" id="save-status"></span>
+    <div class="topbar-actions" id="topbar-actions"></div>
+    <button class="btn btn-ghost" onclick="openSettings()" title="Einstellungen">&#9881;</button>
+  </div>
+
+  <div id="main">
+    <div id="view-dashboard" class="view"></div>
+    <div id="view-editor" class="view">
+      <div class="map-wrap">
+        <div id="map"></div>
+        <div class="map-search">
+          <div class="map-search-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="map-search-input" placeholder="Adresse oder Ort suchen…" oninput="onSearchInput(this.value)" autocomplete="off">
+            <button class="search-clear" id="map-search-clear" onclick="clearSearch()" style="display:none;">&times;</button>
+          </div>
+          <div class="map-search-results" id="map-search-results"></div>
+        </div>
+        <div class="map-legend">
+          <div class="item"><span class="dot mandatory"></span> Pflicht</div>
+          <div class="item"><span class="dot optional"></span> Bonus</div>
+          <div class="item"><span class="line"></span> Route (Reihenfolge)</div>
+          <div class="item" id="map-legend-types"></div>
+        </div>
+      </div>
+      <div class="sidebar-resize-handle" id="sidebar-resize-handle" title="Ziehen, um die Sidebar zu vergrößern"></div>
+      <div class="sidebar" id="sidebar"></div>
+    </div>
+    <div id="view-manifest" class="view"></div>
+    <div id="view-riders" class="view"></div>
+    <div id="view-checkin" class="view"></div>
+    <div id="view-leaderboard" class="view"></div>
+    <div id="view-settings" class="view"></div>
+  </div>
+  <nav class="bottom-nav" id="bottom-nav"></nav>
+  <div id="toast-root"></div>
+</div>
+
+<script>
+{{STORAGE_JS}}
+{{CORE_JS}}
+init();
+</script>
+</body>
+</html>
