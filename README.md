@@ -32,6 +32,7 @@ Beide Varianten prüfen zusätzlich zuerst, ob `window.storage` verfügbar ist (
 - Fahrerliste mit Startnummern, Notfallkontakt-Feld (nicht auf gedruckten Startnummern/Spokecards sichtbar)
 - Teams (Solo/Team-Zuordnung, Team-Wertung mit wählbarem Wertungsmodus: beste Einzelzeit oder alle müssen finishen) und frei definierbare Kategorie-Gruppen (Presets Antrieb/Gender oder eigene) pro Fahrer
 - Renn-Zustandsmaschine (Planung → Bereit → Läuft → Abgeschlossen) mit CP-Struktur-Sperre während des Rennens und blockierendem Start-Dialog bei geplanter Startzeit
+- Checkpoint-Reihenfolge frei oder fest wählbar — bei fester Reihenfolge warnt der Ziel-Check-in bei Out-of-Order-Bestätigungen (mit protokolliertem Override) und zeigt Luftlinien-Distanzen zwischen den Checkpoints inkl. Gesamtdistanz
 - Ziel-Check-in-Flow mit Bestätigen/Zurücksetzen inkl. Undo, sowie DNF-/DNS-Markierung
 - Leaderboard mit kombinierbaren Filtern (Status, Team, Kategorien) und Export als CSV (Excel-DE-kompatibel, semikolon-getrennt, optional aufgeteilt nach Team/Kategorie)
 - Manifest- sowie Startnummern-/Spokecards-PDF-Export

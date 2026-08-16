@@ -4,7 +4,9 @@
    Checkpoint-Typen (config-driven über CHECKPOINT_TYPES), Fahrerliste,
    Teams (anlegen/zuordnen/Persistenz/Löschen/Wertungsmodus),
    Kategorie-Gruppen (Presets/eigene Gruppen/Umbenennen/Löschen inkl.
-   Kaskade auf Fahrer-Zuordnungen), DNF/DNS-Status, Renn-Zustandsmaschine
+   Kaskade auf Fahrer-Zuordnungen), DNF/DNS-Status, CP-Reihenfolge
+   (frei/fest) inkl. Out-of-Order-Warnung + Override-Log und
+   Haversine-Distanzberechnung, Renn-Zustandsmaschine
    (Planung/Bereit/Läuft/Abgeschlossen inkl. CP-Struktur-Sperre und
    Override), kompletter Ziel-Check-in-Flow
    (bestätigen/zurücksetzen/Undo-Toast/Speichern & schließen/Übersicht),
@@ -193,6 +195,49 @@ async function runAlleycatTestSuite(){
     checkEqual('"Filter zurücksetzen" zeigt wieder alle Fahrer', document.querySelectorAll('#view-leaderboard .lb-row').length, 5);
   }
 
+  /* 3d) CP-Reihenfolge + Distanzberechnung */
+  {
+    checkEqual('Neues Event hat checkpointOrderMode "frei" per Default', evt.checkpointOrderMode, 'frei');
+
+    check('haversineDistanceKm(A,A) ist 0', haversineDistanceKm(50, 8, 50, 8) === 0);
+    check('haversineDistanceKm ist symmetrisch', haversineDistanceKm(50, 8, 51, 9) === haversineDistanceKm(51, 9, 50, 8));
+    check('haversineDistanceKm liefert positive Distanz für unterschiedliche Punkte', haversineDistanceKm(50, 8, 51, 9) > 0);
+
+    const routeInfo = computeRouteLegs(evt.checkpoints);
+    checkEqual('computeRouteLegs liefert N-1 Legs', routeInfo.legs.length, evt.checkpoints.length - 1);
+    check('computeRouteLegs-Gesamtdistanz entspricht Summe der Legs', Math.abs(routeInfo.total - routeInfo.legs.reduce((s, l) => s + l.km, 0)) < 0.0001);
+
+    onCheckpointOrderModeChange('fest');
+    checkEqual('checkpointOrderMode auf "fest" gesetzt', evt.checkpointOrderMode, 'fest');
+
+    openCheckin();
+    selectCheckinRiderByBib(evt.riders[2].bib);
+    const secondCp = evt.checkpoints[1];
+
+    const origConfirm4 = window.confirm;
+    let orderConfirmMsg = null;
+    window.confirm = (msg) => { orderConfirmMsg = msg; return false; };
+    onCheckinToggleCheckpoint(secondCp.id, true);
+    check('Out-of-Order-Warnung erscheint bei "fest"', !!orderConfirmMsg && orderConfirmMsg.includes(evt.checkpoints[0].name));
+    check('Bei Ablehnung bleibt Checkpoint offen', !(getActiveCheckinRider().completed || []).includes(secondCp.id));
+
+    window.confirm = () => true;
+    onCheckinToggleCheckpoint(secondCp.id, true);
+    check('Bei Bestätigung wird Checkpoint trotzdem markiert', (getActiveCheckinRider().completed || []).includes(secondCp.id));
+    check('Override wird geloggt', (getActiveCheckinRider().checkpointOrderOverrides || []).some(o => o.checkpointId === secondCp.id));
+
+    onCheckpointOrderModeChange('frei');
+    orderConfirmMsg = null;
+    window.confirm = () => { orderConfirmMsg = 'SOLLTE NICHT AUFGERUFEN WERDEN'; return true; };
+    onCheckinToggleCheckpoint(evt.checkpoints[2].id, true);
+    check('"Frei"-Modus fragt nicht nach Reihenfolge', orderConfirmMsg === null);
+    window.confirm = origConfirm4;
+
+    /* Aufräumen, damit die nachfolgenden Check-in-Abschnitte (5+) unverändert bleiben */
+    evt.riders[2].completed = [];
+    evt.riders[2].checkpointOrderOverrides = [];
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -206,6 +251,7 @@ async function runAlleycatTestSuite(){
   checkEqual('Race-Status persistiert', reloaded && reloaded.status, evt.status);
   checkEqual('Kategorie-Gruppen persistiert', reloaded && reloaded.categoryGroups.length, evt.categoryGroups.length);
   checkEqual('DNF-Status persistiert', reloaded && reloaded.riders[3].raceStatus, 'dnf');
+  checkEqual('checkpointOrderMode persistiert', reloaded && reloaded.checkpointOrderMode, 'frei');
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();

@@ -257,6 +257,13 @@ function toggleAddMode(){
   state.addMode = !state.addMode;
   renderSidebar();
 }
+function onCheckpointOrderModeChange(value){
+  const evt = state.currentEvent;
+  if(!evt || isCpLocked(evt)) return;
+  evt.checkpointOrderMode = value;
+  debouncedSave();
+  renderSidebar();
+}
 function onEventNameInput(value){
   state.currentEvent.name = value;
   const idxItem = state.eventsIndex.find(e => e.id === state.currentEvent.id);
@@ -283,9 +290,10 @@ function renderSidebar(){
   }
   const evt = state.currentEvent;
   const locked = isCpLocked(evt);
+  const routeInfo = evt.checkpointOrderMode === 'fest' ? computeRouteLegs(evt.checkpoints) : null;
   const rows = evt.checkpoints.length === 0
     ? `<div class="cp-list-empty">${t('checkpoint.noCheckpointsYet')}<br>${t('checkpoint.activateHint')}</div>`
-    : evt.checkpoints.map(cp => {
+    : evt.checkpoints.map((cp, cpIdx) => {
         const editing = state.editingId === cp.id;
         let editBlock = '';
         if(editing && locked){
@@ -385,7 +393,8 @@ function renderSidebar(){
               </div>
             </div>
             ${editBlock}
-          </div>`;
+          </div>
+          ${routeInfo && routeInfo.legs[cpIdx] ? `<div class="cp-leg-distance">↓ ${routeInfo.legs[cpIdx].km.toFixed(2)} km</div>` : ''}`;
       }).join('');
 
   el.innerHTML = `
@@ -439,6 +448,19 @@ function renderSidebar(){
     ` : evt.status === 'completed' ? `
       <div class="cp-lock-banner">
         <span>${t('raceState.cpLockedCompletedBanner')}</span>
+      </div>
+    ` : ''}
+    <div class="cp-order-mode-row">
+      <label>${t('checkpointOrder.modeLabel')}</label>
+      <select onchange="onCheckpointOrderModeChange(this.value)" ${locked ? 'disabled' : ''}>
+        <option value="frei" ${evt.checkpointOrderMode !== 'fest' ? 'selected' : ''}>${t('checkpointOrder.modeFrei')}</option>
+        <option value="fest" ${evt.checkpointOrderMode === 'fest' ? 'selected' : ''}>${t('checkpointOrder.modeFest')}</option>
+      </select>
+    </div>
+    ${routeInfo ? `
+      <div class="cp-total-distance">
+        ${t('checkpointOrder.totalDistance', {km: routeInfo.total.toFixed(2)})}
+        <span class="cp-distance-hint">${t('checkpointOrder.distanceHint')}</span>
       </div>
     ` : ''}
     <div class="addmode-row">

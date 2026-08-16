@@ -212,11 +212,29 @@ function onCheckinFinishTimeChange(value){
   debouncedSave();
   renderCheckin();
 }
+function checkOrderBeforeComplete(cpId){
+  const evt = state.currentEvent;
+  const rider = getActiveCheckinRider();
+  if(!evt || !rider || evt.checkpointOrderMode !== 'fest') return true;
+  const cp = findCp(cpId);
+  if(!cp) return true;
+  const completed = rider.completed || [];
+  const earlierIncomplete = evt.checkpoints.filter(c => c.order < cp.order && !completed.includes(c.id));
+  if(!earlierIncomplete.length) return true;
+  const names = earlierIncomplete.map(c => c.name || (t('leaderboard.cpPrefix') + String(c.order).padStart(2, '0'))).join(', ');
+  if(!confirm(t('checkpointOrder.outOfOrderConfirm', {names}))) return false;
+  rider.checkpointOrderOverrides = rider.checkpointOrderOverrides || [];
+  rider.checkpointOrderOverrides.push({checkpointId: cpId, at: toLocalDateTimeInputValue(new Date())});
+  return true;
+}
 function onCheckinToggleCheckpoint(cpId, checked){
   const rider = getActiveCheckinRider(); if(!rider) return;
   rider.completed = rider.completed || [];
   if(checked){
-    if(!rider.completed.includes(cpId)) rider.completed.push(cpId);
+    if(!rider.completed.includes(cpId)){
+      if(!checkOrderBeforeComplete(cpId)){ renderCheckin(); return; }
+      rider.completed.push(cpId);
+    }
     const cp = findCp(cpId);
     if(cp && cp.timeWindowEnabled){
       rider.checkpointTimes = rider.checkpointTimes || {};
@@ -236,6 +254,7 @@ function onCheckinSetScore(cpId, score){
     delete rider.scores[cpId];
     rider.completed = rider.completed.filter(id => id !== cpId);
   } else {
+    if(!checkOrderBeforeComplete(cpId)){ renderCheckin(); return; }
     rider.scores[cpId] = score;
     if(!rider.completed.includes(cpId)) rider.completed.push(cpId);
     const cp = findCp(cpId);

@@ -307,6 +307,18 @@
   .addmode-row{padding:10px 18px; border-bottom:1px solid var(--paper-line); flex-shrink:0;}
   .addmode-row .btn{width:100%;}
   .addmode-hint{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#6b6248; margin-top:6px; line-height:1.4;}
+  .cp-order-mode-row{display:flex; align-items:center; gap:8px; padding:10px 18px 0; flex-shrink:0;}
+  .cp-order-mode-row label{font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:#6b6248;}
+  .cp-order-mode-row select{font-family:'Inter',sans-serif; font-size:12.5px; border:1px solid var(--paper-line); background:#faf6ea; color:var(--ink); border-radius:2px; padding:4px 6px;}
+  .cp-total-distance{
+    padding:8px 18px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#5b5340; flex-shrink:0;
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  }
+  .cp-distance-hint{font-size:9.5px; color:#8a8065; font-style:italic;}
+  .cp-leg-distance{
+    text-align:center; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#8a8065;
+    padding:2px 0; margin:-2px 0;
+  }
 
   .settings-section{border-bottom:1px solid var(--paper-line); flex-shrink:0;}
   .settings-toggle{

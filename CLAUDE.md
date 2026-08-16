@@ -27,7 +27,7 @@ No `npm install`, no dependencies — `build.js` is plain Node.
 src/
   core/            # shared between BOTH variants — must build to byte-identical output
     i18n.js             translations dict + t(key, params), getCurrentLanguage()/setLanguage() (device-local via localStorage)
-    utils.js            formatters, uid, escapeHtml, downloadJSON
+    utils.js            formatters, uid, escapeHtml, downloadJSON, haversineDistanceKm, computeRouteLegs
     checkpoint.js       CHECKPOINT_TYPES, custom-type CRUD, checkpoint edit/drag, renderSidebar, event-field handlers (name/date/start/curfew)
     team.js             evt.teams CRUD, computeTeamStats (scoring modes), teamBadgeHtml
     category.js         CATEGORY_PRESETS, evt.categoryGroups CRUD (incl. cascading option rename/delete), rider.categories assignment, JSON export/import
@@ -75,6 +75,7 @@ All persistence goes through three async functions with a stable contract regard
 - **Rider race status** (`rider.raceStatus`, `''|'dnf'|'dns'`, set via `setRiderRaceStatus()` in `checkin.js`): independent of `finishTime` — `riderStatusBadgeHtml()` checks it before falling back to curfew logic. Confirming a rider at the finish (`confirmRiderAtFinish()`) always clears it.
 - **Category groups** (`category.js`): `evt.categoryGroups = [{id, name, options[], sortOrder}]`, orthogonal to and independent of the Teams system. `rider.categories = {[groupId]: selectedOption}`. Option values are raw user text (from presets or custom input) and never go through `t()` — same rule as checkpoint/team names. Renaming or deleting an option cascades into every rider's assignment; deleting a group clears the corresponding key on every rider.
 - **Team scoring mode** (`evt.teamScoringMode`, `'bestTime'|'allMustFinish'`, set in `rider.js`'s Teams section): `computeTeamStats()` in `team.js` computes `bestTime`/`worstTime`/`allFinished` per team and sorts accordingly — `bestTime` ranks by the fastest member's finish time, `allMustFinish` requires every member to have finished and ranks by the slowest member's time (teams with an unfinished member sort last).
+- **Checkpoint order mode** (`evt.checkpointOrderMode`, `'frei'|'fest'`, toggle in `checkpoint.js`'s `renderSidebar()`): purely advisory in `'frei'`. In `'fest'`, `checkin.js`'s `checkOrderBeforeComplete()` gates `onCheckinToggleCheckpoint`/`onCheckinSetScore` — completing a checkpoint out of `order` sequence prompts a confirm; accepting appends `{checkpointId, at}` to `rider.checkpointOrderOverrides` as an audit log. Distance (`computeRouteLegs()` in `utils.js`, plain Haversine on CP coordinates, no API call) is only shown in `'fest'` mode, per-leg between consecutive `cp-row`s plus a total — intentionally omitted in `'frei'` mode since sequence-less checkpoints have no meaningful "route length".
 
 ### `php-backend/`
 

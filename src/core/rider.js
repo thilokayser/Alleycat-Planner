@@ -8,7 +8,8 @@ function withRiderDefaults(rider){
     scores: {},
     checkpointTimes: {},
     raceStatus: '',
-    categories: {}
+    categories: {},
+    checkpointOrderOverrides: []
   }, rider);
 }
 

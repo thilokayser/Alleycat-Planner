@@ -347,6 +347,14 @@ const translations = {
       importFailed: 'Import fehlgeschlagen: Die Datei enthält keine gültigen Kategorie-Gruppen (JSON).',
       noCategory: '— Keine —'
     },
+    checkpointOrder: {
+      modeLabel: 'Checkpoint-Reihenfolge',
+      modeFrei: 'Frei',
+      modeFest: 'Fest',
+      distanceHint: 'Luftlinie — reale Fahrstrecke ist länger.',
+      totalDistance: 'Gesamtdistanz: {km} km',
+      outOfOrderConfirm: 'Achtung: folgende Checkpoints in der Reihenfolge davor sind noch nicht erledigt: {names}. Trotzdem bestätigen?'
+    },
     raceState: {
       planning: 'In Planung',
       ready: 'Bereit',

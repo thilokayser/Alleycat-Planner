@@ -19,7 +19,8 @@ function withEventDefaults(evt){
     spokecardsPrinted: false,
     manifestGenerated: false,
     teamScoringMode: 'bestTime',
-    categoryGroups: []
+    categoryGroups: [],
+    checkpointOrderMode: 'frei'
   }, evt);
   merged.checkpoints = (merged.checkpoints || []).map(withCheckpointDefaults);
   merged.riders = (merged.riders || []).map(withRiderDefaults);
