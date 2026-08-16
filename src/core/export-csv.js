@@ -6,7 +6,7 @@ function csvEscape(v){
 function exportLeaderboardCSV(){
   const evt = state.currentEvent;
   const allRiders = evt ? (evt.riders || []) : [];
-  if(!allRiders.length){ alert('Noch keine Fahrerliste angelegt.'); return; }
+  if(!allRiders.length){ alert(t('leaderboard.noRidersYet')); return; }
 
   const cps = evt.checkpoints.slice().sort((a, b) => a.order - b.order);
   const mandatoryCps = cps.filter(c => c.mandatory);
@@ -15,9 +15,9 @@ function exportLeaderboardCSV(){
   const arrivedSorted = allRiders.filter(r => r.finishTime).sort((a, b) => new Date(a.finishTime) - new Date(b.finishTime));
   const rankMap = new Map(arrivedSorted.map((r, i) => [r.bib, i + 1]));
 
-  const header = ['Rang', 'Bib', 'Name', 'Team', 'Zielzeit', 'Status',
-    ...cps.map(cp => 'CP-' + String(cp.order).padStart(2, '0') + ' ' + (cp.name || '')),
-    'Pflicht erledigt', 'Gesamt erledigt', ...(hasScoredCheckpoints ? ['Punkte gesamt'] : [])];
+  const header = [t('exportCsv.colRank'), t('exportCsv.colBib'), t('exportCsv.colName'), t('exportCsv.colTeam'), t('exportCsv.colFinishTime'), t('exportCsv.colStatus'),
+    ...cps.map(cp => t('leaderboard.cpPrefix') + String(cp.order).padStart(2, '0') + ' ' + (cp.name || '')),
+    t('exportCsv.colMandatoryDone'), t('exportCsv.colTotalDone'), ...(hasScoredCheckpoints ? [t('exportCsv.colTotalPoints')] : [])];
   const lines = [header.map(csvEscape).join(';')];
 
   riders.forEach(r => {

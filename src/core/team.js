@@ -21,7 +21,7 @@ function toggleNewTeamForm(){
 }
 function addTeam(){
   const name = (document.getElementById('newteam-name').value || '').trim();
-  if(!name){ alert('Bitte einen Team-Namen angeben.'); return; }
+  if(!name){ alert(t('team.namePrompt')); return; }
   const evt = state.currentEvent;
   const colorInput = document.getElementById('newteam-color').value;
   const color = colorInput || TEAM_COLOR_PALETTE[(evt.teams || []).length % TEAM_COLOR_PALETTE.length];
@@ -45,7 +45,7 @@ function setTeamColor(id, color){
   renderRiders();
 }
 function deleteTeam(id){
-  if(!confirm('Dieses Team wirklich löschen? Zugeordnete Fahrer verlieren die Team-Zuordnung.')) return;
+  if(!confirm(t('team.deleteConfirm'))) return;
   const evt = state.currentEvent;
   evt.teams = (evt.teams || []).filter(t => t.id !== id);
   (evt.riders || []).forEach(r => { if(r.teamId === id) r.teamId = null; });

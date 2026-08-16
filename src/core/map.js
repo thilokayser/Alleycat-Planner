@@ -89,7 +89,7 @@ function onMapClick(e){
     order,
     lat: e.latlng.lat,
     lng: e.latlng.lng,
-    name: 'Checkpoint ' + order,
+    name: t('map.defaultCheckpointName', {order}),
     clue: '',
     mandatory: true,
     type: CHECKPOINT_TYPES[0].key,
@@ -179,7 +179,7 @@ function renderSearchResults(isLoading){
   if(!el) return;
   if(isLoading){
     el.style.display = 'block';
-    el.innerHTML = `<div class="map-search-loading">Suche \u2026</div>`;
+    el.innerHTML = `<div class="map-search-loading">${t('map.searching')}</div>`;
     return;
   }
   if(!searchResultsData.length){

@@ -45,8 +45,8 @@ function unconfirmRiderAtFinish(){
   debouncedSave();
   renderCheckin();
   showToast({
-    message: `Fahrer #${bib} ist wieder „nicht im Ziel".`,
-    actionLabel: 'Rückgängig',
+    message: t('checkin.unconfirmedToast', {bib}),
+    actionLabel: t('checkin.undo'),
     onAction: () => {
       const r = (state.currentEvent.riders || []).find(x => x.bib === bib);
       if(!r) return;
@@ -84,7 +84,7 @@ function updateLiveCountdown(){
   if(evt.startMode === 'scheduled' && evt.startTime){
     const start = new Date(evt.startTime);
     if(!isNaN(start.getTime()) && now < start){
-      text = 'Start in ' + formatCountdown(start - now);
+      text = t('checkin.startIn', {countdown: formatCountdown(start - now)});
       cls = 'start';
     }
   }
@@ -92,13 +92,13 @@ function updateLiveCountdown(){
     const curfew = new Date(evt.curfewTime);
     if(!isNaN(curfew.getTime())){
       if(now < curfew){
-        text = 'Curfew in ' + formatCountdown(curfew - now);
+        text = t('checkin.curfewIn', {countdown: formatCountdown(curfew - now)});
         cls = 'curfew';
       } else if(evt.curfewMode === 'soft'){
-        text = formatCountdown(now - curfew) + ' über Curfew';
+        text = t('checkin.overCurfew', {countdown: formatCountdown(now - curfew)});
         cls = 'over';
       } else {
-        text = 'Curfew erreicht — Rennen beendet';
+        text = t('checkin.curfewReached');
         cls = 'over';
       }
     }
@@ -121,19 +121,19 @@ async function startQrScan(){
   state.qrScannerActive = true;
   renderCheckin();
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    state.qrScanError = 'Kamera-Zugriff wird von diesem Browser oder dieser Umgebung nicht unterstützt.';
+    state.qrScanError = t('checkin.cameraUnsupported');
     renderCheckin();
     return;
   }
   if(typeof jsQR !== 'function'){
-    state.qrScanError = 'QR-Scan-Bibliothek konnte nicht geladen werden.';
+    state.qrScanError = t('checkin.qrLibFailed');
     renderCheckin();
     return;
   }
   try{
     qrScanStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}});
   }catch(e){
-    state.qrScanError = 'Kein Zugriff auf die Kamera. Bitte Berechtigung erlauben und erneut versuchen, oder Bib-Nummer manuell eingeben.';
+    state.qrScanError = t('checkin.cameraAccessDenied');
     renderCheckin();
     return;
   }
@@ -257,11 +257,11 @@ function computeCurfewResult(evt, finishTimeValue){
   return {onTime: false, diffMin, penalty: null};
 }
 function riderStatusBadgeHtml(evt, rider){
-  if(!rider.finishTime) return `<span class="lb-status missing">Fehlt</span>`;
+  if(!rider.finishTime) return `<span class="lb-status missing">${t('checkin.statusMissing')}</span>`;
   const curfew = computeCurfewResult(evt, rider.finishTime);
-  if(!curfew || curfew.onTime) return `<span class="lb-status arrived">Im Ziel</span>`;
-  if(evt.curfewMode === 'soft') return `<span class="lb-status warn">+${curfew.penalty} Strafmin.</span>`;
-  return `<span class="lb-status danger">Cutoff</span>`;
+  if(!curfew || curfew.onTime) return `<span class="lb-status arrived">${t('checkin.statusArrived')}</span>`;
+  if(evt.curfewMode === 'soft') return `<span class="lb-status warn">${t('checkin.statusPenalty', {penalty: curfew.penalty})}</span>`;
+  return `<span class="lb-status danger">${t('checkin.statusCutoff')}</span>`;
 }
 
 function computeTimeWindowResult(cp, timeValue){
@@ -281,7 +281,7 @@ function renderCheckin(){
   const el = document.getElementById('view-checkin');
   const evt = state.currentEvent;
   if(!evt){
-    el.innerHTML = `<div class="loading-row">Kein Event ausgew\u00e4hlt.</div>`;
+    el.innerHTML = `<div class="loading-row">${t('checkin.noEventSelected')}</div>`;
     return;
   }
   const rider = getActiveCheckinRider();
@@ -290,7 +290,7 @@ function renderCheckin(){
 
   if(!rider){
     body = `
-      <div class="checkin-search-hint">${state.checkinNotFound ? `Kein Fahrer mit Bib \u201e${escapeHtml(state.checkinBibInput)}\u201c gefunden.` : 'Bib-Nummer eingeben und auf \u201eSuchen\u201c klicken, um den Fahrer zu laden.'}</div>
+      <div class="checkin-search-hint">${state.checkinNotFound ? t('checkin.riderNotFound', {bib: escapeHtml(state.checkinBibInput)}) : t('checkin.enterBibHint')}</div>
     `;
   } else {
     const completed = rider.completed || [];
@@ -303,17 +303,17 @@ function renderCheckin(){
         ? `<div class="checkin-score-row">${Array.from({length: cpType.scoreMax + 1}, (_, s) => s).map(s => `<button type="button" class="score-btn ${scores[cp.id] === s ? 'active' : ''}" onclick="onCheckinSetScore('${cp.id}', ${s})">${s}</button>`).join('')}</div>`
         : `<label class="checkin-cp-check">
              <input type="checkbox" ${done ? 'checked' : ''} onchange="onCheckinToggleCheckpoint('${cp.id}', this.checked)">
-             Erledigt
+             ${t('checkin.done')}
            </label>`;
       let timeWindowHtml = '';
       if(cp.timeWindowEnabled && done){
         const twResult = computeTimeWindowResult(cp, cpTimes[cp.id]);
         const badge = twResult
-          ? (twResult.ok ? `<span class="tw-badge ok">Im Zeitfenster</span>` : `<span class="tw-badge warn">${twResult.reason === 'early' ? 'Zu früh' : 'Zu spät'}</span>`)
+          ? (twResult.ok ? `<span class="tw-badge ok">${t('checkin.inTimeWindowBadge')}</span>` : `<span class="tw-badge warn">${twResult.reason === 'early' ? t('checkin.tooEarly') : t('checkin.tooLate')}</span>`)
           : '';
         timeWindowHtml = `
           <div class="checkin-timewindow">
-            <label>Ankunft hier (Fenster ${formatTimeOnly(cp.timeWindowStart)}–${formatTimeOnly(cp.timeWindowEnd)})</label>
+            <label>${t('checkin.arrivalWindowLabel', {start: formatTimeOnly(cp.timeWindowStart), end: formatTimeOnly(cp.timeWindowEnd)})}</label>
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <input type="datetime-local" value="${escapeHtml(cpTimes[cp.id] || '')}" onchange="onCheckinCheckpointTimeChange('${cp.id}', this.value)">
               ${badge}
@@ -324,8 +324,8 @@ function renderCheckin(){
         <div class="checkin-cp-row ${cp.mandatory ? '' : 'optional'}">
           <div class="checkin-cp-head">
             <span class="cp-no">${cp.order}</span>
-            <span class="cp-name">${escapeHtml(cp.name || '(ohne Namen)')}</span>
-            ${cp.mandatory ? '' : '<span class="tag-bonus">BONUS</span>'}
+            <span class="cp-name">${escapeHtml(cp.name || t('checkpoint.noName'))}</span>
+            ${cp.mandatory ? '' : `<span class="tag-bonus">${t('exportPdf.bonusBadge')}</span>`}
           </div>
           ${controlsHtml}
           ${timeWindowHtml}
@@ -337,46 +337,46 @@ function renderCheckin(){
     let curfewBlock = '';
     if(curfew){
       if(curfew.onTime){
-        curfewBlock = `<div class="checkin-status ok">Im Zeitfenster \u2014 vor Curfew im Ziel.</div>`;
+        curfewBlock = `<div class="checkin-status ok">${t('checkin.onTimeStatus')}</div>`;
       } else if(evt.curfewMode === 'soft'){
-        curfewBlock = `<div class="checkin-status warn">${curfew.diffMin} Min. nach Curfew \u2014 +${curfew.penalty} Strafminuten.</div>`;
+        curfewBlock = `<div class="checkin-status warn">${t('checkin.softCurfewStatus', {diffMin: curfew.diffMin, penalty: curfew.penalty})}</div>`;
       } else {
-        curfewBlock = `<div class="checkin-status danger">${curfew.diffMin} Min. nach Hard Cutoff \u2014 au\u00dferhalb der Wertung.</div>`;
+        curfewBlock = `<div class="checkin-status danger">${t('checkin.hardCurfewStatus', {diffMin: curfew.diffMin})}</div>`;
       }
     }
     let mandatoryBlock = '';
     if(mandatoryCps.length){
       mandatoryBlock = missingMandatory.length
-        ? `<div class="checkin-status warn">${missingMandatory.length} Pflicht-Checkpoint${missingMandatory.length === 1 ? '' : 's'} noch offen.</div>`
-        : `<div class="checkin-status ok">Alle Pflicht-Checkpoints erledigt.</div>`;
+        ? `<div class="checkin-status warn">${t(missingMandatory.length === 1 ? 'checkin.missingMandatorySingular' : 'checkin.missingMandatoryPlural', {count: missingMandatory.length})}</div>`
+        : `<div class="checkin-status ok">${t('checkin.allMandatoryDone')}</div>`;
     }
     body = `
       <div class="checkin-card">
         <div class="checkin-card-head">
           <div class="checkin-bib">#${rider.bib}</div>
           <div class="checkin-name-col">
-            <input type="text" class="checkin-name-input" placeholder="Name (optional)" value="${escapeHtml(rider.name || '')}" oninput="onCheckinNameChange(this.value)">
+            <input type="text" class="checkin-name-input" placeholder="${t('rider.namePlaceholder')}" value="${escapeHtml(rider.name || '')}" oninput="onCheckinNameChange(this.value)">
             ${teamBadgeHtml(evt, rider.teamId)}
-            <input type="text" class="checkin-emergency-input" placeholder="Notfallkontakt (Name &amp; Telefon)" value="${escapeHtml(rider.emergencyContact || '')}" oninput="onCheckinEmergencyChange(this.value)">
+            <input type="text" class="checkin-emergency-input" placeholder="${t('rider.emergencyPlaceholder')}" value="${escapeHtml(rider.emergencyContact || '')}" oninput="onCheckinEmergencyChange(this.value)">
           </div>
-          <button class="btn btn-primary btn-sm" onclick="finishCheckin()" title="Speichert sofort und wechselt zur Suche zurück">Speichern &amp; schließen</button>
+          <button class="btn btn-primary btn-sm" onclick="finishCheckin()" title="${t('checkin.saveAndCloseTitle')}">${t('checkin.saveAndClose')}</button>
         </div>
         ${!rider.finishTime ? `
           <div class="checkin-confirm-row">
-            <button class="btn btn-primary checkin-confirm-btn" onclick="confirmRiderAtFinish()">Fahrer ist im Ziel — bestätigen</button>
-            <div class="checkin-confirm-hint">Noch nicht bestätigt — Zielzeit wird erst beim Klick erfasst.</div>
+            <button class="btn btn-primary checkin-confirm-btn" onclick="confirmRiderAtFinish()">${t('checkin.confirmAtFinish')}</button>
+            <div class="checkin-confirm-hint">${t('checkin.notYetConfirmedHint')}</div>
           </div>
         ` : `
           <div class="checkin-timing">
             <div>
-              <label>Zielzeit</label>
+              <label>${t('checkin.finishTimeLabel')}</label>
               <input type="datetime-local" value="${escapeHtml(rider.finishTime || '')}" onchange="onCheckinFinishTimeChange(this.value)">
             </div>
             ${curfewBlock}
-            <button class="btn btn-ghost btn-sm" onclick="unconfirmRiderAtFinish()" title="Falls versehentlich bestätigt">Zurücksetzen</button>
+            <button class="btn btn-ghost btn-sm" onclick="unconfirmRiderAtFinish()" title="${t('checkin.resetTitle')}">${t('checkin.reset')}</button>
           </div>
         `}
-        ${evt.checkpoints.length === 0 ? `<div class="cp-list-empty">Keine Checkpoints im Event.</div>` : `<div class="checkin-cp-list">${cpRows}</div>`}
+        ${evt.checkpoints.length === 0 ? `<div class="cp-list-empty">${t('checkin.noCheckpointsInEvent')}</div>` : `<div class="checkin-cp-list">${cpRows}</div>`}
         ${mandatoryBlock}
       </div>
     `;
@@ -397,11 +397,11 @@ function renderCheckin(){
       <div class="checkin-main-inner">
         <div id="live-countdown" class="live-countdown"></div>
         <div class="checkin-search">
-          <label>Bib-Nummer</label>
+          <label>${t('checkin.bibNumberLabel')}</label>
           <div class="checkin-search-row">
-            <input type="text" id="checkin-bib-input" inputmode="numeric" placeholder="z.B. 7" value="${escapeHtml(state.checkinBibInput)}" oninput="onCheckinBibInput(this.value)" onkeydown="if(event.key==='Enter') findCheckinRider()">
-            <button class="btn btn-primary" onclick="findCheckinRider()">Suchen</button>
-            <button class="btn" onclick="startQrScan()" title="QR-Code der Spokecard scannen">Scannen</button>
+            <input type="text" id="checkin-bib-input" inputmode="numeric" placeholder="${t('checkin.bibPlaceholder')}" value="${escapeHtml(state.checkinBibInput)}" oninput="onCheckinBibInput(this.value)" onkeydown="if(event.key==='Enter') findCheckinRider()">
+            <button class="btn btn-primary" onclick="findCheckinRider()">${t('checkin.search')}</button>
+            <button class="btn" onclick="startQrScan()" title="${t('checkin.scanQrTitle')}">${t('checkin.scan')}</button>
           </div>
         </div>
         ${body}
@@ -409,24 +409,24 @@ function renderCheckin(){
     </div>
     <div class="checkin-side">
       <div class="checkin-side-head">
-        <span>Alle Fahrer</span>
+        <span>${t('checkin.allRiders')}</span>
         <span class="checkin-side-count">${finishedCount} / ${riders.length}</span>
       </div>
-      ${riders.length ? `<div class="checkin-overview-list">${overviewRows}</div>` : `<div class="checkin-side-empty">Noch keine Fahrerliste — unter „Fahrer" anlegen.</div>`}
+      ${riders.length ? `<div class="checkin-overview-list">${overviewRows}</div>` : `<div class="checkin-side-empty">${t('checkin.noRiderListYet')}</div>`}
     </div>
     ${state.qrScannerActive ? `
       <div class="qr-scan-overlay">
         ${state.qrScanError ? `
           <div class="qr-scan-status error">${escapeHtml(state.qrScanError)}</div>
-          <button class="btn btn-primary" onclick="startQrScan()">Erneut versuchen</button>
+          <button class="btn btn-primary" onclick="startQrScan()">${t('checkin.retry')}</button>
         ` : `
           <div class="qr-scan-video-wrap">
             <video id="qr-scan-video" autoplay playsinline muted></video>
             <div class="qr-scan-frame"></div>
           </div>
-          <div class="qr-scan-status">QR-Code der Spokecard vor die Kamera halten…</div>
+          <div class="qr-scan-status">${t('checkin.holdQrToCamera')}</div>
         `}
-        <button class="btn btn-ghost" onclick="stopQrScan()">Abbrechen</button>
+        <button class="btn btn-ghost" onclick="stopQrScan()">${t('common.cancel')}</button>
       </div>
     ` : ''}
   `;

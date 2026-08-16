@@ -15,11 +15,11 @@ function withCheckpointDefaults(cp){
    to introduce a new type — every dropdown, icon, manifest cell and check-in
    control derives from this list instead of scattered type === 'x' checks. */
 let CHECKPOINT_TYPES = [
-  {key: 'qr', icon: '\ud83d\udd32', shortLabel: 'QR', fullLabel: 'QR-Code-Scan', dropdownLabel: 'QR-Code-Scan', referenceFieldLabel: 'QR-Inhalt / Code', hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'},
-  {key: 'photo', icon: '\ud83d\udcf7', shortLabel: 'FOTO', fullLabel: 'Foto-Beweis', dropdownLabel: 'Foto-Beweis', referenceFieldLabel: 'Referenz-Code', hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'},
-  {key: 'item', icon: '\ud83d\udce6', shortLabel: 'ITEM', fullLabel: 'Item-Abgabe', dropdownLabel: 'Item-Abgabe', referenceFieldLabel: 'Referenz-Code', hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'},
-  {key: 'custom', icon: '\u2753', shortLabel: 'R\u00c4TSEL', fullLabel: 'R\u00e4tselfrage', dropdownLabel: 'R\u00e4tselfrage / Custom Input', referenceFieldLabel: 'Referenz-Code', hasCustomQuestion: true, isScored: false, scoreMax: 0, manifestCell: 'answer-line'},
-  {key: 'challenge', icon: '\ud83c\udfc6', shortLabel: 'CHALLENGE', fullLabel: 'Checkpoint-Wertung', dropdownLabel: 'Checkpoint-Wertung (Challenge)', referenceFieldLabel: 'Referenz-Code', hasCustomQuestion: false, isScored: true, scoreMax: 10, manifestCell: 'score-line'}
+  {key: 'qr', icon: '\ud83d\udd32', shortLabel: 'QR', fullLabel: t('checkpoint.types.qr.full'), dropdownLabel: t('checkpoint.types.qr.dropdown'), referenceFieldLabel: t('checkpoint.types.qr.ref'), hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'},
+  {key: 'photo', icon: '\ud83d\udcf7', shortLabel: 'FOTO', fullLabel: t('checkpoint.types.photo.full'), dropdownLabel: t('checkpoint.types.photo.dropdown'), referenceFieldLabel: t('checkpoint.types.photo.ref'), hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'},
+  {key: 'item', icon: '\ud83d\udce6', shortLabel: 'ITEM', fullLabel: t('checkpoint.types.item.full'), dropdownLabel: t('checkpoint.types.item.dropdown'), referenceFieldLabel: t('checkpoint.types.item.ref'), hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'},
+  {key: 'custom', icon: '\u2753', shortLabel: 'R\u00c4TSEL', fullLabel: t('checkpoint.types.custom.full'), dropdownLabel: t('checkpoint.types.custom.dropdown'), referenceFieldLabel: t('checkpoint.types.custom.ref'), hasCustomQuestion: true, isScored: false, scoreMax: 0, manifestCell: 'answer-line'},
+  {key: 'challenge', icon: '\ud83c\udfc6', shortLabel: 'CHALLENGE', fullLabel: t('checkpoint.types.challenge.full'), dropdownLabel: t('checkpoint.types.challenge.dropdown'), referenceFieldLabel: t('checkpoint.types.challenge.ref'), hasCustomQuestion: false, isScored: true, scoreMax: 10, manifestCell: 'score-line'}
 ];
 const BUILTIN_CHECKPOINT_TYPE_KEYS = CHECKPOINT_TYPES.map(t => t.key);
 function getCheckpointType(key){
@@ -63,12 +63,12 @@ function addCustomCheckpointType(){
   const hasCustomQuestion = document.getElementById('newtype-question').checked;
   const isScored = document.getElementById('newtype-scored').checked;
   const scoreMax = isScored ? (parseInt(document.getElementById('newtype-scoremax').value, 10) || 10) : 0;
-  if(!label){ alert('Bitte einen Namen f\u00fcr den Checkpoint-Typ angeben.'); return; }
+  if(!label){ alert(t('checkpoint.newTypeNamePrompt')); return; }
   const key = slugifyTypeKey(shortLabel || label);
   const manifestCell = isScored ? 'score-line' : (hasCustomQuestion ? 'answer-line' : 'punch-box');
   CHECKPOINT_TYPES.push({
     key, icon, shortLabel: (shortLabel || label.toUpperCase()).slice(0, 14), fullLabel: label,
-    dropdownLabel: label, referenceFieldLabel: 'Referenz-Code',
+    dropdownLabel: label, referenceFieldLabel: t('checkpoint.defaultRefFieldLabel'),
     hasCustomQuestion, isScored, scoreMax, manifestCell
   });
   saveCustomCheckpointTypes();
@@ -76,7 +76,7 @@ function addCustomCheckpointType(){
   renderSettings();
 }
 function deleteCustomCheckpointType(key){
-  if(!confirm('Diesen Checkpoint-Typ wirklich l\u00f6schen? Bereits angelegte Checkpoints dieses Typs bleiben erhalten, fallen aber auf den Standard-Typ zur\u00fcck.')) return;
+  if(!confirm(t('checkpoint.deleteTypeConfirm'))) return;
   CHECKPOINT_TYPES = CHECKPOINT_TYPES.filter(t => t.key !== key);
   saveCustomCheckpointTypes();
   renderSettings();
@@ -175,7 +175,7 @@ function onEditName(id, value){
   const cp = findCp(id); if(!cp) return;
   cp.name = value;
   const rowName = document.getElementById('row-name-' + id);
-  if(rowName) rowName.textContent = value || '(ohne Namen)';
+  if(rowName) rowName.textContent = value || t('checkpoint.noName');
   debouncedSave();
 }
 function onEditClue(id, value){
@@ -277,12 +277,12 @@ function onEventDateInput(value){
 function renderSidebar(){
   const el = document.getElementById('sidebar');
   if(state.loading || !state.currentEvent){
-    el.innerHTML = `<div class="loading-row">L\u00e4dt Event \u2026</div>`;
+    el.innerHTML = `<div class="loading-row">${t('checkpoint.loadingEvent')}</div>`;
     return;
   }
   const evt = state.currentEvent;
   const rows = evt.checkpoints.length === 0
-    ? `<div class="cp-list-empty">Noch keine Checkpoints.<br>Aktiviere "Checkpoint setzen" und klick auf die Karte.</div>`
+    ? `<div class="cp-list-empty">${t('checkpoint.noCheckpointsYet')}<br>${t('checkpoint.activateHint')}</div>`
     : evt.checkpoints.map(cp => {
         const editing = state.editingId === cp.id;
         let editBlock = '';
@@ -290,36 +290,36 @@ function renderSidebar(){
           if(state.confirmDeleteCpId === cp.id){
             editBlock = `
               <div class="confirm-row">
-                Checkpoint wirklich l\u00f6schen?
+                ${t('checkpoint.deleteCpConfirm')}
                 <div class="row2">
-                  <button class="btn btn-danger btn-sm" style="flex:1;" onclick="confirmDeleteCp('${cp.id}')">L\u00f6schen</button>
-                  <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="state.confirmDeleteCpId=null; renderSidebar();">Abbrechen</button>
+                  <button class="btn btn-danger btn-sm" style="flex:1;" onclick="confirmDeleteCp('${cp.id}')">${t('common.delete')}</button>
+                  <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="state.confirmDeleteCpId=null; renderSidebar();">${t('common.cancel')}</button>
                 </div>
               </div>`;
           } else {
             editBlock = `
               <div class="cp-edit" onclick="event.stopPropagation()">
                 <div>
-                  <label>Name</label>
+                  <label>${t('checkpoint.nameLabel')}</label>
                   <input type="text" value="${escapeHtml(cp.name)}" oninput="onEditName('${cp.id}', this.value)">
                 </div>
                 <div>
-                  <label>Checkpoint-Typ</label>
+                  <label>${t('checkpoint.checkpointTypeLabel')}</label>
                   <select onchange="onEditType('${cp.id}', this.value)">
-                    ${CHECKPOINT_TYPES.map(t => `<option value="${t.key}" ${cp.type === t.key ? 'selected' : ''}>${t.dropdownLabel}</option>`).join('')}
+                    ${CHECKPOINT_TYPES.map(ct => `<option value="${ct.key}" ${cp.type === ct.key ? 'selected' : ''}>${ct.dropdownLabel}</option>`).join('')}
                   </select>
                 </div>
                 <div>
-                  <label>Clue / Hinweis f\u00fcr Fahrer</label>
+                  <label>${t('checkpoint.clueLabel')}</label>
                   <textarea oninput="onEditClue('${cp.id}', this.value)">${escapeHtml(cp.clue)}</textarea>
                 </div>
                 ${getCheckpointType(cp.type).hasCustomQuestion ? `
                 <div>
-                  <label>R\u00e4tselfrage / erwartete Antwort</label>
+                  <label>${t('checkpoint.customQuestionLabel')}</label>
                   <textarea oninput="onEditCustomQuestion('${cp.id}', this.value)">${escapeHtml(cp.customQuestion || '')}</textarea>
                 </div>` : ''}
                 ${getCheckpointType(cp.type).isScored ? `
-                <div class="settings-hint">Wird vor Ort direkt im Ziel-Check-in mit 0\u2013${getCheckpointType(cp.type).scoreMax} Punkten bewertet (z. B. Trackstand, Bunny-Hop).</div>
+                <div class="settings-hint">${t('checkpoint.scoredHint', {max: getCheckpointType(cp.type).scoreMax})}</div>
                 ` : ''}
                 <div class="row2">
                   <div>
@@ -327,32 +327,32 @@ function renderSidebar(){
                     <input type="text" class="mono" value="${escapeHtml(cp.punchCode || '')}" oninput="onEditPunch('${cp.id}', this.value)">
                   </div>
                   <div>
-                    <label>Koordinaten</label>
+                    <label>${t('checkpoint.coordinatesLabel')}</label>
                     <div class="coord-readout">${cp.lat.toFixed(5)}, ${cp.lng.toFixed(5)}</div>
                   </div>
                 </div>
                 <label class="checkbox-row">
                   <input type="checkbox" ${cp.mandatory ? 'checked' : ''} onchange="onEditMandatory('${cp.id}', this.checked)">
-                  Pflicht-Checkpoint (unchecked = Bonus)
+                  ${t('checkpoint.mandatoryCheckboxLabel')}
                 </label>
                 <label class="checkbox-row">
                   <input type="checkbox" ${cp.timeWindowEnabled ? 'checked' : ''} onchange="onEditTimeWindowEnabled('${cp.id}', this.checked)">
-                  Zeitfenster aktivieren (z. B. Happy-Hour-Barstop)
+                  ${t('checkpoint.timeWindowCheckboxLabel')}
                 </label>
                 ${cp.timeWindowEnabled ? `
                 <div class="row2">
                   <div>
-                    <label>Von</label>
+                    <label>${t('checkpoint.fromLabel')}</label>
                     <input type="datetime-local" value="${escapeHtml(cp.timeWindowStart || '')}" onchange="onEditTimeWindowStart('${cp.id}', this.value)">
                   </div>
                   <div>
-                    <label>Bis</label>
+                    <label>${t('checkpoint.toLabel')}</label>
                     <input type="datetime-local" value="${escapeHtml(cp.timeWindowEnd || '')}" onchange="onEditTimeWindowEnd('${cp.id}', this.value)">
                   </div>
                 </div>
                 ` : ''}
                 <div class="edit-actions">
-                  <button class="btn btn-danger btn-sm" onclick="askDeleteCp('${cp.id}')">Checkpoint l\u00f6schen</button>
+                  <button class="btn btn-danger btn-sm" onclick="askDeleteCp('${cp.id}')">${t('checkpoint.deleteCheckpoint')}</button>
                 </div>
               </div>`;
           }
@@ -360,19 +360,19 @@ function renderSidebar(){
         return `
           <div class="cp-row ${editing ? 'editing' : ''} ${cp.mandatory ? '' : 'optional'}" data-cp-id="${cp.id}" onclick="selectCp('${cp.id}')">
             <div class="cp-row-top">
-              <span class="cp-drag-handle" title="Ziehen zum Umsortieren" onpointerdown="onCpDragStart(event, '${cp.id}')" onclick="event.stopPropagation()">
+              <span class="cp-drag-handle" title="${t('checkpoint.dragToReorder')}" onpointerdown="onCpDragStart(event, '${cp.id}')" onclick="event.stopPropagation()">
                 <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.4"/><circle cx="7.5" cy="2.5" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13.5" r="1.4"/><circle cx="7.5" cy="13.5" r="1.4"/></svg>
               </span>
               <div class="cp-no">${cp.order}</div>
-              <div class="cp-name" id="row-name-${cp.id}">${escapeHtml(cp.name || '(ohne Namen)')}</div>
+              <div class="cp-name" id="row-name-${cp.id}">${escapeHtml(cp.name || t('checkpoint.noName'))}</div>
               <span class="tag-type">${typeLabel(cp.type)}</span>
-              <label class="cp-quick-toggle" title="Pflicht-Checkpoint" onclick="event.stopPropagation()">
+              <label class="cp-quick-toggle" title="${t('checkpoint.mandatoryCheckpointTitle')}" onclick="event.stopPropagation()">
                 <input type="checkbox" ${cp.mandatory ? 'checked' : ''} onchange="onEditMandatory('${cp.id}', this.checked)">
-                Pflicht
+                ${t('checkpoint.mandatoryQuickToggle')}
               </label>
               <div class="cp-order-btns" onclick="event.stopPropagation()">
-                <button onclick="moveCp('${cp.id}', -1)" title="Nach oben">&uarr;</button>
-                <button onclick="moveCp('${cp.id}', 1)" title="Nach unten">&darr;</button>
+                <button onclick="moveCp('${cp.id}', -1)" title="${t('checkpoint.moveUp')}">&uarr;</button>
+                <button onclick="moveCp('${cp.id}', 1)" title="${t('checkpoint.moveDown')}">&darr;</button>
               </div>
             </div>
             ${editBlock}
@@ -381,57 +381,57 @@ function renderSidebar(){
 
   el.innerHTML = `
     <div class="sidebar-head">
-      <input type="text" class="event-title-input" value="${escapeHtml(evt.name)}" oninput="onEventNameInput(this.value)" placeholder="Eventname">
+      <input type="text" class="event-title-input" value="${escapeHtml(evt.name)}" oninput="onEventNameInput(this.value)" placeholder="${t('checkpoint.eventNamePlaceholder')}">
       <input type="date" class="event-date-input" value="${escapeHtml(evt.date || '')}" oninput="onEventDateInput(this.value)">
     </div>
     <div class="settings-section">
-      <button class="settings-toggle" onclick="toggleSettings()">${state.settingsOpen ? '\u25be' : '\u25b8'} Start &amp; Curfew</button>
+      <button class="settings-toggle" onclick="toggleSettings()">${state.settingsOpen ? '\u25be' : '\u25b8'} ${t('checkpoint.startAndCurfew')}</button>
       ${state.settingsOpen ? `
         <div class="settings-body">
           <div>
-            <label>Start-Modus</label>
+            <label>${t('checkpoint.startModeLabel')}</label>
             <select onchange="onStartModeChange(this.value)">
-              <option value="manual" ${evt.startMode !== 'scheduled' ? 'selected' : ''}>Manueller Startknopf</option>
-              <option value="scheduled" ${evt.startMode === 'scheduled' ? 'selected' : ''}>Fester Startzeitpunkt</option>
+              <option value="manual" ${evt.startMode !== 'scheduled' ? 'selected' : ''}>${t('checkpoint.manualStartOption')}</option>
+              <option value="scheduled" ${evt.startMode === 'scheduled' ? 'selected' : ''}>${t('checkpoint.scheduledStartOption')}</option>
             </select>
           </div>
           ${evt.startMode === 'scheduled' ? `
           <div>
-            <label>Startzeit</label>
+            <label>${t('checkpoint.startTimeLabel')}</label>
             <input type="datetime-local" value="${escapeHtml(evt.startTime || '')}" oninput="onStartTimeChange(this.value)">
-          </div>` : `<div class="settings-hint">Der Admin l\u00f6st den Start manuell per Knopf aus, sobald das Feld bereit ist.</div>`}
+          </div>` : `<div class="settings-hint">${t('checkpoint.manualStartHint')}</div>`}
           <div>
-            <label>Curfew-Modus</label>
+            <label>${t('checkpoint.curfewModeLabel')}</label>
             <select onchange="onCurfewModeChange(this.value)">
-              <option value="hard" ${evt.curfewMode !== 'soft' ? 'selected' : ''}>Hard Cutoff (Sperre)</option>
-              <option value="soft" ${evt.curfewMode === 'soft' ? 'selected' : ''}>Soft Curfew (Strafzeit)</option>
+              <option value="hard" ${evt.curfewMode !== 'soft' ? 'selected' : ''}>${t('checkpoint.hardCutoffOption')}</option>
+              <option value="soft" ${evt.curfewMode === 'soft' ? 'selected' : ''}>${t('checkpoint.softCurfewOption')}</option>
             </select>
           </div>
           <div class="settings-row2">
             <div>
-              <label>Curfew-Zeitpunkt</label>
+              <label>${t('checkpoint.curfewTimeLabel')}</label>
               <input type="datetime-local" value="${escapeHtml(evt.curfewTime || '')}" oninput="onCurfewTimeChange(this.value)">
             </div>
             ${evt.curfewMode === 'soft' ? `
             <div>
-              <label>Strafmin. / Min. sp\u00e4t</label>
+              <label>${t('checkpoint.penaltyPerMinLabel')}</label>
               <input type="text" inputmode="decimal" value="${escapeHtml(String(evt.curfewPenaltyPerMin ?? 1))}" oninput="onCurfewPenaltyChange(this.value)">
             </div>` : ''}
           </div>
-          <div class="settings-hint">${evt.curfewMode === 'soft' ? 'Fahrer k\u00f6nnen nach Curfew noch ins Ziel \u2014 pro Minute Versp\u00e4tung gibt es Strafminuten auf die Wertung.' : 'Nach dem Curfew-Zeitpunkt gilt das Rennen als beendet.'}</div>
+          <div class="settings-hint">${evt.curfewMode === 'soft' ? t('checkpoint.softCurfewHint') : t('checkpoint.hardCurfewHint')}</div>
         </div>
       ` : ''}
     </div>
     <div class="addmode-row">
       <button class="btn btn-toggle ${state.addMode ? 'active' : ''}" onclick="toggleAddMode()">
-        ${state.addMode ? '\u25CF Checkpoint setzen (aktiv)' : 'Checkpoint setzen'}
+        ${state.addMode ? t('checkpoint.addModeActive') : t('checkpoint.addModeInactive')}
       </button>
-      <div class="addmode-hint">${state.addMode ? 'Klick auf die Karte, um einen Checkpoint zu platzieren. Marker sind verschiebbar.' : 'Aktivieren, dann per Klick auf die Karte Checkpoints anlegen.'}</div>
+      <div class="addmode-hint">${state.addMode ? t('checkpoint.addModeHintActive') : t('checkpoint.addModeHintInactive')}</div>
     </div>
     <div class="cp-list">${rows}</div>
     <div class="sidebar-foot">
-      <button class="btn" onclick="exportRouteGPX()">GPX exportieren</button>
-      <button class="btn" onclick="openManifest()">Manifest generieren</button>
+      <button class="btn" onclick="exportRouteGPX()">${t('checkpoint.exportGpx')}</button>
+      <button class="btn" onclick="openManifest()">${t('checkpoint.generateManifest')}</button>
     </div>
   `;
 }

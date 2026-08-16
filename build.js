@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const CORE_FILES = [
+  'i18n.js',
   'utils.js',
   'checkpoint.js',
   'team.js',

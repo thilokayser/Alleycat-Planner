@@ -46,7 +46,7 @@ function showToast({message, actionLabel, onAction, duration = 6000}){
   toastEl.innerHTML = `
     <span class="toast-msg">${escapeHtml(message)}</span>
     ${actionLabel ? `<button type="button" class="toast-action"></button>` : ''}
-    <button type="button" class="toast-close" aria-label="Schließen">&times;</button>
+    <button type="button" class="toast-close" aria-label="${t('ui.close')}">&times;</button>
   `;
   root.appendChild(toastEl);
   let dismissed = false;
@@ -118,10 +118,10 @@ function setSaveStatus(status){
   const el = document.getElementById('save-status');
   if(!el) return;
   el.className = 'save-status ' + status;
-  el.textContent = status === 'pending' ? 'Ungespeicherte Änderungen…'
-    : status === 'saving' ? 'Speichert…'
-    : status === 'saved' ? 'Gespeichert'
-    : status === 'error' ? 'Fehler beim Speichern — Änderung evtl. verloren'
+  el.textContent = status === 'pending' ? t('ui.saveStatusPending')
+    : status === 'saving' ? t('ui.saveStatusSaving')
+    : status === 'saved' ? t('ui.saveStatusSaved')
+    : status === 'error' ? t('ui.saveStatusError')
     : '';
 }
 
@@ -149,7 +149,7 @@ async function openEditor(id){
   flushPendingSave();
   state.loading = true; state.view = 'editor'; render();
   const evt = await loadEvent(id);
-  state.currentEvent = withEventDefaults(evt || {id, name:'Unbenanntes Event', date:'', checkpoints:[]});
+  state.currentEvent = withEventDefaults(evt || {id, name:t('common.unnamedEvent'), date:'', checkpoints:[]});
   state.loading = false;
   render();
   setTimeout(() => { initMap(); initSidebarResize(); applySidebarWidth(); }, 30);
@@ -179,17 +179,17 @@ function openLeaderboard(){
 /* ---------------- app settings: theme + icon pack ---------------- */
 const ICON_PACKS = {
   emoji: {
-    label: 'Emoji', desc: 'Standard — keine externen Ressourcen nötig', cdn: null,
+    label: t('ui.iconPackEmojiLabel'), desc: t('ui.iconPackEmojiDesc'), cdn: null,
     render: (key) => typeIcon(key)
   },
   fa: {
-    label: 'Font Awesome', desc: 'Lädt Font Awesome 6 von cdnjs nach',
+    label: t('ui.iconPackFaLabel'), desc: t('ui.iconPackFaDesc'),
     cdn: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css',
     icons: {qr: 'fa-solid fa-qrcode', photo: 'fa-solid fa-camera', item: 'fa-solid fa-box', custom: 'fa-solid fa-circle-question', challenge: 'fa-solid fa-trophy'},
     render(key){ return `<i class="${this.icons[key] || 'fa-solid fa-location-dot'}"></i>`; }
   },
   material: {
-    label: 'Material Symbols', desc: 'Lädt Material Symbols von Google Fonts nach',
+    label: t('ui.iconPackMaterialLabel'), desc: t('ui.iconPackMaterialDesc'),
     cdn: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,500,0,0&display=block',
     icons: {qr: 'qr_code_2', photo: 'photo_camera', item: 'inventory_2', custom: 'help', challenge: 'emoji_events'},
     render(key){ return `<span class="material-symbols-outlined">${this.icons[key] || 'place'}</span>`; }
@@ -265,15 +265,15 @@ function render(){
 }
 
 const NAV_ITEMS = [
-  {view: 'editor', label: 'Karte', shortLabel: 'Karte', onclick: evtId => `openEditor('${evtId}')`,
+  {view: 'editor', label: t('ui.navMap'), shortLabel: t('ui.navMap'), onclick: evtId => `openEditor('${evtId}')`,
     icon: '<path d="M12 21s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>'},
-  {view: 'riders', label: 'Fahrer', shortLabel: 'Fahrer', onclick: () => 'openRiders()',
+  {view: 'riders', label: t('ui.navRiders'), shortLabel: t('ui.navRiders'), onclick: () => 'openRiders()',
     icon: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/>'},
-  {view: 'checkin', label: 'Ziel-Check-in', shortLabel: 'Check-in', onclick: () => 'openCheckin()',
+  {view: 'checkin', label: t('ui.navCheckin'), shortLabel: t('ui.navCheckinShort'), onclick: () => 'openCheckin()',
     icon: '<path d="M6 3v18"/><path d="M6 4h12l-3 4 3 4H6"/>'},
-  {view: 'leaderboard', label: 'Leaderboard', shortLabel: 'Board', onclick: () => 'openLeaderboard()',
+  {view: 'leaderboard', label: t('ui.navLeaderboard'), shortLabel: t('ui.navLeaderboardShort'), onclick: () => 'openLeaderboard()',
     icon: '<path d="M7 4h10v3a5 5 0 0 1-10 0V4z"/><path d="M7 5H4.5A2.5 2.5 0 0 0 7 9.5"/><path d="M17 5h2.5A2.5 2.5 0 0 1 17 9.5"/><path d="M12 12v3.5"/><path d="M9.5 19.5h5"/><path d="M10.3 15.5h3.4l.6 4h-4.6z"/>'},
-  {view: 'manifest', label: 'Manifest ansehen', shortLabel: 'Manifest', onclick: () => 'openManifest()',
+  {view: 'manifest', label: t('ui.navManifest'), shortLabel: t('ui.navManifestShort'), onclick: () => 'openManifest()',
     icon: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M9.5 12.5h5"/><path d="M9.5 16h5"/>'}
 ];
 function renderTopbar(){
@@ -282,25 +282,25 @@ function renderTopbar(){
   const bottomNav = document.getElementById('bottom-nav');
 
   if(state.view === 'settings'){
-    sub.textContent = 'Einstellungen';
-    actions.innerHTML = `<button class="btn btn-ghost" onclick="closeSettings()">&larr; Zurück</button>`;
+    sub.textContent = t('settings.title');
+    actions.innerHTML = `<button class="btn btn-ghost" onclick="closeSettings()">${t('settings.back')}</button>`;
     bottomNav.innerHTML = '';
     return;
   }
 
   if(state.view === 'dashboard' || !state.currentEvent){
-    sub.textContent = 'Headquarter';
+    sub.textContent = t('ui.headquarter');
     actions.innerHTML = '';
     bottomNav.innerHTML = '';
     return;
   }
 
-  sub.textContent = state.currentEvent.name || 'Unbenanntes Event';
+  sub.textContent = state.currentEvent.name || t('common.unnamedEvent');
   const evtId = state.currentEvent.id;
   const navBtn = item =>
     `<button class="btn ${state.view === item.view ? 'btn-primary' : ''}" onclick="${item.onclick(evtId)}">${item.label}</button>`;
   actions.innerHTML = `
-    <button class="btn btn-ghost" onclick="goDashboard()">&larr; Alle Events</button>
+    <button class="btn btn-ghost" onclick="goDashboard()">${t('ui.backToAllEvents')}</button>
     <span class="topbar-nav-buttons">${NAV_ITEMS.map(navBtn).join('')}</span>
   `;
   bottomNav.innerHTML = NAV_ITEMS.map(item => `
@@ -314,10 +314,10 @@ function renderTopbar(){
 
 /* ---------------- render: settings ---------------- */
 const THEMES = {
-  feldpost: {label: 'Feldpost', desc: 'Rally-Stempel-Look — dunkles Chrome, warmes Papier (Standard)', swatch: ['#17191a', '#eee5cd', '#ff5f1f', '#b23a2e']},
-  hell: {label: 'Hell', desc: 'Helles Chrome, klassisches Papier', swatch: ['#f4f1ea', '#fffdf7', '#e0551c', '#b23a2e']},
-  dunkel: {label: 'Dunkel', desc: 'Durchgehend dunkel, ruhiger blauer Akzent', swatch: ['#121212', '#1e1e1e', '#5b8cff', '#e05a4e']},
-  dracula: {label: 'Dracula', desc: 'Pink/Lila-Akzente auf klassischem Dracula-Dunkel', swatch: ['#282a36', '#2b2d3a', '#ff79c6', '#bd93f9']}
+  feldpost: {label: t('settings.themeFeldpostLabel'), desc: t('settings.themeFeldpostDesc'), swatch: ['#17191a', '#eee5cd', '#ff5f1f', '#b23a2e']},
+  hell: {label: t('settings.themeHellLabel'), desc: t('settings.themeHellDesc'), swatch: ['#f4f1ea', '#fffdf7', '#e0551c', '#b23a2e']},
+  dunkel: {label: t('settings.themeDunkelLabel'), desc: t('settings.themeDunkelDesc'), swatch: ['#121212', '#1e1e1e', '#5b8cff', '#e05a4e']},
+  dracula: {label: t('settings.themeDraculaLabel'), desc: t('settings.themeDraculaDesc'), swatch: ['#282a36', '#2b2d3a', '#ff79c6', '#bd93f9']}
 };
 function renderSettings(){
   Object.entries(ICON_PACKS).forEach(([key, p]) => {
@@ -331,11 +331,11 @@ function renderSettings(){
     document.head.appendChild(link);
   });
   const el = document.getElementById('view-settings');
-  const themeCards = Object.entries(THEMES).map(([key, t]) => `
+  const themeCards = Object.entries(THEMES).map(([key, th]) => `
     <button class="option-card ${state.appSettings.theme === key ? 'active' : ''}" onclick="setTheme('${key}')">
-      <span class="option-swatch">${t.swatch.map(c => `<span style="background:${c}"></span>`).join('')}</span>
-      <span class="option-card-label">${t.label}</span>
-      <span class="option-card-desc">${t.desc}</span>
+      <span class="option-swatch">${th.swatch.map(c => `<span style="background:${c}"></span>`).join('')}</span>
+      <span class="option-card-label">${th.label}</span>
+      <span class="option-card-desc">${th.desc}</span>
     </button>
   `).join('');
   const iconCards = Object.entries(ICON_PACKS).map(([key, p]) => `
@@ -345,19 +345,19 @@ function renderSettings(){
       <span class="option-card-desc">${p.desc}</span>
     </button>
   `).join('');
-  const typeRows = CHECKPOINT_TYPES.map(t => {
-    const isBuiltin = BUILTIN_CHECKPOINT_TYPE_KEYS.includes(t.key);
-    const meta = t.isScored ? `Bewertet 0–${t.scoreMax} Punkte` : t.hasCustomQuestion ? 'Freitext-Frage im Editor' : 'Ankreuzfeld im Manifest';
+  const typeRows = CHECKPOINT_TYPES.map(ct => {
+    const isBuiltin = BUILTIN_CHECKPOINT_TYPE_KEYS.includes(ct.key);
+    const meta = ct.isScored ? t('settings.scoredMeta', {max: ct.scoreMax}) : ct.hasCustomQuestion ? t('settings.customQuestionMeta') : t('settings.checkboxMeta');
     return `
       <div class="type-row">
-        <span class="type-icon">${typeIconHtml(t.key)}</span>
+        <span class="type-icon">${typeIconHtml(ct.key)}</span>
         <div class="type-info">
-          <div class="type-name">${escapeHtml(t.fullLabel)}</div>
-          <div class="type-meta">${escapeHtml(t.shortLabel)} &middot; ${meta}</div>
+          <div class="type-name">${escapeHtml(ct.fullLabel)}</div>
+          <div class="type-meta">${escapeHtml(ct.shortLabel)} &middot; ${meta}</div>
         </div>
         ${isBuiltin
-          ? `<span class="type-badge">Standard</span>`
-          : `<button class="btn btn-sm btn-danger" onclick="deleteCustomCheckpointType('${t.key}')">Löschen</button>`}
+          ? `<span class="type-badge">${t('settings.builtinBadge')}</span>`
+          : `<button class="btn btn-sm btn-danger" onclick="deleteCustomCheckpointType('${ct.key}')">${t('common.delete')}</button>`}
       </div>
     `;
   }).join('');
@@ -365,56 +365,56 @@ function renderSettings(){
     <div class="settings-form">
       <div class="row2">
         <div>
-          <label>Icon (Emoji)</label>
+          <label>${t('settings.iconLabel')}</label>
           <input type="text" id="newtype-icon" class="icon-input" maxlength="4" value="📍">
         </div>
         <div>
-          <label>Kurzname (Badge)</label>
-          <input type="text" id="newtype-short" maxlength="14" placeholder="z. B. SPRINT">
+          <label>${t('settings.shortNameLabel')}</label>
+          <input type="text" id="newtype-short" maxlength="14" placeholder="${t('settings.shortNamePlaceholder')}">
         </div>
       </div>
       <div>
-        <label>Name</label>
-        <input type="text" id="newtype-label" placeholder="z. B. Sprint-Wertung">
+        <label>${t('settings.nameLabel')}</label>
+        <input type="text" id="newtype-label" placeholder="${t('settings.namePlaceholder')}">
       </div>
       <label class="checkbox-row">
         <input type="checkbox" id="newtype-question">
-        Hat eine frei definierbare Frage (z. B. Rätsel)
+        ${t('settings.hasQuestionCheckbox')}
       </label>
       <label class="checkbox-row">
         <input type="checkbox" id="newtype-scored" onchange="document.getElementById('newtype-scoremax-row').style.display = this.checked ? 'block' : 'none';">
-        Wird mit Punkten bewertet
+        ${t('settings.isScoredCheckbox')}
       </label>
       <div id="newtype-scoremax-row" style="display:none;">
-        <label>Maximalpunktzahl</label>
+        <label>${t('settings.maxScoreLabel')}</label>
         <input type="number" id="newtype-scoremax" value="10" min="1" max="999">
       </div>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="addCustomCheckpointType()">Checkpoint-Typ anlegen</button>
-        <button class="btn btn-ghost" onclick="toggleNewTypeForm()">Abbrechen</button>
+        <button class="btn btn-primary" onclick="addCustomCheckpointType()">${t('settings.createType')}</button>
+        <button class="btn btn-ghost" onclick="toggleNewTypeForm()">${t('common.cancel')}</button>
       </div>
     </div>
-  ` : `<button class="btn" onclick="toggleNewTypeForm()">+ Neuer Checkpoint-Typ</button>`;
+  ` : `<button class="btn" onclick="toggleNewTypeForm()">${t('settings.newType')}</button>`;
   el.innerHTML = `
     <div class="dash-head">
       <div>
-        <h2>Einstellungen</h2>
-        <p>Individualisiere Theme und Icon-Darstellung — gilt für alle Events auf diesem Gerät.</p>
+        <h2>${t('settings.title')}</h2>
+        <p>${t('settings.intro')}</p>
       </div>
     </div>
     <div class="settings-section">
-      <h3>Theme</h3>
-      <div class="settings-section-desc">Verändert die Farbpalette der gesamten App.</div>
+      <h3>${t('settings.themeHeading')}</h3>
+      <div class="settings-section-desc">${t('settings.themeDesc')}</div>
       <div class="option-grid">${themeCards}</div>
     </div>
     <div class="settings-section">
-      <h3>Icon-Pack</h3>
-      <div class="settings-section-desc">Bestimmt, wie Checkpoint-Typen auf der Karte und in der Legende dargestellt werden. Font Awesome und Material Symbols werden bei Auswahl von einem CDN nachgeladen.</div>
+      <h3>${t('settings.iconPackHeading')}</h3>
+      <div class="settings-section-desc">${t('settings.iconPackDesc')}</div>
       <div class="option-grid">${iconCards}</div>
     </div>
     <div class="settings-section">
-      <h3>Checkpoint-Typen</h3>
-      <div class="settings-section-desc">Eigene Checkpoint-Typen stehen sofort in jedem Event im Typ-Dropdown, auf der Karte, im Manifest und im Ziel-Check-in zur Verfügung.</div>
+      <h3>${t('settings.checkpointTypesHeading')}</h3>
+      <div class="settings-section-desc">${t('settings.checkpointTypesDesc')}</div>
       <div class="type-list">${typeRows}</div>
       ${newTypeForm}
     </div>

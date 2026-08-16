@@ -1,11 +1,11 @@
 function exportRouteGPX(){
   const evt = state.currentEvent;
-  if(!evt || !evt.checkpoints.length){ alert('Keine Checkpoints zum Exportieren.'); return; }
+  if(!evt || !evt.checkpoints.length){ alert(t('exportGpx.noCheckpoints')); return; }
   const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const cps = evt.checkpoints.slice().sort((a, b) => a.order - b.order);
   const wpts = cps.map(cp => `  <wpt lat="${cp.lat}" lon="${cp.lng}">
     <name>${esc(String(cp.order).padStart(2, '0') + ' ' + (cp.name || typeFullLabel(cp.type)))}</name>
-    <desc>${esc((cp.mandatory ? 'Pflicht' : 'Bonus') + (cp.clue ? ' — ' + cp.clue : ''))}</desc>
+    <desc>${esc((cp.mandatory ? t('common.mandatory') : t('common.bonus')) + (cp.clue ? ' — ' + cp.clue : ''))}</desc>
     <sym>Flag</sym>
   </wpt>`).join('\n');
   const rtepts = cps.map(cp => `    <rtept lat="${cp.lat}" lon="${cp.lng}"><name>${esc(cp.name || String(cp.order))}</name></rtept>`).join('\n');
@@ -14,7 +14,7 @@ function exportRouteGPX(){
   <metadata><name>${esc(evt.name || 'Alleycat')}</name></metadata>
 ${wpts}
   <rte>
-    <name>${esc(evt.name || 'Alleycat')} — Route</name>
+    <name>${esc(evt.name || 'Alleycat')} — ${esc(t('exportGpx.routeSuffix'))}</name>
 ${rtepts}
   </rte>
 </gpx>`;
