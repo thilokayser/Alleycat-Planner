@@ -109,7 +109,7 @@ function renderDashboard(){
     <div class="dash-head">
       <div>
         <h2>Deine Alleycats</h2>
-        <p>Geteiltes Organizer-Board \u2014 sichtbar f\u00fcr alle mit Zugriff auf dieses Tool.</p>
+        <p>Geteiltes Headquarter-Board \u2014 sichtbar f\u00fcr alle mit Zugriff auf dieses Tool.</p>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <input type="file" id="import-event-file" accept="application/json,.json" style="display:none;" onchange="onImportEventFile(this)">

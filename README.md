@@ -28,7 +28,7 @@ Beide Varianten prüfen zusätzlich zuerst, ob `window.storage` verfügbar ist (
 ## Features
 
 - Events mit beliebig vielen Checkpoints, Position per Karte (Leaflet) oder Koordinaten
-- Checkpoint-Typen: QR-Code-Scan, Foto-Beweis, Item-Abgabe, Rätselfrage, Marshal-Bewertung (Challenge, gepunktet) — plus eigene Checkpoint-Typen über die Einstellungen definierbar
+- Checkpoint-Typen: QR-Code-Scan, Foto-Beweis, Item-Abgabe, Rätselfrage, Checkpoint-Wertung (Challenge, gepunktet) — plus eigene Checkpoint-Typen über die Einstellungen definierbar
 - Fahrerliste mit Startnummern, Notfallkontakt-Feld (nicht auf gedruckten Startnummern/Spokecards sichtbar)
 - Ziel-Check-in-Flow mit Bestätigen/Zurücksetzen inkl. Undo
 - Leaderboard, Export als CSV (Excel-DE-kompatibel, semikolon-getrennt)
@@ -51,4 +51,4 @@ Alles in `src/core/` muss zwischen beiden Varianten byte-identisch bauen; Backen
 ## Roadmap
 
 - Fahrer-Selbstregistrierung (öffentlicher Anmeldelink statt nur organizer-generierter Startnummern-Slots)
-- Live-Multi-Marshal-Check-in / Live-Zuschauer-Leaderboard — geht nur über `alleycat-dispatch-server.html`, da einzige Variante mit echtem Server-Backend
+- Live-Multi-Checkpoint-Check-in / Live-Zuschauer-Leaderboard — geht nur über `alleycat-dispatch-server.html`, da einzige Variante mit echtem Server-Backend

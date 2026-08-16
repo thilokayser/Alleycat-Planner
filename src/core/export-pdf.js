@@ -526,7 +526,7 @@ function renderManifest(){
         </div>
         `}
         <div class="waybill-foot">
-          <span>Organizer Manifest</span>
+          <span>Headquarter Manifest</span>
           <span>Generiert automatisch aus den Checkpoints</span>
         </div>
       </div>

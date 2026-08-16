@@ -19,7 +19,7 @@ let CHECKPOINT_TYPES = [
   {key: 'photo', icon: '\ud83d\udcf7', shortLabel: 'FOTO', fullLabel: 'Foto-Beweis', dropdownLabel: 'Foto-Beweis', referenceFieldLabel: 'Referenz-Code', hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'},
   {key: 'item', icon: '\ud83d\udce6', shortLabel: 'ITEM', fullLabel: 'Item-Abgabe', dropdownLabel: 'Item-Abgabe', referenceFieldLabel: 'Referenz-Code', hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'},
   {key: 'custom', icon: '\u2753', shortLabel: 'R\u00c4TSEL', fullLabel: 'R\u00e4tselfrage', dropdownLabel: 'R\u00e4tselfrage / Custom Input', referenceFieldLabel: 'Referenz-Code', hasCustomQuestion: true, isScored: false, scoreMax: 0, manifestCell: 'answer-line'},
-  {key: 'challenge', icon: '\ud83c\udfc6', shortLabel: 'CHALLENGE', fullLabel: 'Marshal-Bewertung', dropdownLabel: 'Marshal-Bewertung (Challenge)', referenceFieldLabel: 'Referenz-Code', hasCustomQuestion: false, isScored: true, scoreMax: 10, manifestCell: 'score-line'}
+  {key: 'challenge', icon: '\ud83c\udfc6', shortLabel: 'CHALLENGE', fullLabel: 'Checkpoint-Wertung', dropdownLabel: 'Checkpoint-Wertung (Challenge)', referenceFieldLabel: 'Referenz-Code', hasCustomQuestion: false, isScored: true, scoreMax: 10, manifestCell: 'score-line'}
 ];
 const BUILTIN_CHECKPOINT_TYPE_KEYS = CHECKPOINT_TYPES.map(t => t.key);
 function getCheckpointType(key){
@@ -319,7 +319,7 @@ function renderSidebar(){
                   <textarea oninput="onEditCustomQuestion('${cp.id}', this.value)">${escapeHtml(cp.customQuestion || '')}</textarea>
                 </div>` : ''}
                 ${getCheckpointType(cp.type).isScored ? `
-                <div class="settings-hint">Marshal bewertet die Challenge vor Ort direkt im Ziel-Check-in mit 0\u2013${getCheckpointType(cp.type).scoreMax} Punkten (z. B. Trackstand, Bunny-Hop).</div>
+                <div class="settings-hint">Wird vor Ort direkt im Ziel-Check-in mit 0\u2013${getCheckpointType(cp.type).scoreMax} Punkten bewertet (z. B. Trackstand, Bunny-Hop).</div>
                 ` : ''}
                 <div class="row2">
                   <div>

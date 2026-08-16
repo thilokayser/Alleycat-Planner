@@ -289,7 +289,7 @@ function renderTopbar(){
   }
 
   if(state.view === 'dashboard' || !state.currentEvent){
-    sub.textContent = 'Organizer Backend';
+    sub.textContent = 'Headquarter';
     actions.innerHTML = '';
     bottomNav.innerHTML = '';
     return;
@@ -383,7 +383,7 @@ function renderSettings(){
       </label>
       <label class="checkbox-row">
         <input type="checkbox" id="newtype-scored" onchange="document.getElementById('newtype-scoremax-row').style.display = this.checked ? 'block' : 'none';">
-        Wird vom Marshal mit Punkten bewertet
+        Wird mit Punkten bewertet
       </label>
       <div id="newtype-scoremax-row" style="display:none;">
         <label>Maximalpunktzahl</label>
