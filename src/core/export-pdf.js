@@ -157,6 +157,8 @@ async function exportSpokeCardsPDF(){
   renderRiders();
   const doc = await buildSpokeCardsDoc(evt);
   doc.save((evt.name || 'spokecards').replace(/\s+/g, '_').toLowerCase() + '-spokecards.pdf');
+  evt.spokecardsPrinted = true;
+  debouncedSave();
   state.spokeCardsGenerating = false;
   renderRiders();
 }
@@ -174,6 +176,8 @@ async function printSpokeCardsPDF(){
   } else if(!window.open(blobUrl, '_blank')){
     state.printPopupBlocked = true;
   }
+  evt.spokecardsPrinted = true;
+  debouncedSave();
   state.spokeCardsGenerating = false;
   renderRiders();
 }
@@ -206,6 +210,10 @@ async function exportRidersPDF(){
 
 /* ---------------- manifest export ---------------- */
 function printManifest(){
+  if(state.currentEvent){
+    state.currentEvent.manifestGenerated = true;
+    debouncedSave();
+  }
   window.print();
 }
 function toggleManifestSettings(){
@@ -318,6 +326,8 @@ async function exportManifestPDF(){
   const visibleCols = columnDefs.filter(c => ms[showKey[c.key]]);
   if(!visibleCols.length){
     doc.save((evt.name || 'manifest').replace(/\s+/g, '_').toLowerCase() + '-manifest.pdf');
+    evt.manifestGenerated = true;
+    debouncedSave();
     return;
   }
   const totalFlex = visibleCols.reduce((s, c) => s + c.flex, 0);
@@ -415,6 +425,8 @@ async function exportManifestPDF(){
   doc.text(t('exportPdf.autoGenFooter'), pageRight, 806, {align: 'right'});
 
   doc.save((evt.name || 'manifest').replace(/\s+/g,'_').toLowerCase() + '-manifest.pdf');
+  evt.manifestGenerated = true;
+  debouncedSave();
 }
 
 

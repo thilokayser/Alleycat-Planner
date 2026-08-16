@@ -26,7 +26,8 @@ No `npm install`, no dependencies — `build.js` is plain Node.
 ```
 src/
   core/            # shared between BOTH variants — must build to byte-identical output
-    utils.js           formatters, uid, escapeHtml, downloadJSON
+    i18n.js             translations dict + t(key, params), getCurrentLanguage()/setLanguage() (device-local via localStorage)
+    utils.js            formatters, uid, escapeHtml, downloadJSON
     checkpoint.js       CHECKPOINT_TYPES, custom-type CRUD, checkpoint edit/drag, renderSidebar, event-field handlers (name/date/start/curfew)
     team.js             evt.teams CRUD, computeTeamStats, teamBadgeHtml
     map.js              Leaflet init/markers/click, sidebar resize, Nominatim search
@@ -34,6 +35,7 @@ src/
     checkin.js          full check-in flow incl. QR scan, live countdown, computeCurfewResult, riderStatusBadgeHtml
     leaderboard.js       renderLeaderboard, filters, sortRidersForOverview
     export-csv.js / export-gpx.js / export-pdf.js
+    race-state.js        race status machine (planning/ready/running/completed), CP-lock, start-time dialog
     dashboard.js         withEventDefaults, event CRUD, renderDashboard
     ui-headquarter.js    state, showToast, init(), navigation, render() dispatcher, renderTopbar, settings/themes/icon packs
   storage/
@@ -67,6 +69,8 @@ All persistence goes through three async functions with a stable contract regard
 - **`CHECKPOINT_TYPES`** (`checkpoint.js`, a mutable `let`) is the single source of truth for checkpoint kinds. User-defined custom types get merged in at load time from `checkpointTypes:custom` in storage and must stay after the built-in types (`BUILTIN_CHECKPOINT_TYPE_KEYS`) when persisted.
 - **`THEMES`** and **`ICON_PACKS`** (`ui-headquarter.js`) drive the Settings page; themes are pure CSS variables swapped via `data-theme` on `<html>` (see `src/styles/themes.css`), icon packs lazy-load their CDN (Font Awesome / Material Symbols) on selection.
 - Escaping conventions are deliberate and must be preserved when adding new export paths: `escapeHtml()` (`utils.js`) for all interpolated HTML, a local `esc()` inside `exportRouteGPX()` for XML, and `csvEscape()` for CSV — the latter also neutralizes leading `= + - @` to prevent formula-injection when the export is opened in Excel/Sheets.
+- **i18n**: every visible UI string goes through `t('namespace.key', params)` (`i18n.js`) rather than being hardcoded — only `de` is populated today, but the structure is translation-ready. Never wrap `t()` calls around user-entered content (checkpoint/team/category names, clues) — those stay raw. Watch for arrow-function params named `t` shadowing the global `t()` inside `.map()` callbacks (rename to e.g. `ct`/`tm`/`th`).
+- **Race status machine** (`race-state.js`): `evt.status` moves `planning → ready → running → completed` (backward always allowed, with a confirm). Forward transitions are validated (`markReady` blocks without ≥1 checkpoint + `expectedRiders` set; `completeRace` warns about unfinished riders); only reachable via `onStatusSelectChange()` (topbar dropdown) or the blocking start-time dialog (`checkStartDialog()`, polled every second from `init()`, renders into `#start-dialog-root` — independent of `render()`/the active view since it must persist across navigation). `isCpLocked(evt)` gates checkpoint structure edits in `checkpoint.js`'s `renderSidebar()` once `status` is `running`/`completed` (with a `cpLockOverride` escape hatch during `running`) — this is the only read-only enforcement in place; other views do not yet respect race status.
 
 ### `php-backend/`
 

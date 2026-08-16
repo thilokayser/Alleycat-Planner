@@ -2,7 +2,9 @@
    ------------------------------------------------------------------
    Prüft alle Kernfunktionen der App End-to-End: Event-CRUD, alle
    Checkpoint-Typen (config-driven über CHECKPOINT_TYPES), Fahrerliste,
-   Teams (anlegen/zuordnen/Persistenz/Löschen), kompletter Ziel-Check-in-Flow
+   Teams (anlegen/zuordnen/Persistenz/Löschen), Renn-Zustandsmaschine
+   (Planung/Bereit/Läuft/Abgeschlossen inkl. CP-Struktur-Sperre und
+   Override), kompletter Ziel-Check-in-Flow
    (bestätigen/zurücksetzen/Undo-Toast/Speichern & schließen/Übersicht),
    Leaderboard inkl. Team-Wertung-Tab, Manifest, PDF-Export
    (Startnummern + Spokecards) und Storage-Roundtrip.
@@ -41,6 +43,7 @@ async function runAlleycatTestSuite(){
   await wait(80);
   const evt = state.currentEvent;
   check('Event wurde angelegt', !!evt);
+  checkEqual('Neues Event startet im Status "planning"', evt.status, 'planning');
   evt.name = 'Test-Alleycat ' + new Date().toISOString();
   evt.expectedRiders = 5;
 
@@ -74,6 +77,47 @@ async function runAlleycatTestSuite(){
   const teamStats = computeTeamStats(evt);
   checkEqual('computeTeamStats zählt Team-Rot-Mitglieder korrekt', teamStats.teams.find(t => t.team.id === evt.teams[0].id).memberCount, 2);
 
+  /* 3b) Renn-Zustandsmaschine */
+  {
+    const origAlert = window.alert;
+    const origConfirm = window.confirm;
+    let lastAlert = null, lastConfirm = null;
+    window.alert = (msg) => { lastAlert = msg; };
+    window.confirm = (msg) => { lastConfirm = msg; return true; };
+
+    const savedExpected = evt.expectedRiders;
+    evt.expectedRiders = 0;
+    markReady(evt);
+    check('markReady blockiert ohne gesetzte Kapazität', !!lastAlert && evt.status === 'planning');
+    evt.expectedRiders = savedExpected;
+
+    lastAlert = null;
+    markReady(evt);
+    checkEqual('markReady setzt Status auf "ready" (mit Warnungs-Bestätigung)', evt.status, 'ready');
+    check('markReady zeigt Warnungen (Spokecards/Manifest) im Confirm', !!lastConfirm && lastConfirm.includes('Bereit'));
+
+    startRace(evt);
+    checkEqual('startRace setzt Status auf "running"', evt.status, 'running');
+    check('CP-Struktur nach Rennstart gesperrt', isCpLocked(evt));
+
+    toggleCpLockOverride();
+    check('Override entsperrt CP-Struktur', !isCpLocked(evt));
+    toggleCpLockOverride();
+    check('Erneuter Toggle sperrt wieder', isCpLocked(evt));
+
+    lastConfirm = null;
+    completeRace(evt);
+    check('completeRace fragt nach unbestätigten Fahrern', !!lastConfirm && lastConfirm.includes('Fahrer'));
+    checkEqual('completeRace setzt Status auf "completed"', evt.status, 'completed');
+    check('CP-Struktur bleibt nach Abschluss gesperrt', isCpLocked(evt));
+
+    onStatusSelectChange('planning');
+    checkEqual('Rückwärts-Übergang über Dropdown funktioniert (mit Bestätigung)', evt.status, 'planning');
+
+    window.alert = origAlert;
+    window.confirm = origConfirm;
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -84,6 +128,7 @@ async function runAlleycatTestSuite(){
   checkEqual('Fahrerliste persistiert', reloaded && reloaded.riders.length, 5);
   checkEqual('Teams persistiert', reloaded && reloaded.teams.length, 2);
   checkEqual('Fahrer-Team-Zuordnung persistiert', reloaded && reloaded.riders[0].teamId, evt.teams[0].id);
+  checkEqual('Race-Status persistiert', reloaded && reloaded.status, evt.status);
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();

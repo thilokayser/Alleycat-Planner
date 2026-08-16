@@ -23,6 +23,7 @@ const CORE_FILES = [
   'export-csv.js',
   'export-gpx.js',
   'export-pdf.js',
+  'race-state.js',
   'dashboard.js',
   'ui-headquarter.js'
 ];

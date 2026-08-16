@@ -126,14 +126,30 @@ function setSaveStatus(status){
 }
 
 /* ---------------- init ---------------- */
+function applyStaticTranslations(){
+  const settingsBtn = document.getElementById('settings-gear-btn');
+  if(settingsBtn) settingsBtn.title = t('settings.title');
+  const searchInput = document.getElementById('map-search-input');
+  if(searchInput) searchInput.placeholder = t('map.searchPlaceholder');
+  const resizeHandle = document.getElementById('sidebar-resize-handle');
+  if(resizeHandle) resizeHandle.title = t('map.sidebarResizeTitle');
+  const legendMandatory = document.getElementById('legend-mandatory');
+  if(legendMandatory) legendMandatory.textContent = t('common.mandatory');
+  const legendBonus = document.getElementById('legend-bonus');
+  if(legendBonus) legendBonus.textContent = t('common.bonus');
+  const legendRoute = document.getElementById('legend-route');
+  if(legendRoute) legendRoute.textContent = t('map.routeLegend');
+}
 async function init(){
   if(!(await initStorageBackend())) return;
   await loadAppSettings();
   applyAppSettings();
+  applyStaticTranslations();
   await loadCustomCheckpointTypes();
   await loadEventsIndex();
   state.loading = false;
   render();
+  setInterval(checkStartDialog, 1000);
 }
 
 
@@ -301,6 +317,7 @@ function renderTopbar(){
     `<button class="btn ${state.view === item.view ? 'btn-primary' : ''}" onclick="${item.onclick(evtId)}">${item.label}</button>`;
   actions.innerHTML = `
     <button class="btn btn-ghost" onclick="goDashboard()">${t('ui.backToAllEvents')}</button>
+    ${renderStatusControl(state.currentEvent)}
     <span class="topbar-nav-buttons">${NAV_ITEMS.map(navBtn).join('')}</span>
   `;
   bottomNav.innerHTML = NAV_ITEMS.map(item => `

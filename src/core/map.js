@@ -82,7 +82,7 @@ function initSidebarResize(){
   });
 }
 function onMapClick(e){
-  if(!state.addMode || !state.currentEvent) return;
+  if(!state.addMode || !state.currentEvent || isCpLocked(state.currentEvent)) return;
   const order = state.currentEvent.checkpoints.length + 1;
   const cp = {
     id: uid('cp'),

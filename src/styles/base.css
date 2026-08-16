@@ -744,6 +744,49 @@
   .lb-progress-tag.points.zero{color:var(--steel);}
   .leaderboard-empty{padding:60px; text-align:center; color:var(--steel); font-family:'JetBrains Mono',monospace; font-size:12px;}
 
+  /* ---------- race status control ---------- */
+  .status-control{display:flex; align-items:center; gap:6px;}
+  .status-badge{
+    font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.05em;
+    padding:3px 8px; border-radius:3px; white-space:nowrap;
+  }
+  .status-badge.status-planning{background:rgba(124,131,136,0.18); color:var(--steel);}
+  .status-badge.status-ready{background:rgba(217,164,6,0.18); color:#d9a406;}
+  .status-badge.status-running{background:rgba(92,138,92,0.2); color:var(--ok); animation:status-pulse 2s ease-in-out infinite;}
+  .status-badge.status-completed{background:rgba(91,140,255,0.18); color:#5b8cff;}
+  @keyframes status-pulse{
+    0%, 100%{opacity:1;}
+    50%{opacity:0.55;}
+  }
+  .status-select{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; background:var(--asphalt-2); color:var(--chalk);
+    border:1px solid var(--asphalt-3); border-radius:3px; padding:3px 4px;
+  }
+
+  /* ---------- CP-structure lock ---------- */
+  .cp-lock-banner{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background:rgba(255,95,31,0.1); border:1px solid var(--hivis); border-radius:4px;
+    padding:8px 10px; margin-bottom:10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--hivis-2);
+  }
+  .cp-lock-banner.unlocked{background:rgba(92,138,92,0.1); border-color:var(--ok); color:var(--ok);}
+  .cp-row.locked .cp-drag-handle{cursor:default; opacity:0.35;}
+  .cp-edit-readonly{padding:10px 4px 4px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--steel);}
+  .cp-readonly-row{margin-bottom:5px; line-height:1.4;}
+  .cp-readonly-row b{color:var(--chalk); font-weight:700;}
+
+  /* ---------- start-time dialog ---------- */
+  .start-dialog-overlay{
+    position:fixed; inset:0; background:rgba(10,10,10,0.92); z-index:3000;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .start-dialog{
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:3px solid var(--hivis);
+    border-radius:6px; padding:32px; max-width:360px; width:90vw; text-align:center;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .start-dialog-title{font-family:'Oswald',sans-serif; font-size:20px; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px;}
+
   @media print{
     body *{visibility:hidden;}
     #print-root, #print-root *{visibility:visible;}

@@ -11,7 +11,13 @@ function withEventDefaults(evt){
     riders: [],
     teams: [],
     spokeCardImage: '',
-    manifestSettings: {}
+    manifestSettings: {},
+    status: 'planning',
+    statusChangedAt: '',
+    startConfirmedAt: '',
+    cpLockOverride: false,
+    spokecardsPrinted: false,
+    manifestGenerated: false
   }, evt);
   merged.checkpoints = (merged.checkpoints || []).map(withCheckpointDefaults);
   merged.riders = (merged.riders || []).map(withRiderDefaults);

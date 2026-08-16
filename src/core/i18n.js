@@ -96,7 +96,10 @@ const translations = {
     },
     map: {
       defaultCheckpointName: 'Checkpoint {order}',
-      searching: 'Suche …'
+      searching: 'Suche …',
+      searchPlaceholder: 'Adresse oder Ort suchen…',
+      sidebarResizeTitle: 'Ziehen, um die Sidebar zu vergrößern',
+      routeLegend: 'Route (Reihenfolge)'
     },
     exportCsv: {
       colRank: 'Rang', colBib: 'Bib', colName: 'Name', colTeam: 'Team',
@@ -299,6 +302,33 @@ const translations = {
       themeHellLabel: 'Hell', themeHellDesc: 'Helles Chrome, klassisches Papier',
       themeDunkelLabel: 'Dunkel', themeDunkelDesc: 'Durchgehend dunkel, ruhiger blauer Akzent',
       themeDraculaLabel: 'Dracula', themeDraculaDesc: 'Pink/Lila-Akzente auf klassischem Dracula-Dunkel'
+    },
+    raceState: {
+      planning: 'In Planung',
+      ready: 'Bereit',
+      running: 'Läuft',
+      completed: 'Abgeschlossen',
+      missingCheckpoint: 'Mindestens ein Checkpoint mit Position ist erforderlich.',
+      missingCapacity: 'Die erwartete Fahreranzahl muss gesetzt sein (unter „Fahrer").',
+      blockedTitle: 'Vorbereitung kann noch nicht abgeschlossen werden:',
+      spokecardsNotPrinted: 'Spokecards wurden noch nicht gedruckt.',
+      manifestNotGenerated: 'Manifest wurde noch nicht erzeugt.',
+      warningsConfirm: 'Trotzdem als „Bereit" markieren?',
+      backwardConfirm: 'Status wirklich zurück auf „{status}" setzen?',
+      startTimeReachedTitle: '🏁 Startzeit erreicht',
+      startNow: 'Rennen jetzt starten',
+      postpone5: '+5 Minuten verschieben',
+      completeConfirm: '{count} Fahrer noch nicht im Ziel — trotzdem abschließen?',
+      completeConfirmZero: 'Rennen wirklich abschließen?',
+      cpLockedBanner: '🔒 CP-Struktur gesperrt (Rennen läuft).',
+      cpUnlockedBanner: '🔓 Entsperrt — Änderungen während des laufenden Rennens möglich.',
+      unlockCp: 'Entsperren',
+      relockCp: 'Wieder sperren',
+      unlockConfirm: 'CP-Struktur wirklich entsperren? Änderungen während des laufenden Rennens können zu inkonsistenten Daten führen.',
+      cpLockedCompletedBanner: '🔒 Rennen abgeschlossen — CP-Struktur ist read-only.',
+      completePrompt: 'Vorbereitung abschließen',
+      startPrompt: 'Rennen jetzt starten',
+      completeRacePrompt: 'Rennen abschließen'
     }
   }
 };

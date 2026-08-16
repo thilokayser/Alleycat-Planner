@@ -253,6 +253,7 @@ function onCurfewPenaltyChange(value){
   debouncedSave();
 }
 function toggleAddMode(){
+  if(isCpLocked(state.currentEvent)) return;
   state.addMode = !state.addMode;
   renderSidebar();
 }
@@ -281,12 +282,20 @@ function renderSidebar(){
     return;
   }
   const evt = state.currentEvent;
+  const locked = isCpLocked(evt);
   const rows = evt.checkpoints.length === 0
     ? `<div class="cp-list-empty">${t('checkpoint.noCheckpointsYet')}<br>${t('checkpoint.activateHint')}</div>`
     : evt.checkpoints.map(cp => {
         const editing = state.editingId === cp.id;
         let editBlock = '';
-        if(editing){
+        if(editing && locked){
+          editBlock = `
+            <div class="cp-edit-readonly" onclick="event.stopPropagation()">
+              <div class="cp-readonly-row"><b>${t('checkpoint.checkpointTypeLabel')}:</b> ${escapeHtml(getCheckpointType(cp.type).fullLabel)}</div>
+              ${cp.clue ? `<div class="cp-readonly-row"><b>${t('checkpoint.clueLabel')}:</b> ${escapeHtml(cp.clue)}</div>` : ''}
+              <div class="cp-readonly-row"><b>${t('checkpoint.coordinatesLabel')}:</b> ${cp.lat.toFixed(5)}, ${cp.lng.toFixed(5)}</div>
+            </div>`;
+        } else if(editing){
           if(state.confirmDeleteCpId === cp.id){
             editBlock = `
               <div class="confirm-row">
@@ -358,21 +367,21 @@ function renderSidebar(){
           }
         }
         return `
-          <div class="cp-row ${editing ? 'editing' : ''} ${cp.mandatory ? '' : 'optional'}" data-cp-id="${cp.id}" onclick="selectCp('${cp.id}')">
+          <div class="cp-row ${editing ? 'editing' : ''} ${cp.mandatory ? '' : 'optional'} ${locked ? 'locked' : ''}" data-cp-id="${cp.id}" onclick="selectCp('${cp.id}')">
             <div class="cp-row-top">
-              <span class="cp-drag-handle" title="${t('checkpoint.dragToReorder')}" onpointerdown="onCpDragStart(event, '${cp.id}')" onclick="event.stopPropagation()">
+              <span class="cp-drag-handle" title="${t('checkpoint.dragToReorder')}" ${locked ? '' : `onpointerdown="onCpDragStart(event, '${cp.id}')"`} onclick="event.stopPropagation()">
                 <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.4"/><circle cx="7.5" cy="2.5" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13.5" r="1.4"/><circle cx="7.5" cy="13.5" r="1.4"/></svg>
               </span>
               <div class="cp-no">${cp.order}</div>
               <div class="cp-name" id="row-name-${cp.id}">${escapeHtml(cp.name || t('checkpoint.noName'))}</div>
               <span class="tag-type">${typeLabel(cp.type)}</span>
               <label class="cp-quick-toggle" title="${t('checkpoint.mandatoryCheckpointTitle')}" onclick="event.stopPropagation()">
-                <input type="checkbox" ${cp.mandatory ? 'checked' : ''} onchange="onEditMandatory('${cp.id}', this.checked)">
+                <input type="checkbox" ${cp.mandatory ? 'checked' : ''} ${locked ? 'disabled' : ''} onchange="onEditMandatory('${cp.id}', this.checked)">
                 ${t('checkpoint.mandatoryQuickToggle')}
               </label>
               <div class="cp-order-btns" onclick="event.stopPropagation()">
-                <button onclick="moveCp('${cp.id}', -1)" title="${t('checkpoint.moveUp')}">&uarr;</button>
-                <button onclick="moveCp('${cp.id}', 1)" title="${t('checkpoint.moveDown')}">&darr;</button>
+                <button onclick="moveCp('${cp.id}', -1)" title="${t('checkpoint.moveUp')}" ${locked ? 'disabled' : ''}>&uarr;</button>
+                <button onclick="moveCp('${cp.id}', 1)" title="${t('checkpoint.moveDown')}" ${locked ? 'disabled' : ''}>&darr;</button>
               </div>
             </div>
             ${editBlock}
@@ -422,8 +431,18 @@ function renderSidebar(){
         </div>
       ` : ''}
     </div>
+    ${evt.status === 'running' ? `
+      <div class="cp-lock-banner ${evt.cpLockOverride ? 'unlocked' : ''}">
+        <span>${evt.cpLockOverride ? t('raceState.cpUnlockedBanner') : t('raceState.cpLockedBanner')}</span>
+        <button class="btn btn-sm" onclick="toggleCpLockOverride()">${evt.cpLockOverride ? t('raceState.relockCp') : t('raceState.unlockCp')}</button>
+      </div>
+    ` : evt.status === 'completed' ? `
+      <div class="cp-lock-banner">
+        <span>${t('raceState.cpLockedCompletedBanner')}</span>
+      </div>
+    ` : ''}
     <div class="addmode-row">
-      <button class="btn btn-toggle ${state.addMode ? 'active' : ''}" onclick="toggleAddMode()">
+      <button class="btn btn-toggle ${state.addMode ? 'active' : ''}" onclick="toggleAddMode()" ${locked ? 'disabled' : ''}>
         ${state.addMode ? t('checkpoint.addModeActive') : t('checkpoint.addModeInactive')}
       </button>
       <div class="addmode-hint">${state.addMode ? t('checkpoint.addModeHintActive') : t('checkpoint.addModeHintInactive')}</div>

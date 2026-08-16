@@ -22,13 +22,13 @@
       <div class="brand-mark">AC</div>
       <div>
         <h1>Alleycat Dispatch</h1>
-        <span class="sub" id="topbar-sub">Organizer Backend</span>
+        <span class="sub" id="topbar-sub"></span>
       </div>
     </div>
     <div class="topbar-spacer"></div>
     <span class="save-status" id="save-status"></span>
     <div class="topbar-actions" id="topbar-actions"></div>
-    <button class="btn btn-ghost" onclick="openSettings()" title="Einstellungen">&#9881;</button>
+    <button class="btn btn-ghost" id="settings-gear-btn" onclick="openSettings()">&#9881;</button>
   </div>
 
   <div id="main">
@@ -39,19 +39,19 @@
         <div class="map-search">
           <div class="map-search-box">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="map-search-input" placeholder="Adresse oder Ort suchen…" oninput="onSearchInput(this.value)" autocomplete="off">
+            <input type="text" id="map-search-input" oninput="onSearchInput(this.value)" autocomplete="off">
             <button class="search-clear" id="map-search-clear" onclick="clearSearch()" style="display:none;">&times;</button>
           </div>
           <div class="map-search-results" id="map-search-results"></div>
         </div>
         <div class="map-legend">
-          <div class="item"><span class="dot mandatory"></span> Pflicht</div>
-          <div class="item"><span class="dot optional"></span> Bonus</div>
-          <div class="item"><span class="line"></span> Route (Reihenfolge)</div>
+          <div class="item"><span class="dot mandatory"></span> <span id="legend-mandatory"></span></div>
+          <div class="item"><span class="dot optional"></span> <span id="legend-bonus"></span></div>
+          <div class="item"><span class="line"></span> <span id="legend-route"></span></div>
           <div class="item" id="map-legend-types"></div>
         </div>
       </div>
-      <div class="sidebar-resize-handle" id="sidebar-resize-handle" title="Ziehen, um die Sidebar zu vergrößern"></div>
+      <div class="sidebar-resize-handle" id="sidebar-resize-handle"></div>
       <div class="sidebar" id="sidebar"></div>
     </div>
     <div id="view-manifest" class="view"></div>
@@ -62,6 +62,7 @@
   </div>
   <nav class="bottom-nav" id="bottom-nav"></nav>
   <div id="toast-root"></div>
+  <div id="start-dialog-root"></div>
 </div>
 
 <script>
