@@ -203,6 +203,8 @@ async function exportRidersPDF(){
   renderRiders();
   const doc = await buildRiderSheetDoc(evt);
   doc.save((evt.name || 'startnummern').replace(/\s+/g, '_').toLowerCase() + '-startnummern.pdf');
+  evt.bibsPrinted = true;
+  debouncedSave();
   state.riderSheetGenerating = false;
   renderRiders();
 }

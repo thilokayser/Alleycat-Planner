@@ -6,7 +6,10 @@
    Kategorie-Gruppen (Presets/eigene Gruppen/Umbenennen/Löschen inkl.
    Kaskade auf Fahrer-Zuordnungen), DNF/DNS-Status, CP-Reihenfolge
    (frei/fest) inkl. Out-of-Order-Warnung + Override-Log und
-   Haversine-Distanzberechnung, Renn-Zustandsmaschine
+   Haversine-Distanzberechnung, Dashboard-Übersicht mit anpassbaren
+   Widgets (Status-Kacheln/CP-Auslastung/Aktivität/Kategorie-Verteilung/
+   Mini-Leaderboard/Countdown/To-dos, inkl. Sichtbarkeit + Reihenfolge),
+   Renn-Zustandsmaschine
    (Planung/Bereit/Läuft/Abgeschlossen inkl. CP-Struktur-Sperre und
    Override), kompletter Ziel-Check-in-Flow
    (bestätigen/zurücksetzen/Undo-Toast/Speichern & schließen/Übersicht),
@@ -238,6 +241,83 @@ async function runAlleycatTestSuite(){
     evt.riders[2].checkpointOrderOverrides = [];
   }
 
+  /* 3e) Dashboard-Übersicht + Widgets */
+  {
+    checkEqual('Neues Event hat bibsPrinted=false per Default', evt.bibsPrinted, false);
+
+    const tiles = computeRiderStatusTiles(evt);
+    checkEqual('Status-Kacheln: 3 angemeldete Fahrer ohne Aktivität', tiles.registered, 3);
+    checkEqual('Status-Kacheln: 1 DNF', tiles.dnf, 1);
+    checkEqual('Status-Kacheln: 1 DNS', tiles.dns, 1);
+    checkEqual('Status-Kacheln: 0 unterwegs', tiles.underway, 0);
+    checkEqual('Status-Kacheln: 0 finished', tiles.finished, 0);
+
+    const synthEvt = {
+      checkpoints: [
+        {id: 'sa', order: 1, name: 'Start', lat: 50, lng: 8},
+        {id: 'sb', order: 2, name: 'Bahnhof', lat: 51, lng: 9}
+      ],
+      riders: [
+        {bib: 1, name: 'X', completed: ['sa', 'sb'], checkpointTimes: {sa: '2026-01-01T10:00', sb: '2026-01-01T10:15'}, finishTime: '2026-01-01T10:20', raceStatus: '', categories: {g: 'Fixed'}},
+        {bib: 2, name: 'Y', completed: ['sa'], checkpointTimes: {sa: '2026-01-01T10:05'}, finishTime: '', raceStatus: '', categories: {}}
+      ],
+      categoryGroups: [{id: 'g', name: 'Antrieb', options: ['Fixed', 'Free']}]
+    };
+    const load = computeCheckpointLoad(synthEvt);
+    checkEqual('computeCheckpointLoad: wenigste zuerst', load[0].checkpoint.id, 'sb');
+    checkEqual('computeCheckpointLoad: Bahnhof-Count', load[0].count, 1);
+    checkEqual('computeCheckpointLoad: Start-Count', load[1].count, 2);
+
+    const activity = computeRecentActivity(synthEvt, 10);
+    checkEqual('computeRecentActivity: alle Einträge erfasst (3 CP-Zeiten + 1 Zielzeit)', activity.length, 4);
+    checkEqual('computeRecentActivity: neueste zuerst (Zieleinlauf)', activity[0].label, t('overview.finishLabel'));
+
+    const dist = computeCategoryDistribution(synthEvt);
+    checkEqual('computeCategoryDistribution: eine Gruppe', dist.length, 1);
+    checkEqual('computeCategoryDistribution: Fixed-Count', dist[0].counts.find(c => c.opt === 'Fixed').count, 1);
+    checkEqual('computeCategoryDistribution: Free-Count', dist[0].counts.find(c => c.opt === 'Free').count, 0);
+
+    const mini = computeMiniLeaderboard(synthEvt, 5);
+    checkEqual('computeMiniLeaderboard: nur Finisher', mini.length, 1);
+    checkEqual('computeMiniLeaderboard: richtiger Fahrer', mini[0].bib, 1);
+
+    const untilInfo = computeStartCountdown({status: 'planning', startMode: 'scheduled', startTime: toLocalDateTimeInputValue(new Date(Date.now() + 3600000))});
+    checkEqual('computeStartCountdown: Modus "until" vor geplantem Start', untilInfo.mode, 'until');
+    check('computeStartCountdown: "until" liegt in der Zukunft', untilInfo.ms > 0);
+    const sinceInfo = computeStartCountdown({status: 'running', startConfirmedAt: toLocalDateTimeInputValue(new Date(Date.now() - 600000))});
+    checkEqual('computeStartCountdown: Modus "since" während des Rennens', sinceInfo.mode, 'since');
+    const durationInfo = computeStartCountdown({status: 'completed', startConfirmedAt: toLocalDateTimeInputValue(new Date(Date.now() - 3600000)), statusChangedAt: toLocalDateTimeInputValue(new Date(Date.now() - 600000))});
+    checkEqual('computeStartCountdown: Modus "duration" nach Abschluss', durationInfo.mode, 'duration');
+    const noneInfo = computeStartCountdown({status: 'planning', startMode: 'manual', startTime: ''});
+    checkEqual('computeStartCountdown: Modus "none" ohne geplante Startzeit', noneInfo.mode, 'none');
+
+    const todosBefore = computeDashboardTodos(evt);
+    check('computeDashboardTodos: keine "keine Checkpoints"-Warnung (Checkpoints vorhanden)', !todosBefore.some(td => td.key === 'noCheckpoints'));
+    check('computeDashboardTodos: keine Kapazitäts-Warnung (expectedRiders gesetzt)', !todosBefore.some(td => td.key === 'noCapacity'));
+    check('computeDashboardTodos: erkennt fehlende Startzeit', todosBefore.some(td => td.key === 'noStartTime'));
+    check('computeDashboardTodos: erkennt ungedruckte Startnummern/Spokecards', todosBefore.some(td => td.key === 'notPrinted'));
+    check('computeDashboardTodos: erkennt fehlendes Manifest', todosBefore.some(td => td.key === 'noManifest'));
+    checkEqual('computeDashboardTodos: alle Kategorie-Gruppen ohne Zuordnung gemeldet', todosBefore.filter(td => td.key.startsWith('catGroupEmpty')).length, evt.categoryGroups.length);
+
+    /* Widget-Sichtbarkeit + Reihenfolge in der Übersicht */
+    openOverview();
+    await wait(20);
+    check('Overview-View rendert Status-Kacheln (Default sichtbar)', document.querySelector('.overview-widget[data-widget="statusTiles"]') !== null);
+    check('Overview-View versteckt Mini-Leaderboard per Default', document.querySelector('.overview-widget[data-widget="miniLeaderboard"]') === null);
+    onOverviewWidgetVisibilityToggle('miniLeaderboard', true);
+    await wait(20);
+    check('Sichtbarkeits-Toggle blendet Mini-Leaderboard ein', document.querySelector('.overview-widget[data-widget="miniLeaderboard"]') !== null);
+    onOverviewWidgetVisibilityToggle('miniLeaderboard', false);
+    await wait(20);
+    check('Sichtbarkeits-Toggle blendet Mini-Leaderboard wieder aus', document.querySelector('.overview-widget[data-widget="miniLeaderboard"]') === null);
+
+    const orderBefore = evt.dashboardWidgetOrder.slice();
+    moveOverviewWidget(orderBefore[1], -1);
+    checkEqual('moveOverviewWidget vertauscht zwei Positionen', evt.dashboardWidgetOrder[0], orderBefore[1]);
+    moveOverviewWidget(orderBefore[1], 1);
+    checkEqual('Zurückverschieben stellt Original-Reihenfolge wieder her', evt.dashboardWidgetOrder[0], orderBefore[0]);
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -252,6 +332,8 @@ async function runAlleycatTestSuite(){
   checkEqual('Kategorie-Gruppen persistiert', reloaded && reloaded.categoryGroups.length, evt.categoryGroups.length);
   checkEqual('DNF-Status persistiert', reloaded && reloaded.riders[3].raceStatus, 'dnf');
   checkEqual('checkpointOrderMode persistiert', reloaded && reloaded.checkpointOrderMode, 'frei');
+  checkEqual('dashboardWidgetOrder persistiert', reloaded && reloaded.dashboardWidgetOrder.length, DASHBOARD_WIDGET_KEYS.length);
+  checkEqual('dashboardWidgetVisibility persistiert', reloaded && reloaded.dashboardWidgetVisibility.statusTiles, true);
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();

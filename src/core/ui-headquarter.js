@@ -31,11 +31,13 @@ let state = {
   leaderboardCsvSplitKey: '',
   leaderboardTab: 'individual',
   leaderboardTeamFilter: '',
+  overviewSettingsOpen: false,
 };
 let map, markersLayer, routeLine;
 let qrScanStream = null;
 let qrScanRAF = null;
 let liveCountdownInterval = null;
+let overviewTickInterval = null;
 let saveTimeout;
 let searchDebounce;
 let cpDragState = null;
@@ -174,6 +176,12 @@ async function openEditor(id){
   render();
   setTimeout(() => { initMap(); initSidebarResize(); applySidebarWidth(); }, 30);
 }
+function openOverview(){
+  state.view = 'overview';
+  state.overviewSettingsOpen = false;
+  render();
+  startOverviewTick();
+}
 function openManifest(){
   state.view = 'manifest';
   render();
@@ -268,6 +276,7 @@ function closeSettings(){
 function render(){
   renderTopbar();
   document.getElementById('view-dashboard').classList.toggle('active', state.view === 'dashboard');
+  document.getElementById('view-overview').classList.toggle('active', state.view === 'overview');
   document.getElementById('view-editor').classList.toggle('active', state.view === 'editor');
   document.getElementById('view-manifest').classList.toggle('active', state.view === 'manifest');
   document.getElementById('view-riders').classList.toggle('active', state.view === 'riders');
@@ -276,6 +285,7 @@ function render(){
   document.getElementById('view-settings').classList.toggle('active', state.view === 'settings');
 
   if(state.view === 'dashboard') renderDashboard();
+  if(state.view === 'overview') renderOverview();
   if(state.view === 'editor') renderSidebar();
   if(state.view === 'manifest') renderManifest();
   if(state.view === 'riders') renderRiders();
@@ -285,6 +295,8 @@ function render(){
 }
 
 const NAV_ITEMS = [
+  {view: 'overview', label: t('ui.navOverview'), shortLabel: t('ui.navOverview'), onclick: () => 'openOverview()',
+    icon: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>'},
   {view: 'editor', label: t('ui.navMap'), shortLabel: t('ui.navMap'), onclick: evtId => `openEditor('${evtId}')`,
     icon: '<path d="M12 21s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>'},
   {view: 'riders', label: t('ui.navRiders'), shortLabel: t('ui.navRiders'), onclick: () => 'openRiders()',
