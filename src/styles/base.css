@@ -519,6 +519,41 @@
     border-radius:2px; padding:4px 6px;
   }
   .team-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0; display:inline-block;}
+  .rider-categories-row{width:100%; display:flex; flex-wrap:wrap; gap:6px; justify-content:center;}
+  .rider-category-field{display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-width:90px;}
+  .rider-category-field label{font-family:'JetBrains Mono',monospace; font-size:8.5px; text-transform:uppercase; letter-spacing:0.04em; color:#8a8065;}
+  .rider-category-field select{
+    font-family:'Inter',sans-serif; font-size:11px; border:1px solid var(--paper-line); background:#faf6ea; color:var(--ink);
+    border-radius:2px; padding:3px 5px; width:100%;
+  }
+  .team-scoring-mode-row{display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap;}
+  .team-scoring-mode-row label{font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel);}
+  .team-scoring-mode-row select{
+    font-family:'Inter',sans-serif; font-size:12.5px; background:var(--asphalt); color:var(--chalk);
+    border:1px solid var(--asphalt-3); border-radius:3px; padding:5px 8px;
+  }
+  .category-options-list{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .category-option-chip{
+    display:inline-flex; align-items:center; gap:4px; background:var(--asphalt); border:1px solid var(--asphalt-3);
+    border-radius:12px; padding:2px 4px 2px 8px;
+  }
+  .category-option-chip input{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; background:none; border:none; color:var(--chalk);
+    width:auto; max-width:90px; padding:2px 0;
+  }
+  .category-option-chip button{background:none; border:none; color:var(--steel); cursor:pointer; font-size:13px; line-height:1; padding:0 2px;}
+  .category-option-chip button:hover{color:var(--stamp);}
+  .category-option-add{display:inline-flex; align-items:center; gap:4px;}
+  .category-option-add input{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; background:var(--asphalt); color:var(--chalk);
+    border:1px dashed var(--asphalt-3); border-radius:12px; padding:3px 8px; width:90px;
+  }
+  .category-option-add button{
+    font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; background:none;
+    border:1px solid var(--asphalt-3); color:var(--steel); border-radius:10px; padding:3px 8px; cursor:pointer;
+  }
+  .category-option-add button:hover{color:var(--hivis); border-color:var(--hivis);}
+  .checkin-dnf-dns-row{display:flex; gap:8px; margin-top:8px; justify-content:center;}
   .team-badge{
     display:inline-flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:10px;
     color:var(--steel); margin-left:6px; vertical-align:middle;
@@ -678,10 +713,22 @@
   }
   .lb-tab-btn:hover{color:var(--chalk); border-color:var(--steel);}
   .lb-tab-btn.active{background:var(--hivis); border-color:var(--hivis); color:var(--ink);}
-  .leaderboard-team-filter{
+  .leaderboard-team-filter, .leaderboard-status-filter, .leaderboard-category-filter, .leaderboard-csv-split{
     font-family:'JetBrains Mono',monospace; font-size:12px; background:var(--asphalt); color:var(--chalk);
     border:1px solid var(--asphalt-3); border-radius:3px; padding:8px 10px;
   }
+  .leaderboard-filter-chips{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:-8px 0 16px;}
+  .filter-chip{
+    display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:10.5px;
+    background:var(--asphalt-3); color:var(--chalk); border-radius:12px; padding:4px 6px 4px 10px;
+  }
+  .filter-chip button{background:none; border:none; color:var(--steel); cursor:pointer; font-size:13px; line-height:1; padding:0 2px;}
+  .filter-chip button:hover{color:var(--hivis);}
+  .filter-chip-reset{
+    background:none; border:none; color:var(--hivis-2); font-family:'JetBrains Mono',monospace; font-size:10.5px;
+    text-decoration:underline; cursor:pointer; padding:0;
+  }
+  .lb-scoring-mode-tag{font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--steel); text-transform:uppercase; letter-spacing:0.03em;}
   .leaderboard-toolbar{display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:16px; flex-shrink:0;}
   .leaderboard-search{
     flex:1; min-width:220px; max-width:360px; display:flex; align-items:center; gap:8px;

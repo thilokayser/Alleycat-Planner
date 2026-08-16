@@ -33,9 +33,17 @@ function playConfirmFeedback(){
 function confirmRiderAtFinish(){
   const rider = getActiveCheckinRider(); if(!rider) return;
   rider.finishTime = toLocalDateTimeInputValue(new Date());
+  rider.raceStatus = '';
   debouncedSave();
   renderCheckin();
   playConfirmFeedback();
+}
+function setRiderRaceStatus(status){
+  const rider = getActiveCheckinRider(); if(!rider) return;
+  rider.raceStatus = (rider.raceStatus === status) ? '' : status;
+  if(rider.raceStatus) rider.finishTime = '';
+  debouncedSave();
+  renderCheckin();
 }
 function unconfirmRiderAtFinish(){
   const rider = getActiveCheckinRider(); if(!rider) return;
@@ -257,6 +265,8 @@ function computeCurfewResult(evt, finishTimeValue){
   return {onTime: false, diffMin, penalty: null};
 }
 function riderStatusBadgeHtml(evt, rider){
+  if(rider.raceStatus === 'dnf') return `<span class="lb-status danger">${t('checkin.statusDnf')}</span>`;
+  if(rider.raceStatus === 'dns') return `<span class="lb-status missing">${t('checkin.statusDns')}</span>`;
   if(!rider.finishTime) return `<span class="lb-status missing">${t('checkin.statusMissing')}</span>`;
   const curfew = computeCurfewResult(evt, rider.finishTime);
   if(!curfew || curfew.onTime) return `<span class="lb-status arrived">${t('checkin.statusArrived')}</span>`;
@@ -361,10 +371,19 @@ function renderCheckin(){
           </div>
           <button class="btn btn-primary btn-sm" onclick="finishCheckin()" title="${t('checkin.saveAndCloseTitle')}">${t('checkin.saveAndClose')}</button>
         </div>
-        ${!rider.finishTime ? `
+        ${rider.raceStatus === 'dnf' || rider.raceStatus === 'dns' ? `
+          <div class="checkin-status danger">
+            <span>${rider.raceStatus === 'dnf' ? t('checkin.dnfSet') : t('checkin.dnsSet')}</span>
+            <button class="btn btn-ghost btn-sm" onclick="setRiderRaceStatus('${rider.raceStatus}')">${t('common.cancel')}</button>
+          </div>
+        ` : !rider.finishTime ? `
           <div class="checkin-confirm-row">
             <button class="btn btn-primary checkin-confirm-btn" onclick="confirmRiderAtFinish()">${t('checkin.confirmAtFinish')}</button>
             <div class="checkin-confirm-hint">${t('checkin.notYetConfirmedHint')}</div>
+            <div class="checkin-dnf-dns-row">
+              <button class="btn btn-ghost btn-sm" onclick="setRiderRaceStatus('dnf')">${t('checkin.markDnf')}</button>
+              <button class="btn btn-ghost btn-sm" onclick="setRiderRaceStatus('dns')">${t('checkin.markDns')}</button>
+            </div>
           </div>
         ` : `
           <div class="checkin-timing">

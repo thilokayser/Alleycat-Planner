@@ -15,6 +15,37 @@ function onLeaderboardTeamFilterChange(value){
   state.leaderboardTeamFilter = value;
   renderLeaderboard();
 }
+function onLeaderboardStatusFilterChange(value){
+  state.leaderboardStatusFilter = value;
+  renderLeaderboard();
+}
+function onLeaderboardCategoryFilterChange(groupId, value){
+  state.leaderboardCategoryFilters = state.leaderboardCategoryFilters || {};
+  if(value) state.leaderboardCategoryFilters[groupId] = value;
+  else delete state.leaderboardCategoryFilters[groupId];
+  renderLeaderboard();
+}
+function removeLeaderboardFilter(kind, groupId){
+  if(kind === 'team') state.leaderboardTeamFilter = '';
+  else if(kind === 'status') state.leaderboardStatusFilter = '';
+  else if(kind === 'category') delete state.leaderboardCategoryFilters[groupId];
+  renderLeaderboard();
+}
+function clearLeaderboardFilters(){
+  state.leaderboardSearch = '';
+  state.leaderboardTeamFilter = '';
+  state.leaderboardStatusFilter = '';
+  state.leaderboardCategoryFilters = {};
+  renderLeaderboard();
+}
+function riderMatchesStatusFilter(r, filter){
+  if(!filter) return true;
+  if(filter === 'dnf') return r.raceStatus === 'dnf';
+  if(filter === 'dns') return r.raceStatus === 'dns';
+  if(filter === 'arrived') return !!r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns';
+  if(filter === 'underway') return !r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns';
+  return true;
+}
 function setLeaderboardTab(tab){
   state.leaderboardTab = tab;
   renderLeaderboard();
@@ -28,6 +59,8 @@ function renderLeaderboard(){
   }
   const allRiders = evt.riders || [];
   const teams = evt.teams || [];
+  const groups = (evt.categoryGroups || []).slice().sort((a,b) => a.sortOrder - b.sortOrder);
+  const catFilters = state.leaderboardCategoryFilters || {};
   const cps = evt.checkpoints.slice().sort((a,b) => a.order - b.order);
   const mandatoryCps = cps.filter(c => c.mandatory);
 
@@ -35,9 +68,30 @@ function renderLeaderboard(){
   const riders = sortRidersForOverview(
     allRiders.filter(r =>
       (!q || String(r.bib).includes(q) || (r.name || '').toLowerCase().includes(q)) &&
-      (!state.leaderboardTeamFilter || r.teamId === state.leaderboardTeamFilter)
+      (!state.leaderboardTeamFilter || r.teamId === state.leaderboardTeamFilter) &&
+      riderMatchesStatusFilter(r, state.leaderboardStatusFilter) &&
+      groups.every(g => !catFilters[g.id] || (r.categories && r.categories[g.id] === catFilters[g.id]))
     )
   );
+
+  const activeFilters = [];
+  if(state.leaderboardTeamFilter){
+    const tm = teams.find(t => t.id === state.leaderboardTeamFilter);
+    if(tm) activeFilters.push({label: tm.name, onclick: `removeLeaderboardFilter('team')`});
+  }
+  if(state.leaderboardStatusFilter){
+    const statusLabels = {underway: t('leaderboard.statusUnderway'), arrived: t('checkin.statusArrived'), dnf: t('checkin.statusDnf'), dns: t('checkin.statusDns')};
+    activeFilters.push({label: statusLabels[state.leaderboardStatusFilter] || state.leaderboardStatusFilter, onclick: `removeLeaderboardFilter('status')`});
+  }
+  groups.forEach(g => {
+    if(catFilters[g.id]) activeFilters.push({label: `${g.name}: ${catFilters[g.id]}`, onclick: `removeLeaderboardFilter('category', '${g.id}')`});
+  });
+  const filterChipsHtml = activeFilters.length ? `
+    <div class="leaderboard-filter-chips">
+      ${activeFilters.map(f => `<span class="filter-chip">${escapeHtml(f.label)} <button type="button" onclick="${f.onclick}">&times;</button></span>`).join('')}
+      <button type="button" class="filter-chip-reset" onclick="clearLeaderboardFilters()">${t('leaderboard.resetFilters')}</button>
+    </div>
+  ` : '';
 
   const arrivedCount = allRiders.filter(r => r.finishTime).length;
   const arrivalPct = allRiders.length ? Math.round((arrivedCount / allRiders.length) * 100) : 0;
@@ -65,11 +119,13 @@ function renderLeaderboard(){
 
   if(state.leaderboardTab === 'teams'){
     const teamStats = computeTeamStats(evt);
+    const relevantTime = ts => teamStats.scoringMode === 'allMustFinish' ? ts.worstTime : ts.bestTime;
     const teamRowsHtml = teamStats.teams.map(ts => `
       <tr>
         <td class="lb-rider">${teamBadgeHtml(evt, ts.team.id)}</td>
         <td>${ts.memberCount}</td>
         <td>${ts.arrived}</td>
+        <td>${relevantTime(ts) ? formatDateTime(relevantTime(ts)) : '—'}</td>
         <td><span class="lb-progress-tag">${ts.doneMandatory}/${ts.memberCount * teamStats.mandatoryTotal} ${t('common.mandatory')}</span></td>
         ${teamStats.hasScoredCheckpoints ? `<td><span class="lb-progress-tag points${ts.totalScore === 0 ? ' zero' : ''}">${ts.totalScore} Pkt.</span></td>` : ''}
       </tr>
@@ -81,7 +137,7 @@ function renderLeaderboard(){
       </div>
       ${tabsHtml}
       <div class="leaderboard-toolbar">
-        <div class="leaderboard-stats"><span>${t(teamStats.teams.length === 1 ? 'leaderboard.teamCountSingular' : 'leaderboard.teamCountPlural', {count: teamStats.teams.length})}</span></div>
+        <div class="leaderboard-stats"><span>${t(teamStats.teams.length === 1 ? 'leaderboard.teamCountSingular' : 'leaderboard.teamCountPlural', {count: teamStats.teams.length})}</span> <span class="lb-scoring-mode-tag">${teamStats.scoringMode === 'allMustFinish' ? t('rider.teamScoringAllMustFinish') : t('rider.teamScoringBestTime')}</span></div>
         <button class="btn" onclick="exportLeaderboardCSV()">${t('leaderboard.exportCsv')}</button>
       </div>
       <div class="leaderboard-scroll">
@@ -91,11 +147,12 @@ function renderLeaderboard(){
               <th class="lb-rider">${t('leaderboard.colTeam')}</th>
               <th>${t('leaderboard.colRider')}</th>
               <th>${t('leaderboard.colArrived')}</th>
+              <th>${t('leaderboard.colTeamTime')}</th>
               <th>${t('leaderboard.colMandatoryDone')}</th>
               ${teamStats.hasScoredCheckpoints ? `<th>${t('leaderboard.colPoints')}</th>` : ''}
             </tr>
           </thead>
-          <tbody>${teamRowsHtml || `<tr><td colspan="5" class="leaderboard-empty">${t('leaderboard.noTeamsYet')}</td></tr>`}</tbody>
+          <tbody>${teamRowsHtml || `<tr><td colspan="6" class="leaderboard-empty">${t('leaderboard.noTeamsYet')}</td></tr>`}</tbody>
         </table>
       </div>
     `;
@@ -159,18 +216,39 @@ function renderLeaderboard(){
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" placeholder="${t('leaderboard.searchPlaceholder')}" value="${escapeHtml(state.leaderboardSearch)}" oninput="onLeaderboardSearchInput(this.value)">
       </div>
+      <select class="leaderboard-status-filter" onchange="onLeaderboardStatusFilterChange(this.value)">
+        <option value="">${t('leaderboard.allStatuses')}</option>
+        <option value="underway" ${state.leaderboardStatusFilter === 'underway' ? 'selected' : ''}>${t('leaderboard.statusUnderway')}</option>
+        <option value="arrived" ${state.leaderboardStatusFilter === 'arrived' ? 'selected' : ''}>${t('checkin.statusArrived')}</option>
+        <option value="dnf" ${state.leaderboardStatusFilter === 'dnf' ? 'selected' : ''}>${t('checkin.statusDnf')}</option>
+        <option value="dns" ${state.leaderboardStatusFilter === 'dns' ? 'selected' : ''}>${t('checkin.statusDns')}</option>
+      </select>
       ${teams.length ? `
         <select class="leaderboard-team-filter" onchange="onLeaderboardTeamFilterChange(this.value)">
           <option value="">${t('leaderboard.allTeams')}</option>
           ${teams.map(tm => `<option value="${tm.id}" ${state.leaderboardTeamFilter === tm.id ? 'selected' : ''}>${escapeHtml(tm.name)}</option>`).join('')}
         </select>
       ` : ''}
+      ${groups.map(g => `
+        <select class="leaderboard-category-filter" onchange="onLeaderboardCategoryFilterChange('${g.id}', this.value)">
+          <option value="">${escapeHtml(g.name)}</option>
+          ${g.options.map(opt => `<option value="${escapeHtml(opt)}" ${catFilters[g.id] === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}
+        </select>
+      `).join('')}
       <div class="leaderboard-stats">
         <div class="leaderboard-progress-bar"><div class="leaderboard-progress-fill" style="width:${arrivalPct}%"></div></div>
         <span><b>${arrivedCount}</b> ${t('leaderboard.ridersArrived', {total: allRiders.length})}</span>
       </div>
-      <button class="btn" onclick="exportLeaderboardCSV()">${t('leaderboard.exportCsv')}</button>
+      ${teams.length || groups.length ? `
+        <select class="leaderboard-csv-split" onchange="state.leaderboardCsvSplitKey = this.value;">
+          <option value="">${t('leaderboard.splitByNone')}</option>
+          ${teams.length ? `<option value="team">${t('leaderboard.splitByTeam')}</option>` : ''}
+          ${groups.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('')}
+        </select>
+      ` : ''}
+      <button class="btn" onclick="exportLeaderboardCSV(state.leaderboardCsvSplitKey)">${t('leaderboard.exportCsv')}</button>
     </div>
+    ${filterChipsHtml}
     <div class="leaderboard-scroll">
       <table class="leaderboard-table">
         <thead>

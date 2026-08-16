@@ -2,12 +2,14 @@
    ------------------------------------------------------------------
    Prüft alle Kernfunktionen der App End-to-End: Event-CRUD, alle
    Checkpoint-Typen (config-driven über CHECKPOINT_TYPES), Fahrerliste,
-   Teams (anlegen/zuordnen/Persistenz/Löschen), Renn-Zustandsmaschine
+   Teams (anlegen/zuordnen/Persistenz/Löschen/Wertungsmodus),
+   Kategorie-Gruppen (Presets/eigene Gruppen/Umbenennen/Löschen inkl.
+   Kaskade auf Fahrer-Zuordnungen), DNF/DNS-Status, Renn-Zustandsmaschine
    (Planung/Bereit/Läuft/Abgeschlossen inkl. CP-Struktur-Sperre und
    Override), kompletter Ziel-Check-in-Flow
    (bestätigen/zurücksetzen/Undo-Toast/Speichern & schließen/Übersicht),
-   Leaderboard inkl. Team-Wertung-Tab, Manifest, PDF-Export
-   (Startnummern + Spokecards) und Storage-Roundtrip.
+   Leaderboard inkl. Team-Wertung-Tab und kombinierbaren Filtern, Manifest,
+   PDF-Export (Startnummern + Spokecards) und Storage-Roundtrip.
 
    Läuft UNVERÄNDERT gegen beide gebauten Varianten (erst `node build.js`):
      - dist/alleycat-dispatch-local.html   (SQLite via sql.js/IndexedDB, oder window.storage)
@@ -118,6 +120,79 @@ async function runAlleycatTestSuite(){
     window.confirm = origConfirm;
   }
 
+  /* 3c) Kategorien + DNF/DNS + Team-Wertungsmodus */
+  {
+    openRiders();
+    await wait(20);
+    addCategoryPreset('drivetrain');
+    addCategoryPreset('gender');
+    checkEqual('2 Kategorie-Presets hinzugefügt', evt.categoryGroups.length, 2);
+    addCategoryPreset('drivetrain');
+    checkEqual('Erneutes Preset-Hinzufügen erzeugt keine Dopplung', evt.categoryGroups.length, 2);
+
+    toggleNewCategoryGroupForm();
+    await wait(20);
+    document.getElementById('newcatgroup-name').value = 'Rahmenmaterial';
+    document.querySelectorAll('.newcatgroup-option-input')[0].value = 'Stahl';
+    addNewCategoryGroupOptionField();
+    await wait(20);
+    checkEqual('"+ Option" fügt Feld hinzu ohne bestehende Eingabe zu löschen', document.querySelectorAll('.newcatgroup-option-input')[0].value, 'Stahl');
+    document.querySelectorAll('.newcatgroup-option-input')[1].value = 'Alu';
+    addCategoryGroup();
+    checkEqual('Eigene Kategorie-Gruppe angelegt', evt.categoryGroups.length, 3);
+
+    const drivetrainGroup = evt.categoryGroups.find(g => g.name === 'Antrieb');
+    onRiderCategoryChange(evt.riders[0].bib, drivetrainGroup.id, 'Fixed');
+    checkEqual('Fahrer-Kategorie zugeordnet', evt.riders[0].categories[drivetrainGroup.id], 'Fixed');
+
+    renameCategoryOption(drivetrainGroup.id, 'Fixed', 'Fixed Gear');
+    checkEqual('Options-Umbenennung kaskadiert zur Fahrer-Zuordnung', evt.riders[0].categories[drivetrainGroup.id], 'Fixed Gear');
+
+    const origConfirm3 = window.confirm;
+    window.confirm = () => true;
+    deleteCategoryOption(drivetrainGroup.id, 'Fixed Gear');
+    check('Options-Löschung setzt betroffene Fahrer-Zuordnung zurück', !evt.riders[0].categories[drivetrainGroup.id]);
+
+    const genderGroup = evt.categoryGroups.find(g => g.name === 'Gender');
+    onRiderCategoryChange(evt.riders[1].bib, genderGroup.id, 'Open');
+    deleteCategoryGroup(genderGroup.id);
+    window.confirm = origConfirm3;
+    checkEqual('Gruppe gelöscht', evt.categoryGroups.length, 2);
+    check('Fahrer-Zuordnung nach Gruppen-Löschung entfernt', !evt.riders[1].categories[genderGroup.id]);
+
+    /* DNF/DNS auf riders[3]/[4] — unabhängig von den späteren Check-in-Tests auf riders[0]/[1] */
+    openCheckin();
+    selectCheckinRiderByBib(evt.riders[3].bib);
+    setRiderRaceStatus('dnf');
+    checkEqual('Fahrer als DNF markiert', getActiveCheckinRider().raceStatus, 'dnf');
+    check('DNF-Badge wird angezeigt', riderStatusBadgeHtml(evt, getActiveCheckinRider()).includes('DNF'));
+    selectCheckinRiderByBib(evt.riders[4].bib);
+    setRiderRaceStatus('dns');
+    checkEqual('Fahrer als DNS markiert', getActiveCheckinRider().raceStatus, 'dns');
+
+    /* Team-Wertungsmodus — nutzt Team Blau (bereits mit Fahrer #3 belegt) statt ein neues Team anzulegen,
+       damit der spätere "Team-Wertung zeigt beide Teams"-Check (Abschnitt 10a) bei 2 Teams bleibt */
+    const scoringTeam = evt.teams[1];
+    onRiderTeamChange(evt.riders[3].bib, scoringTeam.id);
+    onTeamScoringModeChange('allMustFinish');
+    let scoringStats = computeTeamStats(evt).teams.find(ts => ts.team.id === scoringTeam.id);
+    check('allMustFinish: Team mit DNF-Fahrer nicht "allFinished"', !scoringStats.allFinished);
+    onTeamScoringModeChange('bestTime');
+    checkEqual('Team-Wertungsmodus persistiert auf Event', evt.teamScoringMode, 'bestTime');
+
+    /* Leaderboard-Filter kombiniert */
+    openLeaderboard();
+    await wait(20);
+    onLeaderboardStatusFilterChange('dnf');
+    await wait(20);
+    checkEqual('Status-Filter "DNF" zeigt genau einen Fahrer', document.querySelectorAll('#view-leaderboard .lb-row').length, 1);
+    const dnfChip = document.querySelector('.filter-chip');
+    check('Aktiver Filter erzeugt Chip', !!dnfChip);
+    clearLeaderboardFilters();
+    await wait(20);
+    checkEqual('"Filter zurücksetzen" zeigt wieder alle Fahrer', document.querySelectorAll('#view-leaderboard .lb-row').length, 5);
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -129,6 +204,8 @@ async function runAlleycatTestSuite(){
   checkEqual('Teams persistiert', reloaded && reloaded.teams.length, 2);
   checkEqual('Fahrer-Team-Zuordnung persistiert', reloaded && reloaded.riders[0].teamId, evt.teams[0].id);
   checkEqual('Race-Status persistiert', reloaded && reloaded.status, evt.status);
+  checkEqual('Kategorie-Gruppen persistiert', reloaded && reloaded.categoryGroups.length, evt.categoryGroups.length);
+  checkEqual('DNF-Status persistiert', reloaded && reloaded.riders[3].raceStatus, 'dnf');
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();

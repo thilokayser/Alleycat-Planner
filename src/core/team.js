@@ -52,18 +52,43 @@ function deleteTeam(id){
   debouncedSave();
   renderRiders();
 }
+function onTeamScoringModeChange(mode){
+  const evt = state.currentEvent;
+  if(!evt) return;
+  evt.teamScoringMode = mode;
+  debouncedSave();
+  render();
+}
 
 function computeTeamStats(evt){
   const riders = evt.riders || [];
   const mandatoryCps = evt.checkpoints.filter(c => c.mandatory);
   const hasScoredCheckpoints = evt.checkpoints.some(cp => getCheckpointType(cp.type).isScored);
+  const mode = evt.teamScoringMode === 'allMustFinish' ? 'allMustFinish' : 'bestTime';
   const teams = (evt.teams || []).map(t => {
     const members = riders.filter(r => r.teamId === t.id);
-    const arrived = members.filter(r => r.finishTime).length;
+    const arrivedMembers = members.filter(r => r.finishTime);
+    const arrived = arrivedMembers.length;
+    const finishTimes = arrivedMembers.map(r => new Date(r.finishTime).getTime()).filter(ms => !isNaN(ms));
+    const bestTime = finishTimes.length ? Math.min(...finishTimes) : null;
+    const allFinished = members.length > 0 && arrived === members.length;
+    const worstTime = allFinished && finishTimes.length ? Math.max(...finishTimes) : null;
     const doneMandatory = members.reduce((sum, r) => sum + mandatoryCps.filter(cp => (r.completed || []).includes(cp.id)).length, 0);
     const totalScore = members.reduce((sum, r) => sum + Object.values(r.scores || {}).reduce((s, v) => s + (Number(v) || 0), 0), 0);
-    return {team: t, memberCount: members.length, arrived, doneMandatory, totalScore};
+    return {team: t, memberCount: members.length, arrived, doneMandatory, totalScore, bestTime, worstTime, allFinished};
   });
-  teams.sort((a, b) => b.arrived - a.arrived || b.totalScore - a.totalScore);
-  return {teams, hasScoredCheckpoints, mandatoryTotal: mandatoryCps.length};
+  if(mode === 'allMustFinish'){
+    teams.sort((a, b) => {
+      if(a.allFinished !== b.allFinished) return a.allFinished ? -1 : 1;
+      if(a.allFinished && b.allFinished) return a.worstTime - b.worstTime;
+      return b.arrived - a.arrived || b.totalScore - a.totalScore;
+    });
+  } else {
+    teams.sort((a, b) => {
+      if(!!a.bestTime !== !!b.bestTime) return a.bestTime ? -1 : 1;
+      if(a.bestTime && b.bestTime) return a.bestTime - b.bestTime;
+      return b.arrived - a.arrived || b.totalScore - a.totalScore;
+    });
+  }
+  return {teams, hasScoredCheckpoints, mandatoryTotal: mandatoryCps.length, scoringMode: mode};
 }

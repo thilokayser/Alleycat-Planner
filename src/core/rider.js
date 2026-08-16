@@ -6,7 +6,9 @@ function withRiderDefaults(rider){
     finishTime: '',
     completed: [],
     scores: {},
-    checkpointTimes: {}
+    checkpointTimes: {},
+    raceStatus: '',
+    categories: {}
   }, rider);
 }
 
@@ -73,6 +75,7 @@ function renderRiders(){
   }
   const riders = evt.riders || [];
   const teams = evt.teams || [];
+  const groups = (evt.categoryGroups || []).slice().sort((a,b) => a.sortOrder - b.sortOrder);
   const cards = riders.map(r => `
     <div class="rider-card">
       <div class="rider-qr" id="qr-${r.bib}"></div>
@@ -85,6 +88,17 @@ function renderRiders(){
           ${teams.map(tm => `<option value="${tm.id}" ${r.teamId === tm.id ? 'selected' : ''}>${escapeHtml(tm.name)}</option>`).join('')}
         </select>
       </div>
+      ${groups.length ? `<div class="rider-categories-row">
+        ${groups.map(g => `
+          <div class="rider-category-field">
+            <label>${escapeHtml(g.name)}</label>
+            <select onchange="onRiderCategoryChange(${r.bib}, '${g.id}', this.value)">
+              <option value="">${t('category.noCategory')}</option>
+              ${g.options.map(opt => `<option value="${escapeHtml(opt)}" ${r.categories && r.categories[g.id] === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}
+            </select>
+          </div>
+        `).join('')}
+      </div>` : ''}
       <input type="text" class="rider-emergency-input" placeholder="${t('rider.emergencyPlaceholder')}" value="${escapeHtml(r.emergencyContact || '')}" oninput="onRiderEmergencyInput(${r.bib}, this.value)">
     </div>
   `).join('');
@@ -118,6 +132,52 @@ function renderRiders(){
     </div>
   ` : `<button class="btn" onclick="toggleNewTeamForm()">${t('rider.newTeam')}</button>`;
 
+  const availablePresets = CATEGORY_PRESETS.filter(p => !groups.some(g => g.name === p.name));
+  const categoryGroupRows = groups.map(g => `
+    <div class="type-row category-group-row">
+      <div class="type-info" style="flex:1;">
+        <input type="text" class="team-name-input" value="${escapeHtml(g.name)}" onchange="renameCategoryGroup('${g.id}', this.value)">
+        <div class="category-options-list">
+          ${g.options.map(opt => `
+            <span class="category-option-chip">
+              <input type="text" value="${escapeHtml(opt)}" data-group="${g.id}" data-old="${escapeHtml(opt)}" onchange="renameCategoryOption(this.dataset.group, this.dataset.old, this.value)">
+              <button type="button" data-group="${g.id}" data-value="${escapeHtml(opt)}" onclick="deleteCategoryOption(this.dataset.group, this.dataset.value)" title="${t('common.delete')}">&times;</button>
+            </span>
+          `).join('')}
+          <span class="category-option-add">
+            <input type="text" id="newoption-${g.id}" placeholder="${t('category.optionPlaceholder')}" onkeydown="if(event.key==='Enter'){ addCategoryOption('${g.id}'); event.preventDefault(); }">
+            <button type="button" onclick="addCategoryOption('${g.id}')">${t('category.addOption')}</button>
+          </span>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="deleteCategoryGroup('${g.id}')">${t('common.delete')}</button>
+    </div>
+  `).join('');
+  const newCategoryGroupForm = state.newCategoryGroupFormOpen ? `
+    <div class="settings-form">
+      <div>
+        <label>${t('category.groupNameLabel')}</label>
+        <input type="text" id="newcatgroup-name" placeholder="${t('category.groupNamePlaceholder')}">
+      </div>
+      <div>
+        <label>${t('category.optionsLabel')}</label>
+        <div id="newcatgroup-options-container">
+          <input type="text" class="newcatgroup-option-input" placeholder="${t('category.optionPlaceholder')} 1" style="margin-bottom:6px; display:block;">
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addNewCategoryGroupOptionField()">${t('category.addOption')}</button>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="addCategoryGroup()">${t('category.createGroup')}</button>
+        <button class="btn btn-ghost" onclick="toggleNewCategoryGroupForm()">${t('common.cancel')}</button>
+      </div>
+    </div>
+  ` : `
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      ${availablePresets.map(p => `<button class="btn btn-sm" onclick="addCategoryPreset('${p.key}')">+ ${escapeHtml(p.name)}</button>`).join('')}
+      <button class="btn" onclick="toggleNewCategoryGroupForm()">${t('category.newGroup')}</button>
+    </div>
+  `;
+
   el.innerHTML = `
     <div class="riders-toolbar">
       <div class="riders-count-field">
@@ -140,8 +200,32 @@ function renderRiders(){
     ${state.printPopupBlocked ? `<div class="riders-hint warn">${t('rider.printPopupBlocked')}</div>` : ''}
     <div class="settings-section" style="margin:0 0 22px;">
       <h3 style="font-size:15px;">${t('rider.teamsHeading')}</h3>
+      <div class="team-scoring-mode-row">
+        <label>${t('rider.teamScoringModeLabel')}</label>
+        <select onchange="onTeamScoringModeChange(this.value)">
+          <option value="bestTime" ${evt.teamScoringMode !== 'allMustFinish' ? 'selected' : ''}>${t('rider.teamScoringBestTime')}</option>
+          <option value="allMustFinish" ${evt.teamScoringMode === 'allMustFinish' ? 'selected' : ''}>${t('rider.teamScoringAllMustFinish')}</option>
+        </select>
+      </div>
       <div class="type-list">${teamRows || `<div class="riders-hint" style="padding:0;">${t('rider.noTeamsYet')}</div>`}</div>
       ${newTeamForm}
+    </div>
+    <div class="settings-section" style="margin:0 0 22px;">
+      <h3 style="font-size:15px;">${t('category.heading')}</h3>
+      <div class="type-list">${categoryGroupRows || `<div class="riders-hint" style="padding:0;">${t('category.noGroupsYet')}</div>`}</div>
+      ${newCategoryGroupForm}
+      ${groups.length ? `
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+          <input type="file" id="import-categories-file" accept="application/json,.json" style="display:none;" onchange="onImportCategoriesFile(this)">
+          <button class="btn btn-sm" onclick="document.getElementById('import-categories-file').click()">${t('category.importJson')}</button>
+          <button class="btn btn-sm" onclick="exportCategoriesJSON()">${t('category.exportJson')}</button>
+        </div>
+      ` : `
+        <div style="margin-top:12px;">
+          <input type="file" id="import-categories-file" accept="application/json,.json" style="display:none;" onchange="onImportCategoriesFile(this)">
+          <button class="btn btn-sm" onclick="document.getElementById('import-categories-file').click()">${t('category.importJson')}</button>
+        </div>
+      `}
     </div>
     <div class="spokecard-design">
       <label>${t('rider.cardDesignLabel')}</label>

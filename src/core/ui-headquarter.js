@@ -25,6 +25,10 @@ let state = {
   settingsReturnView: 'dashboard',
   newTypeFormOpen: false,
   newTeamFormOpen: false,
+  newCategoryGroupFormOpen: false,
+  leaderboardStatusFilter: '',
+  leaderboardCategoryFilters: {},
+  leaderboardCsvSplitKey: '',
   leaderboardTab: 'individual',
   leaderboardTeamFilter: '',
 };

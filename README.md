@@ -30,8 +30,10 @@ Beide Varianten prüfen zusätzlich zuerst, ob `window.storage` verfügbar ist (
 - Events mit beliebig vielen Checkpoints, Position per Karte (Leaflet) oder Koordinaten
 - Checkpoint-Typen: QR-Code-Scan, Foto-Beweis, Item-Abgabe, Rätselfrage, Checkpoint-Wertung (Challenge, gepunktet) — plus eigene Checkpoint-Typen über die Einstellungen definierbar
 - Fahrerliste mit Startnummern, Notfallkontakt-Feld (nicht auf gedruckten Startnummern/Spokecards sichtbar)
-- Ziel-Check-in-Flow mit Bestätigen/Zurücksetzen inkl. Undo
-- Leaderboard, Export als CSV (Excel-DE-kompatibel, semikolon-getrennt)
+- Teams (Solo/Team-Zuordnung, Team-Wertung mit wählbarem Wertungsmodus: beste Einzelzeit oder alle müssen finishen) und frei definierbare Kategorie-Gruppen (Presets Antrieb/Gender oder eigene) pro Fahrer
+- Renn-Zustandsmaschine (Planung → Bereit → Läuft → Abgeschlossen) mit CP-Struktur-Sperre während des Rennens und blockierendem Start-Dialog bei geplanter Startzeit
+- Ziel-Check-in-Flow mit Bestätigen/Zurücksetzen inkl. Undo, sowie DNF-/DNS-Markierung
+- Leaderboard mit kombinierbaren Filtern (Status, Team, Kategorien) und Export als CSV (Excel-DE-kompatibel, semikolon-getrennt, optional aufgeteilt nach Team/Kategorie)
 - Manifest- sowie Startnummern-/Spokecards-PDF-Export
 - Routen-Export als GPX
 - 4 Themes (Feldpost, Hell, Dunkel, Dracula) und 3 Icon-Packs (Emoji, Font Awesome, Material Symbols) über die Einstellungen
