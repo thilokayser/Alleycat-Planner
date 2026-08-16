@@ -1,0 +1,166 @@
+{
+  "name": "Kölner Kurier-Alleycat",
+  "date": "2026-09-19",
+  "description": "Herbst-Alleycat quer durch die Kölner Innenstadt entlang des Rheins — 5 Checkpoints, ein Rätsel und eine Marshal-Challenge.",
+  "startMode": "manual",
+  "startTime": "19:00",
+  "curfewMode": "soft",
+  "curfewTime": "22:30",
+  "curfewPenaltyPerMin": 2,
+  "expectedRiders": 8,
+  "spokeCardImage": "",
+  "manifestSettings": {
+    "showNr": true,
+    "showCheckpoint": true,
+    "showTyp": true,
+    "showClue": true,
+    "showKoordinaten": true,
+    "showPunch": true,
+    "headerImage": "",
+    "headerImageWidth": 0,
+    "headerImageHeight": 0
+  },
+  "checkpoints": [
+    {
+      "id": "cp-koeln-dom",
+      "order": 1,
+      "lat": 50.9413,
+      "lng": 6.9583,
+      "name": "Kölner Dom — Südportal",
+      "clue": "Start am Hauptportal, Blick Richtung Hauptbahnhof.",
+      "mandatory": true,
+      "type": "qr",
+      "customQuestion": "",
+      "punchCode": "DOM2026",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": ""
+    },
+    {
+      "id": "cp-hohenzollernbruecke",
+      "order": 2,
+      "lat": 50.9414,
+      "lng": 6.9608,
+      "name": "Hohenzollernbrücke",
+      "clue": "Foto mit Blick auf die Liebesschlösser am Brückengeländer.",
+      "mandatory": true,
+      "type": "photo",
+      "customQuestion": "",
+      "punchCode": "BRUECKE",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": ""
+    },
+    {
+      "id": "cp-rheinauhafen",
+      "order": 3,
+      "lat": 50.9271,
+      "lng": 6.9678,
+      "name": "Rheinauhafen — Kranhäuser",
+      "clue": "Beim Marshal am Fuß des mittleren Kranhauses melden.",
+      "mandatory": true,
+      "type": "item",
+      "customQuestion": "",
+      "punchCode": "KRANHAUS",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": ""
+    },
+    {
+      "id": "cp-ebertplatz",
+      "order": 4,
+      "lat": 50.9527,
+      "lng": 6.9541,
+      "name": "Ebertplatz",
+      "clue": "Bonus-Checkpoint — nur für Punkte, kein Pflicht-Stempel.",
+      "mandatory": false,
+      "type": "custom",
+      "customQuestion": "Wie viele Fahrspuren führen im Kreisverkehr am Ebertplatz um den Brunnen herum?",
+      "punchCode": "",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": ""
+    },
+    {
+      "id": "cp-zuelpicherplatz",
+      "order": 5,
+      "lat": 50.9280,
+      "lng": 6.9310,
+      "name": "Zülpicher Platz — Marshal-Challenge",
+      "clue": "Track-Stand-Wertung durch den Marshal, 0–10 Punkte.",
+      "mandatory": false,
+      "type": "challenge",
+      "customQuestion": "",
+      "punchCode": "",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": ""
+    }
+  ],
+  "riders": [
+    {
+      "bib": 1,
+      "name": "Lena Krüger",
+      "finishTime": "2026-09-19T21:14",
+      "completed": ["cp-koeln-dom", "cp-hohenzollernbruecke", "cp-rheinauhafen", "cp-ebertplatz", "cp-zuelpicherplatz"],
+      "scores": { "cp-zuelpicherplatz": 8 },
+      "checkpointTimes": {}
+    },
+    {
+      "bib": 2,
+      "name": "Jonas Vogt",
+      "finishTime": "2026-09-19T21:42",
+      "completed": ["cp-koeln-dom", "cp-hohenzollernbruecke", "cp-rheinauhafen"],
+      "scores": {},
+      "checkpointTimes": {}
+    },
+    {
+      "bib": 3,
+      "name": "Mira Sander",
+      "finishTime": "",
+      "completed": ["cp-koeln-dom"],
+      "scores": {},
+      "checkpointTimes": {}
+    },
+    {
+      "bib": 4,
+      "name": "Tom Brandt",
+      "finishTime": "",
+      "completed": [],
+      "scores": {},
+      "checkpointTimes": {}
+    },
+    {
+      "bib": 5,
+      "name": "Yara Nowak",
+      "finishTime": "",
+      "completed": [],
+      "scores": {},
+      "checkpointTimes": {}
+    },
+    {
+      "bib": 6,
+      "name": "Finn Ostrowski",
+      "finishTime": "",
+      "completed": [],
+      "scores": {},
+      "checkpointTimes": {}
+    },
+    {
+      "bib": 7,
+      "name": "Elif Aydın",
+      "finishTime": "",
+      "completed": [],
+      "scores": {},
+      "checkpointTimes": {}
+    },
+    {
+      "bib": 8,
+      "name": "Paul Reimann",
+      "finishTime": "",
+      "completed": [],
+      "scores": {},
+      "checkpointTimes": {}
+    }
+  ]
+}

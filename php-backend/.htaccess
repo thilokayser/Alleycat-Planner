@@ -1,0 +1,12 @@
+# Verhindert direkten Web-Zugriff auf die generierte Config mit den DB-Zugangsdaten.
+<IfModule mod_authz_core.c>
+  <Files "config.php">
+    Require all denied
+  </Files>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  <Files "config.php">
+    Order allow,deny
+    Deny from all
+  </Files>
+</IfModule>
