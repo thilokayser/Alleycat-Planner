@@ -91,6 +91,7 @@
   .brand span.sub{display:block; font-family:'JetBrains Mono'; font-size:10px; color:var(--steel); letter-spacing:0.12em; text-transform:uppercase; margin-top:1px;}
   .topbar-spacer{flex:1;}
   .topbar-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;}
+  .bottom-nav{display:none;}
   .save-status{
     font-family:'JetBrains Mono'; font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em;
     white-space:nowrap; opacity:0; transition:opacity .15s;
@@ -570,7 +571,7 @@
   .checkin-search label{display:block; font-family:'JetBrains Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:5px;}
   .checkin-search-row{display:flex; gap:8px;}
   .checkin-search-row input{
-    flex:1; font-family:'JetBrains Mono'; font-size:18px; padding:9px 10px;
+    flex:1; min-width:0; font-family:'JetBrains Mono'; font-size:18px; padding:9px 10px;
     border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); border-radius:3px;
   }
   .checkin-search-hint{color:var(--steel); font-family:'JetBrains Mono'; font-size:12px; text-align:center; padding:30px 10px;}
@@ -772,10 +773,20 @@
   }
 
   @media (max-width: 700px){
-    .topbar{flex-wrap:wrap; row-gap:10px;}
-    .topbar-spacer{display:none;}
-    .topbar-actions{flex-wrap:wrap; width:100%;}
-    .topbar-actions .btn{padding:7px 11px; font-size:12px;}
+    .topbar-nav-buttons{display:none;}
+    .bottom-nav{
+      display:flex; flex-shrink:0; background:var(--asphalt-2); border-top:1px solid var(--asphalt-3);
+      padding-bottom:env(safe-area-inset-bottom, 0);
+    }
+    .bottom-nav:empty{display:none;}
+    .bottom-nav-item{
+      flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+      padding:8px 2px 7px; border:none; background:none; color:var(--steel);
+      font-family:'JetBrains Mono'; font-size:9.5px; text-transform:uppercase; letter-spacing:0.02em;
+      cursor:pointer;
+    }
+    .bottom-nav-item svg{width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.8;}
+    .bottom-nav-item.active{color:var(--hivis);}
   }
 
   @media (max-width: 520px){
@@ -836,6 +847,7 @@
     <div id="view-leaderboard" class="view"></div>
     <div id="view-settings" class="view"></div>
   </div>
+  <nav class="bottom-nav" id="bottom-nav"></nav>
   <div id="toast-root"></div>
 </div>
 
@@ -2581,34 +2593,51 @@ function render(){
   if(state.view === 'settings') renderSettings();
 }
 
+const NAV_ITEMS = [
+  {view: 'editor', label: 'Karte', shortLabel: 'Karte', onclick: evtId => `openEditor('${evtId}')`,
+    icon: '<path d="M12 21s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>'},
+  {view: 'riders', label: 'Fahrer', shortLabel: 'Fahrer', onclick: () => 'openRiders()',
+    icon: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/>'},
+  {view: 'checkin', label: 'Ziel-Check-in', shortLabel: 'Check-in', onclick: () => 'openCheckin()',
+    icon: '<path d="M6 3v18"/><path d="M6 4h12l-3 4 3 4H6"/>'},
+  {view: 'leaderboard', label: 'Leaderboard', shortLabel: 'Board', onclick: () => 'openLeaderboard()',
+    icon: '<path d="M7 4h10v3a5 5 0 0 1-10 0V4z"/><path d="M7 5H4.5A2.5 2.5 0 0 0 7 9.5"/><path d="M17 5h2.5A2.5 2.5 0 0 1 17 9.5"/><path d="M12 12v3.5"/><path d="M9.5 19.5h5"/><path d="M10.3 15.5h3.4l.6 4h-4.6z"/>'},
+  {view: 'manifest', label: 'Manifest ansehen', shortLabel: 'Manifest', onclick: () => 'openManifest()',
+    icon: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M9.5 12.5h5"/><path d="M9.5 16h5"/>'}
+];
 function renderTopbar(){
   const sub = document.getElementById('topbar-sub');
   const actions = document.getElementById('topbar-actions');
+  const bottomNav = document.getElementById('bottom-nav');
 
   if(state.view === 'settings'){
     sub.textContent = 'Einstellungen';
     actions.innerHTML = `<button class="btn btn-ghost" onclick="closeSettings()">&larr; Zurück</button>`;
+    bottomNav.innerHTML = '';
     return;
   }
 
   if(state.view === 'dashboard' || !state.currentEvent){
     sub.textContent = 'Organizer Backend';
     actions.innerHTML = '';
+    bottomNav.innerHTML = '';
     return;
   }
 
   sub.textContent = state.currentEvent.name || 'Unbenanntes Event';
   const evtId = state.currentEvent.id;
-  const navBtn = (view, label, onclick) =>
-    `<button class="btn ${state.view === view ? 'btn-primary' : ''}" onclick="${onclick}">${label}</button>`;
+  const navBtn = item =>
+    `<button class="btn ${state.view === item.view ? 'btn-primary' : ''}" onclick="${item.onclick(evtId)}">${item.label}</button>`;
   actions.innerHTML = `
     <button class="btn btn-ghost" onclick="goDashboard()">&larr; Alle Events</button>
-    ${navBtn('editor', 'Karte', `openEditor('${evtId}')`)}
-    ${navBtn('riders', 'Fahrer', 'openRiders()')}
-    ${navBtn('checkin', 'Ziel-Check-in', 'openCheckin()')}
-    ${navBtn('leaderboard', 'Leaderboard', 'openLeaderboard()')}
-    ${navBtn('manifest', 'Manifest ansehen', 'openManifest()')}
+    <span class="topbar-nav-buttons">${NAV_ITEMS.map(navBtn).join('')}</span>
   `;
+  bottomNav.innerHTML = NAV_ITEMS.map(item => `
+    <button class="bottom-nav-item ${state.view === item.view ? 'active' : ''}" onclick="${item.onclick(evtId)}">
+      <svg viewBox="0 0 24 24">${item.icon}</svg>
+      <span>${item.shortLabel}</span>
+    </button>
+  `).join('');
 }
 
 /* ---------------- render: settings ---------------- */
