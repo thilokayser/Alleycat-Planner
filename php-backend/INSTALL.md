@@ -1,6 +1,6 @@
 # Installguide: PHP-Backend einrichten
 
-Schritt-für-Schritt-Anleitung, um `alleycat-dispatch-server.html` mit einem eigenen PHP/MySQL-Backend zu verbinden — für den Einsatz mit mehreren Organizern/Geräten auf demselben Event. Dauert je nach Hosting-Anbieter ca. 5–10 Minuten, keine Kommandozeile nötig.
+Schritt-für-Schritt-Anleitung, um die Server-Variante der App mit einem eigenen PHP/MySQL-Backend zu verbinden — für den Einsatz mit mehreren Organizern/Geräten auf demselben Event. Dauert je nach Hosting-Anbieter ca. 5–10 Minuten.
 
 **Voraussetzung:** ein Webspace mit PHP und MySQL (jedes normale Shared-Hosting-Paket reicht, kein WordPress nötig).
 
@@ -62,7 +62,7 @@ https://deinedomain.tld/php-backend/api.php
 
 ### <img src="install-guide/step-7-verbinden.svg" width="56" align="top"> Schritt 7 — Mit der App verbinden
 
-`alleycat-dispatch-server.html` öffnen — beim ersten Start erscheint ein Setup-Screen. Dort API-Endpunkt und API-Key aus Schritt 5 eintragen und auf **Verbinden** klicken. Die Zugangsdaten werden danach lokal im Browser gemerkt (nur der Zugang, nicht die Event-Daten selbst).
+Im Repo `node build.js` ausführen und `dist/alleycat-dispatch-server.html` öffnen — beim ersten Start erscheint ein Setup-Screen. Dort API-Endpunkt und API-Key aus Schritt 5 eintragen und auf **Verbinden** klicken. Die Zugangsdaten werden danach lokal im Browser gemerkt (nur der Zugang, nicht die Event-Daten selbst).
 
 Zum späteren Zurücksetzen (z. B. anderes Backend eintragen): die Seite mit `?reset-php-config` an der URL aufrufen.
 
@@ -70,6 +70,6 @@ Zum späteren Zurücksetzen (z. B. anderes Backend eintragen): die Seite mit `?r
 
 ## Fertig
 
-Ab jetzt teilen sich alle Geräte, die `alleycat-dispatch-server.html` mit denselben Zugangsdaten öffnen, dieselben Events — Organizer und Marshals sehen denselben Stand.
+Ab jetzt teilen sich alle Geräte, die die Server-Variante mit denselben Zugangsdaten öffnen, dieselben Events — Organizer und Marshals sehen denselben Stand.
 
 Bei Problemen: siehe [README.md](README.md) für die Datei-Übersicht und was `api.php`/`config.php` genau tun.

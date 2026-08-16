@@ -1,0 +1,33 @@
+  :root{
+    --asphalt:#17191a;
+    --asphalt-2:#212425;
+    --asphalt-3:#2b2f31;
+    --paper:#eee5cd;
+    --paper-2:#e4d9bb;
+    --paper-line:#c9bc95;
+    --ink:#241f18;
+    --hivis:#ff5f1f;
+    --hivis-2:#ff8a3d;
+    --stamp:#b23a2e;
+    --steel:#7c8388;
+    --chalk:#f3f1e8;
+    --ok:#5c8a5c;
+  }
+  :root[data-theme="hell"]{
+    --asphalt:#f4f1ea; --asphalt-2:#ffffff; --asphalt-3:#e3ddc9;
+    --paper:#fffdf7; --paper-2:#f7f2e4; --paper-line:#d8cdae;
+    --ink:#241f18; --hivis:#e0551c; --hivis-2:#ff7a33; --stamp:#b23a2e;
+    --steel:#8c8371; --chalk:#241f18; --ok:#3f7a3f;
+  }
+  :root[data-theme="dunkel"]{
+    --asphalt:#121212; --asphalt-2:#1a1a1a; --asphalt-3:#262626;
+    --paper:#1e1e1e; --paper-2:#252525; --paper-line:#3a3a3a;
+    --ink:#e8e6df; --hivis:#5b8cff; --hivis-2:#7ea5ff; --stamp:#e05a4e;
+    --steel:#8a8f93; --chalk:#f0efe9; --ok:#5c8a5c;
+  }
+  :root[data-theme="dracula"]{
+    --asphalt:#282a36; --asphalt-2:#21222c; --asphalt-3:#383a4c;
+    --paper:#2b2d3a; --paper-2:#323445; --paper-line:#44475a;
+    --ink:#f8f8f2; --hivis:#ff79c6; --hivis-2:#bd93f9; --stamp:#ff5555;
+    --steel:#6272a4; --chalk:#f8f8f2; --ok:#50fa7b;
+  }

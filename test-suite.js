@@ -2,16 +2,17 @@
    ------------------------------------------------------------------
    Prüft alle Kernfunktionen der App End-to-End: Event-CRUD, alle
    Checkpoint-Typen (config-driven über CHECKPOINT_TYPES), Fahrerliste,
-   kompletter Ziel-Check-in-Flow (bestätigen/zurücksetzen/Undo-Toast/
-   Speichern & schließen/Übersicht), Leaderboard, Manifest, PDF-Export
+   Teams (anlegen/zuordnen/Persistenz/Löschen), kompletter Ziel-Check-in-Flow
+   (bestätigen/zurücksetzen/Undo-Toast/Speichern & schließen/Übersicht),
+   Leaderboard inkl. Team-Wertung-Tab, Manifest, PDF-Export
    (Startnummern + Spokecards) und Storage-Roundtrip.
 
-   Läuft UNVERÄNDERT gegen beide Projekt-Varianten:
-     - alleycat-dispatch-local.html   (SQLite via sql.js/IndexedDB, oder window.storage)
-     - alleycat-dispatch-server.html  (PHP/MySQL-Backend, oder window.storage)
+   Läuft UNVERÄNDERT gegen beide gebauten Varianten (erst `node build.js`):
+     - dist/alleycat-dispatch-local.html   (SQLite via sql.js/IndexedDB, oder window.storage)
+     - dist/alleycat-dispatch-server.html  (PHP/MySQL-Backend, oder window.storage)
    Die SQLite-spezifischen Zusatz-Checks (Export -> Re-Import) laufen
    automatisch nur mit, wenn eine `sqlDb`-Instanz im Scope existiert (also
-   gegen alleycat-dispatch-local.html).
+   gegen dist/alleycat-dispatch-local.html).
 
    Verwendung: Diesen Datei-Inhalt in der Browser-Konsole der laufenden
    App einfügen (oder per <script src="test-suite.js"> temporär laden)
@@ -62,6 +63,17 @@ async function runAlleycatTestSuite(){
   evt.riders[0].name = 'Alice';
   evt.riders[1].name = 'Bob';
 
+  /* 3a) Teams anlegen + Fahrer zuordnen */
+  evt.teams.push({id: uid('team'), name: 'Team Rot', color: '#e0551c'});
+  evt.teams.push({id: uid('team'), name: 'Team Blau', color: '#3a6ea5'});
+  checkEqual('2 Teams angelegt', evt.teams.length, 2);
+  onRiderTeamChange(evt.riders[0].bib, evt.teams[0].id);
+  onRiderTeamChange(evt.riders[1].bib, evt.teams[0].id);
+  onRiderTeamChange(evt.riders[2].bib, evt.teams[1].id);
+  checkEqual('Fahrer #1 Team zugeordnet', evt.riders[0].teamId, evt.teams[0].id);
+  const teamStats = computeTeamStats(evt);
+  checkEqual('computeTeamStats zählt Team-Rot-Mitglieder korrekt', teamStats.teams.find(t => t.team.id === evt.teams[0].id).memberCount, 2);
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -70,6 +82,8 @@ async function runAlleycatTestSuite(){
   checkEqual('Event-Name persistiert', reloaded && reloaded.name, evt.name);
   checkEqual('Checkpoints persistiert', reloaded && reloaded.checkpoints.length, CHECKPOINT_TYPES.length);
   checkEqual('Fahrerliste persistiert', reloaded && reloaded.riders.length, 5);
+  checkEqual('Teams persistiert', reloaded && reloaded.teams.length, 2);
+  checkEqual('Fahrer-Team-Zuordnung persistiert', reloaded && reloaded.riders[0].teamId, evt.teams[0].id);
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();
@@ -113,6 +127,23 @@ async function runAlleycatTestSuite(){
   const lbRows = document.querySelectorAll('#view-leaderboard .lb-row');
   checkEqual('Leaderboard zeigt alle Fahrer', lbRows.length, evt.riders.length);
   check('Leaderboard rendert ohne Fehler', document.getElementById('view-leaderboard').innerHTML.length > 100);
+  check('Team-Badge in Einzelwertung sichtbar', document.querySelectorAll('#view-leaderboard .team-badge').length > 0);
+
+  /* 10a) Team-Wertung-Tab */
+  setLeaderboardTab('teams');
+  await wait(20);
+  const teamRows = document.querySelectorAll('#view-leaderboard .leaderboard-table tbody tr');
+  checkEqual('Team-Wertung zeigt beide Teams', teamRows.length, 2);
+  setLeaderboardTab('individual');
+  await wait(20);
+
+  /* 10b) Team löschen -> Fahrer verliert Zuordnung */
+  const origConfirm = window.confirm;
+  window.confirm = () => true;
+  deleteTeam(evt.teams[1].id);
+  window.confirm = origConfirm;
+  checkEqual('Team-Liste nach Löschen verkleinert', evt.teams.length, 1);
+  checkEqual('Fahrer #3 verliert Team-Zuordnung nach Löschen', evt.riders[2].teamId, null);
 
   /* 11) Manifest (Web + PDF) */
   openManifest();
@@ -130,7 +161,7 @@ async function runAlleycatTestSuite(){
   const afterDelete = await loadEvent(evt.id);
   checkEqual('Event nach Löschen nicht mehr im Storage', afterDelete, null);
 
-  /* 14) SQLite-spezifisch — läuft nur mit, wenn sqlDb existiert (alleycat-dispatch-local.html) */
+  /* 14) SQLite-spezifisch — läuft nur mit, wenn sqlDb existiert (dist/alleycat-dispatch-local.html) */
   if(typeof sqlDb !== 'undefined' && sqlDb){
     check('[SQLite] sqlDb-Instanz vorhanden', true);
     await createNewEvent();
