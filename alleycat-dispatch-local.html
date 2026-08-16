@@ -583,7 +583,7 @@
   .checkin-name-col{flex:1; display:flex; flex-direction:column; gap:6px; min-width:0;}
   .checkin-name-input{
     width:100%; font-family:'Inter'; font-size:14px; border:1px solid var(--paper-line);
-    background:#faf6ea; color:var(--ink); border-radius:2px; padding:7px 9px;
+    background:var(--paper-2); color:var(--ink); border-radius:2px; padding:7px 9px;
   }
   .checkin-emergency-input{
     width:100%; font-family:'JetBrains Mono'; font-size:11px; border:1px dashed var(--stamp);
@@ -599,7 +599,7 @@
   .checkin-timing{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:16px; padding-bottom:16px; border-bottom:1px dashed var(--paper-line);}
   .checkin-timing label{display:block; font-family:'JetBrains Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:#6b6248; margin-bottom:4px;}
   .checkin-timing input[type=datetime-local]{
-    font-family:'Inter'; font-size:12.5px; border:1px solid var(--paper-line); background:#faf6ea; color:var(--ink);
+    font-family:'Inter'; font-size:12.5px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink);
     border-radius:2px; padding:6px 8px;
   }
   .checkin-status{font-family:'JetBrains Mono'; font-size:11.5px; padding:6px 10px; border-radius:3px; font-weight:700;}
@@ -627,7 +627,7 @@
   .checkin-cp-check input{accent-color:var(--stamp); cursor:pointer; width:16px; height:16px;}
   .checkin-score-row{display:flex; gap:4px; flex-wrap:wrap;}
   .score-btn{
-    width:26px; height:26px; border-radius:3px; border:1px solid var(--paper-line); background:#faf6ea;
+    width:26px; height:26px; border-radius:3px; border:1px solid var(--paper-line); background:var(--paper-2);
     color:var(--ink); font-family:'JetBrains Mono'; font-size:11px; font-weight:700; cursor:pointer;
   }
   .score-btn:hover{border-color:var(--stamp);}
@@ -638,7 +638,7 @@
     color:#6b6248; margin-bottom:4px;
   }
   .checkin-timewindow input[type=datetime-local]{
-    font-family:'Inter'; font-size:12px; border:1px solid var(--paper-line); background:#faf6ea; color:var(--ink);
+    font-family:'Inter'; font-size:12px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink);
     border-radius:2px; padding:5px 7px;
   }
   .tw-badge{
@@ -724,6 +724,7 @@
     display:inline-flex; align-items:center; justify-content:center;
     width:19px; height:19px; border-radius:50%; font-family:'JetBrains Mono'; font-weight:700; font-size:10px;
     margin-right:8px; flex-shrink:0; vertical-align:middle;
+    background:var(--asphalt-3); color:var(--steel);
   }
   .lb-rank.tier-1{background:var(--hivis); color:var(--ink);}
   .lb-rank.tier-2{background:var(--hivis-2); color:var(--ink);}
@@ -750,6 +751,7 @@
     padding:3px 7px; border-radius:3px; display:inline-block; white-space:nowrap;
   }
   .lb-progress-tag.points{color:var(--hivis-2);}
+  .lb-progress-tag.points.zero{color:var(--steel);}
   .leaderboard-empty{padding:60px; text-align:center; color:var(--steel); font-family:'JetBrains Mono'; font-size:12px;}
 
   @media print{
@@ -2149,7 +2151,7 @@ function updateLiveCountdown(){
   if(evt.startMode === 'scheduled' && evt.startTime){
     const start = new Date(evt.startTime);
     if(!isNaN(start.getTime()) && now < start){
-      text = '\u{1F6A6} Start in ' + formatCountdown(start - now);
+      text = 'Start in ' + formatCountdown(start - now);
       cls = 'start';
     }
   }
@@ -2157,13 +2159,13 @@ function updateLiveCountdown(){
     const curfew = new Date(evt.curfewTime);
     if(!isNaN(curfew.getTime())){
       if(now < curfew){
-        text = '⏱ Curfew in ' + formatCountdown(curfew - now);
+        text = 'Curfew in ' + formatCountdown(curfew - now);
         cls = 'curfew';
       } else if(evt.curfewMode === 'soft'){
-        text = '⚠ ' + formatCountdown(now - curfew) + ' über Curfew';
+        text = formatCountdown(now - curfew) + ' über Curfew';
         cls = 'over';
       } else {
-        text = '\u{1F512} Curfew erreicht — Rennen beendet';
+        text = 'Curfew erreicht — Rennen beendet';
         cls = 'over';
       }
     }
@@ -3245,11 +3247,11 @@ function renderCheckin(){
             <input type="text" class="checkin-name-input" placeholder="Name (optional)" value="${escapeHtml(rider.name || '')}" oninput="onCheckinNameChange(this.value)">
             <input type="text" class="checkin-emergency-input" placeholder="Notfallkontakt (Name &amp; Telefon)" value="${escapeHtml(rider.emergencyContact || '')}" oninput="onCheckinEmergencyChange(this.value)">
           </div>
-          <button class="btn btn-primary btn-sm" onclick="finishCheckin()" title="Speichert sofort und wechselt zur Suche zurück">💾 Speichern &amp; schließen</button>
+          <button class="btn btn-primary btn-sm" onclick="finishCheckin()" title="Speichert sofort und wechselt zur Suche zurück">Speichern &amp; schließen</button>
         </div>
         ${!rider.finishTime ? `
           <div class="checkin-confirm-row">
-            <button class="btn btn-primary checkin-confirm-btn" onclick="confirmRiderAtFinish()">✓ Fahrer ist im Ziel — bestätigen</button>
+            <button class="btn btn-primary checkin-confirm-btn" onclick="confirmRiderAtFinish()">Fahrer ist im Ziel — bestätigen</button>
             <div class="checkin-confirm-hint">Noch nicht bestätigt — Zielzeit wird erst beim Klick erfasst.</div>
           </div>
         ` : `
@@ -3259,7 +3261,7 @@ function renderCheckin(){
               <input type="datetime-local" value="${escapeHtml(rider.finishTime || '')}" onchange="onCheckinFinishTimeChange(this.value)">
             </div>
             ${curfewBlock}
-            <button class="btn btn-ghost btn-sm" onclick="unconfirmRiderAtFinish()" title="Falls versehentlich bestätigt">↺ Zurücksetzen</button>
+            <button class="btn btn-ghost btn-sm" onclick="unconfirmRiderAtFinish()" title="Falls versehentlich bestätigt">Zurücksetzen</button>
           </div>
         `}
         ${evt.checkpoints.length === 0 ? `<div class="cp-list-empty">Keine Checkpoints im Event.</div>` : `<div class="checkin-cp-list">${cpRows}</div>`}
@@ -3286,7 +3288,7 @@ function renderCheckin(){
           <div class="checkin-search-row">
             <input type="text" id="checkin-bib-input" inputmode="numeric" placeholder="z.B. 7" value="${escapeHtml(state.checkinBibInput)}" oninput="onCheckinBibInput(this.value)" onkeydown="if(event.key==='Enter') findCheckinRider()">
             <button class="btn btn-primary" onclick="findCheckinRider()">Suchen</button>
-            <button class="btn" onclick="startQrScan()" title="QR-Code der Spokecard scannen">📷 Scannen</button>
+            <button class="btn" onclick="startQrScan()" title="QR-Code der Spokecard scannen">Scannen</button>
           </div>
         </div>
         ${body}
@@ -3394,7 +3396,7 @@ function renderLeaderboard(){
 
     const rank = rankMap.get(r.bib);
     const rankTier = rank === 1 ? 'tier-1' : rank === 2 ? 'tier-2' : rank === 3 ? 'tier-3' : '';
-    const rankBadge = rank && rankTier ? `<span class="lb-rank ${rankTier}">${rank}</span>` : '';
+    const rankBadge = rank ? `<span class="lb-rank ${rankTier}">${rank}</span>` : '';
 
     return `
       <tr class="lb-row ${r.finishTime ? 'arrived' : 'missing'}">
@@ -3402,7 +3404,7 @@ function renderLeaderboard(){
         ${cells}
         <td>${statusHtml}</td>
         <td><span class="lb-progress-tag">${doneMandatory}/${mandatoryCps.length} Pflicht &middot; ${completed.length}/${cps.length} ges.</span></td>
-        ${hasScoredCheckpoints ? `<td><span class="lb-progress-tag points">${totalScore} Pkt.</span></td>` : ''}
+        ${hasScoredCheckpoints ? `<td><span class="lb-progress-tag points${totalScore === 0 ? ' zero' : ''}">${totalScore} Pkt.</span></td>` : ''}
       </tr>`;
   }).join('');
 
