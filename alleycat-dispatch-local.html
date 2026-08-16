@@ -3439,7 +3439,8 @@ function renderLeaderboard(){
   `;
 }
 function csvEscape(v){
-  const s = String(v == null ? '' : v);
+  let s = String(v == null ? '' : v);
+  if(/^[=+\-@]/.test(s)) s = "'" + s;
   return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 function exportLeaderboardCSV(){

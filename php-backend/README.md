@@ -21,6 +21,6 @@ Danach liegen `config.php` (Zugangsdaten + API-Key, per `.htaccess` vor Web-Zugr
 - `.htaccess` — sperrt Direktzugriff auf `config.php`.
 - `config.php` — wird von `install.php` erzeugt, enthält DB-Zugangsdaten + API-Key. Nicht committen/teilen.
 
-## Noch offen
+## Verwendung
 
-Die App selbst (`alleycat-dispatch_2.html`) spricht diesen Endpunkt noch nicht an — das ist der nächste Schritt, sobald der Server-Teil hier erfolgreich läuft.
+Die Server-Variante der App, `alleycat-dispatch-server.html` im Repo-Root, spricht diesen Endpunkt bereits an (Setup-Screen fragt beim ersten Start nach API-Endpunkt und -Key).

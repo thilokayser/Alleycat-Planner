@@ -7,10 +7,11 @@
    (Startnummern + Spokecards) und Storage-Roundtrip.
 
    Läuft UNVERÄNDERT gegen beide Projekt-Varianten:
-     - alleycat-dispatch_2.html          (localStorage/window.storage)
-     - sqlite-fork/alleycat-dispatch_2.html  (SQLite via sql.js)
+     - alleycat-dispatch-local.html   (SQLite via sql.js/IndexedDB, oder window.storage)
+     - alleycat-dispatch-server.html  (PHP/MySQL-Backend, oder window.storage)
    Die SQLite-spezifischen Zusatz-Checks (Export -> Re-Import) laufen
-   automatisch nur mit, wenn eine `sqlDb`-Instanz im Scope existiert.
+   automatisch nur mit, wenn eine `sqlDb`-Instanz im Scope existiert (also
+   gegen alleycat-dispatch-local.html).
 
    Verwendung: Diesen Datei-Inhalt in der Browser-Konsole der laufenden
    App einfügen (oder per <script src="test-suite.js"> temporär laden)
@@ -129,7 +130,7 @@ async function runAlleycatTestSuite(){
   const afterDelete = await loadEvent(evt.id);
   checkEqual('Event nach Löschen nicht mehr im Storage', afterDelete, null);
 
-  /* 14) SQLite-spezifisch — läuft nur mit, wenn sqlDb existiert (sqlite-fork) */
+  /* 14) SQLite-spezifisch — läuft nur mit, wenn sqlDb existiert (alleycat-dispatch-local.html) */
   if(typeof sqlDb !== 'undefined' && sqlDb){
     check('[SQLite] sqlDb-Instanz vorhanden', true);
     await createNewEvent();
