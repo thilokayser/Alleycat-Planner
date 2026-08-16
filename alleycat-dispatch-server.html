@@ -431,6 +431,11 @@
 
   .sidebar-foot{padding:12px 18px; border-top:1px solid var(--paper-line); flex-shrink:0; display:flex; gap:8px;}
   .sidebar-foot .btn{flex:1;}
+  /* .btn defaults to --chalk text for use on dark (--asphalt) backgrounds; the sidebar
+     sits on --paper instead, where --chalk is too close to the background to read
+     (e.g. Feldpost theme: both are light cream) — use --ink like the rest of the sidebar. */
+  .sidebar .btn{color:var(--ink);}
+  .sidebar .btn:hover{border-color:var(--stamp); color:var(--stamp);}
 
   .confirm-row{background:rgba(178,58,46,0.12); padding:8px; border-radius:3px; margin-top:8px; font-family:'JetBrains Mono'; font-size:11px;}
   .confirm-row .row2{margin-top:6px;}
