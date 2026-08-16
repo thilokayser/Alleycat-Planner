@@ -17,7 +17,7 @@ Beide Varianten prüfen zusätzlich zuerst, ob `window.storage` verfügbar ist (
 
 **Schnellstart lokal:** `alleycat-dispatch-local.html` direkt im Browser öffnen — läuft sofort, keine weitere Einrichtung nötig.
 
-**Schnellstart Server:** siehe [`php-backend/README.md`](php-backend/README.md) — kurz zusammengefasst: `php-backend/` auf einen PHP+MySQL-Webspace hochladen, `install.php` einmal aufrufen, API-Endpunkt + Key kopieren und danach `install.php` löschen. Anschließend `alleycat-dispatch-server.html` öffnen und die Zugangsdaten im Setup-Screen eintragen.
+**Schnellstart Server:** bebilderte Anleitung in [`php-backend/INSTALL.md`](php-backend/INSTALL.md) — kurz zusammengefasst: `php-backend/` auf einen PHP+MySQL-Webspace hochladen, `install.php` einmal aufrufen, API-Endpunkt + Key kopieren und danach `install.php` löschen. Anschließend `alleycat-dispatch-server.html` öffnen und die Zugangsdaten im Setup-Screen eintragen.
 
 ## Features
 

@@ -1,2 +1,5 @@
 # Vom install.php-Installer erzeugt — enthält DB-Zugangsdaten + API-Key im Klartext.
 php-backend/config.php
+
+# macOS Finder
+.DS_Store

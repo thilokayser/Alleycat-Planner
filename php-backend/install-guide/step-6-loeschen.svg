@@ -1,0 +1,17 @@
+<svg viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+  <rect x="4" y="4" width="312" height="312" rx="26" fill="#f3f1e8"/>
+  <rect x="24" y="20" width="272" height="6" rx="3" fill="#b23a2e"/>
+  <circle cx="46" cy="46" r="26" fill="#b23a2e"/>
+  <text x="46" y="56" font-family="'JetBrains Mono',monospace" font-size="26" font-weight="700" fill="#f3f1e8" text-anchor="middle">6</text>
+
+  <g fill="none" stroke="#17191a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M96 128 h128"/>
+    <path d="M112 128 v-16 a10 10 0 0 1 10-10 h36 a10 10 0 0 1 10 10 v16"/>
+    <path d="M108 128 l10 122 a10 10 0 0 0 10 9 h64 a10 10 0 0 0 10-9 l10-122"/>
+  </g>
+  <g stroke="#b23a2e" stroke-width="8" stroke-linecap="round">
+    <line x1="138" y1="152" x2="138" y2="228"/>
+    <line x1="160" y1="152" x2="160" y2="228"/>
+    <line x1="182" y1="152" x2="182" y2="228"/>
+  </g>
+</svg>

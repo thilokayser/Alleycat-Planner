@@ -5,6 +5,8 @@ läuft auf jedem Webspace mit PHP + MySQL (kein WordPress nötig).
 
 ## Setup
 
+Bebilderte Schritt-für-Schritt-Anleitung: [INSTALL.md](INSTALL.md). Kurzfassung:
+
 1. In deinem Hosting-Control-Panel eine **MySQL-Datenbank + Benutzer** anlegen (falls nicht schon vorhanden).
 2. Diesen ganzen `php-backend`-Ordner per FTP/Dateimanager auf den Server hochladen.
 3. `install.php` im Browser aufrufen (z. B. `https://deinedomain.tld/php-backend/install.php`).
