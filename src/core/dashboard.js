@@ -32,7 +32,8 @@ function withEventDefaults(evt){
     gameModes: [],
     ruleRuntimeState: {},
     pointsLedger: [],
-    actionLog: []
+    actionLog: [],
+    featureFlags: {categories: true, gameModes: true}
   }, evt);
   merged.pdfBlocks = (merged.pdfBlocks || []).map(withPdfBlockDefaults);
   merged.gameModes = (merged.gameModes || []).map(withGameModeDefaults);
@@ -298,7 +299,7 @@ function renderRecentActivityWidget(evt){
     <ul class="overview-activity-list">
       ${entries.map(e => `<li><span class="overview-activity-time">${formatTimeOnly(e.at)}</span> <b>#${e.bib}</b> ${escapeHtml(e.name || '—')} &mdash; ${escapeHtml(e.label)}</li>`).join('')}
     </ul>
-  ` : `<div class="overview-widget-empty">${t('overview.noActivity')}</div>`;
+  ` : emptyStateHtml({title: t('overview.noActivity'), compact: true});
   return overviewWidgetWrap('recentActivity', body);
 }
 function renderCategoryDistributionWidget(evt){
@@ -444,7 +445,8 @@ function renderOverview(){
         <h2>${t('overview.title')}</h2>
         <p>${subtitle}</p>
       </div>
-      <div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        ${evt.status === 'completed' && isFeatureEnabled('social_share_cards', evt) ? `<button type="button" class="btn btn-sm btn-primary" onclick="openSocialShareCard()">${t('socialShare.createButton')}</button>` : ''}
         <button type="button" class="btn btn-sm" aria-expanded="${state.overviewSettingsOpen}" onclick="toggleOverviewSettings()">${state.overviewSettingsOpen ? t('overview.doneCustomizing') : t('overview.customize')}</button>
       </div>
     </div>
@@ -452,7 +454,7 @@ function renderOverview(){
     ${settingsPanel}
     ${widgetsHtml}
     ${renderBeamerOverviewSection(evt)}
-    ${renderGameModesSection(evt)}
+    ${isFeatureEnabled('game_modes', evt) ? renderGameModesSection(evt) : ''}
   `;
 }
 function renderBackupStatusLine(evt){

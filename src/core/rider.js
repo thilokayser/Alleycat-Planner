@@ -90,6 +90,7 @@ function renderRiders(){
   }
   const riders = evt.riders || [];
   const teams = evt.teams || [];
+  const categoriesEnabled = isFeatureEnabled('categories', evt);
   const groups = (evt.categoryGroups || []).slice().sort((a,b) => a.sortOrder - b.sortOrder);
   const cards = riders.map(r => `
     <div class="rider-card">
@@ -104,7 +105,7 @@ function renderRiders(){
           ${teams.map(tm => `<option value="${tm.id}" ${r.teamId === tm.id ? 'selected' : ''}>${escapeHtml(tm.name)}</option>`).join('')}
         </select>
       </div>
-      ${groups.length ? `<div class="rider-categories-row">
+      ${groups.length && categoriesEnabled ? `<div class="rider-categories-row">
         ${groups.map(g => `
           <div class="rider-category-field">
             <label>${escapeHtml(g.name)}</label>
@@ -232,7 +233,8 @@ function renderRiders(){
       <div class="type-list">${teamRows || `<div class="riders-hint" style="padding:0;">${t('rider.noTeamsYet')}</div>`}</div>
       ${newTeamForm}
     </div>
-    <div class="settings-section" style="margin:0 0 22px;">
+    ${categoriesEnabled ? `
+    <div class="settings-section" style="margin:0 0 22px;" id="rider-categories-section">
       <h3 style="font-size:15px;">${t('category.heading')}</h3>
       <div class="type-list">${categoryGroupRows || `<div class="riders-hint" style="padding:0;">${t('category.noGroupsYet')}</div>`}</div>
       ${newCategoryGroupForm}
@@ -249,6 +251,7 @@ function renderRiders(){
         </div>
       `}
     </div>
+    ` : ''}
     <div class="spokecard-design">
       <label>${t('rider.cardDesignLabel')}</label>
       <div class="spokecard-design-row">
@@ -258,12 +261,13 @@ function renderRiders(){
       </div>
       <div class="riders-hint" style="margin:6px 0 0;">${t('rider.cardDesignHint')}</div>
     </div>
-    ${riders.length === 0 ? `
-      <div class="empty-state" style="max-width:520px; margin:20px auto;">
-        <div class="display">${t('rider.emptyTitle')}</div>
-        <p>${t('rider.emptyHint')}</p>
-      </div>
-    ` : `
+    ${riders.length === 0 ? `<div style="max-width:520px; margin:20px auto;">${emptyStateHtml({
+      icon: '🚴',
+      title: t('rider.emptyTitle'),
+      description: t('rider.emptyHint'),
+      primaryAction: {label: t('rider.emptyStatePrimary'), onclick: "document.querySelector('.riders-count-field input').focus()"},
+      secondaryAction: {label: t('bulkImport.openButton'), onclick: 'toggleBulkImportPanel()'}
+    })}</div>` : `
       <div id="print-root">
         <div class="rider-sheet-head">
           <h2>${escapeHtml(evt.name || t('common.unnamedEvent'))}</h2>

@@ -211,7 +211,7 @@ function renderOfflineReadinessSection(){
   if(!offlineUiState.loaded){
     refreshOfflineReadiness();
     return `
-      <div class="settings-section">
+      <div class="settings-section" id="offline-readiness-section">
         <h3>${t('offlineTiles.heading')}</h3>
         <div class="settings-section-desc">${t('offlineTiles.loading')}</div>
       </div>
@@ -229,7 +229,7 @@ function renderOfflineReadinessSection(){
     <div class="offline-progress">${t('offlineTiles.progress', {done: offlineUiState.progress.done, total: offlineUiState.progress.total})}${offlineUiState.progress.failed ? ' ' + t('offlineTiles.progressFailed', {failed: offlineUiState.progress.failed}) : ''}</div>
   ` : '';
   return `
-    <div class="settings-section">
+    <div class="settings-section" id="offline-readiness-section">
       <h3>${t('offlineTiles.heading')}</h3>
       <div class="settings-section-desc">${t('offlineTiles.desc')}</div>
       <div class="offline-event-list">${rows}</div>

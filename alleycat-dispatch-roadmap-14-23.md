@@ -22,8 +22,8 @@ Die beiden Übergabedokumente wurden nacheinander geschrieben und nummerieren di
 | # | Arbeitspaket | Enthält | Aufwand | Status heute |
 |---|---|---|---|---|
 | **1** | **Schnelle Effizienz-Gewinne** | Phase 19 komplett | M | ✅ abgeschlossen (17.08.2026) |
-| **2** | **Ordnung vor mehr Features** ⭐ jetzt als nächstes | Phase 16 komplett | M–L | ❌ vollständig offen |
-| 3 | Backend-Fundament | Phase 14 komplett | M | ⚠️ Teilbausteine vorhanden (Prepared Statements, API-Key, `.htaccess`) — Kernstück (Pre-Flight-Check) offen |
+| 2 | Ordnung vor mehr Features | Phase 16 komplett | M–L | ✅ abgeschlossen (17.08.2026) |
+| **3** | **Backend-Fundament** ⭐ jetzt als nächstes | Phase 14 komplett | M | ⚠️ Teilbausteine vorhanden (Prepared Statements, API-Key, `.htaccess`) — Kernstück (Pre-Flight-Check) offen |
 | 4 | Großes Karten-Programm | Phase 15 + Phase 18 zusammengelegt | XL | ⚠️ Battle Royale existiert in alter Form (Phase 11), Rest offen |
 | 5 | Export & Lokalisierung | Phase 17 + Phase 20 zusammengelegt | L | ❌ vollständig offen |
 | 6 | Spezielle Rennformate | Phase 21 komplett | M–L | ❌ vollständig offen |
@@ -81,15 +81,17 @@ Checkboxen markieren, was laut Code-Abgleich bereits existiert. Alles ohne `[x]`
 
 Details siehe [CLAUDE.md](CLAUDE.md), Abschnitt "Paket 1 (Phase 19): UI-Effizienz-Gewinne". 38 neue Checks in `test-suite.js` (361/361 bestanden), inkl. eines während der Verifikation gefundenen und behobenen echten Bugs (Leaflet-Kartengröße konnte durch einen verzögerten `invalidateSize()`-Aufruf bei ausgeblendetem Karten-Container auf 0×0 einfrieren).
 
-### Paket 2 — Ordnung vor mehr Features (Phase 16)
+### Paket 2 — Ordnung vor mehr Features (Phase 16) ✅ abgeschlossen (17.08.2026)
 
-- [ ] `src/core/feature-registry.js`: Datenstruktur + `isEnabled(id)`/`toggle(id)`
-- [ ] Bestehende Features nachträglich eintragen (Kategorien, Spielmodi, Sound-Hook, Offline-Cache) — reine Verkabelung
-- [ ] Settings-Hub-UI (Liste, Toggle, Suche, Sprung zu Detail-Konfiguration)
-- [ ] `src/core/empty-states.js` (wiederverwendbare Komponente)
-- [ ] Empty States einbauen: Checkpoint-Liste, Fahrerliste, Leaderboard vor Rennstart, Dashboard "Letzte Aktivität", Zonen-Editor
-- [ ] `src/core/social-share.js` (Canvas-Rendering + Web Share API)
-- [ ] Social-Share-Button im Dashboard (Status "Abgeschlossen") + Beamer-Podium-Screen (sobald Paket 4 den Podium-Screen liefert)
+- [x] `src/core/feature-registry.js`: `FEATURE_REGISTRY` + `isFeatureEnabled(id, evt)`/`toggleFeature(id)`
+- [x] Bestehende Features nachträglich eintragen (Kategorien, Spielmodi, Sound-Hook, Offline-Cache) — reine Verkabelung
+- [x] Settings-Hub-UI (Liste, Toggle, Suche, Sprung zu Detail-Konfiguration)
+- [x] `src/core/empty-states.js` (wiederverwendbare Komponente)
+- [x] Empty States einbauen: Checkpoint-Liste, Fahrerliste, Leaderboard vor Rennstart, Dashboard "Letzte Aktivität" — Zonen-Editor verschoben, da das Zonen-System selbst erst mit Paket 4 entsteht
+- [x] `src/core/social-share.js` (Canvas-Rendering + Web Share API mit Download-Fallback)
+- [x] Social-Share-Button in der Übersicht (Status "Abgeschlossen") — Beamer-Podium-Screen folgt, sobald Paket 4 ihn liefert
+
+Details siehe [CLAUDE.md](CLAUDE.md), Abschnitt "Paket 2 (Phase 16): Feature-Registry & Settings-Hub". 33 neue Checks in `test-suite.js` (391/391 bestanden). Scoping-Entscheidungen: `battle_royale`/`districts` fehlen bewusst in der Registry (existieren erst mit dem Zonen-System aus Paket 4); die Event-Scope-Einträge `categories`/`game_modes` sind reine, additive UI-Sichtbarkeits-Flags (`evt.featureFlags`) und lassen die bestehenden Datenmodelle (`categoryGroups`/`gameModes`) unangetastet.
 
 ### Paket 4 — Großes Karten-Programm (Phase 15 + 18)
 

@@ -615,7 +615,12 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
           ${routeInfo && routeInfo.legs[cpIdx] ? `<div class="cp-leg-distance">↓ ${routeInfo.legs[cpIdx].km.toFixed(2)} km</div>` : ''}`;
 }
 function renderCpListRows(evt, locked, routeInfo){
-  if(evt.checkpoints.length === 0) return `<div class="cp-list-empty">${t('checkpoint.noCheckpointsYet')}<br>${t('checkpoint.activateHint')}</div>`;
+  if(evt.checkpoints.length === 0) return emptyStateHtml({
+    icon: '📍',
+    title: t('checkpoint.noCheckpointsYet'),
+    description: t('checkpoint.activateHint'),
+    primaryAction: {label: t('checkpoint.emptyStatePrimary'), onclick: 'toggleAddMode()'}
+  });
   if(state.cpListGroupBy === 'type'){
     return CHECKPOINT_TYPES.filter(ct => evt.checkpoints.some(cp => cp.type === ct.key)).map(ct => {
       const group = evt.checkpoints.filter(cp => cp.type === ct.key).slice().sort((a, b) => a.order - b.order);

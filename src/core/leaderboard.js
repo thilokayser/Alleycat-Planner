@@ -125,10 +125,26 @@ function renderLeaderboard(){
         <div class="leaderboard-page-stamp">🏆</div>
         <h2>${t('leaderboard.title')}</h2>
       </div>
-      <div class="leaderboard-toolbar">
-        <div class="leaderboard-stats">${t('leaderboard.noRidersYet')}</div>
+      ${emptyStateHtml({
+        icon: '🏆',
+        title: t('leaderboard.noRidersYet'),
+        description: t('leaderboard.setUpRidersFirst'),
+        primaryAction: {label: t('ui.navRiders'), onclick: 'openRiders()'}
+      })}
+    `;
+    return;
+  }
+  if((evt.status === 'planning' || evt.status === 'ready') && !allRiders.some(r => r.finishTime || r.raceStatus)){
+    el.innerHTML = `
+      <div class="leaderboard-page-head">
+        <div class="leaderboard-page-stamp">🏆</div>
+        <h2>${t('leaderboard.title')}</h2>
       </div>
-      <div class="leaderboard-empty">${t('leaderboard.setUpRidersFirst')}</div>
+      ${emptyStateHtml({
+        icon: '⏳',
+        title: t('leaderboard.raceNotStartedTitle'),
+        description: t('leaderboard.raceNotStartedDesc')
+      })}
     `;
     return;
   }

@@ -100,17 +100,20 @@ function renderBeamerSoundRow(evt, key, label){
   `;
 }
 function renderBeamerOverviewSection(evt){
+  const soundEnabled = isFeatureEnabled('sound_hook');
   return `
-    <div class="overview-beamer-bar">
+    <div class="overview-beamer-bar" id="overview-beamer-section">
       <div class="overview-beamer-info">
         <button type="button" class="btn btn-primary" onclick="openBeamerView('${evt.id}')">${t('beamer.openButton')}</button>
         <span class="overview-beamer-hint">${t('beamer.hintNewTab')}</span>
       </div>
+      ${soundEnabled ? `
       ${renderBeamerSoundRow(evt, 'race_start', t('beamer.soundRaceStartLabel'))}
       ${isGameModeEnabled(evt, 'zone_active') ? renderBeamerSoundRow(evt, 'zone_shrink', t('beamer.soundZoneShrinkLabel')) : ''}
       ${isGameModeEnabled(evt, 'sudden_death') ? renderBeamerSoundRow(evt, 'rider_eliminated', t('beamer.soundRiderEliminatedLabel')) : ''}
       ${isGameModeEnabled(evt, 'first_n') ? renderBeamerSoundRow(evt, 'bonus_secured', t('beamer.soundBonusSecuredLabel')) : ''}
       ${isGameModeEnabled(evt, 'prerequisite') ? renderBeamerSoundRow(evt, 'checkpoint_revealed', t('beamer.soundCheckpointRevealedLabel')) : ''}
+      ` : ''}
     </div>
   `;
 }

@@ -50,6 +50,9 @@ Beide Varianten prüfen zusätzlich zuerst, ob `window.storage` verfügbar ist (
 - 5 Themes (Feldpost, Hell, Dunkel, Dracula, Sonnenlicht — Hochkontrast-Modus für Einsatz im Freien) und 3 Icon-Packs (Emoji, Font Awesome, Material Symbols) über die Einstellungen
 - Command Palette (Cmd/Ctrl+K) mit Fuzzy-Suche über Navigation, Fahrer, Checkpoints und Schnellaktionen; globale Zahlen-Tastenkürzel (1–6) zur Navigation und Esc zum Abbrechen aktiver Modi/Overlays
 - Karten-Editor: einklappbare Sidebar für mehr Kartenfläche, Hover-Synchronisation zwischen Checkpoint-Liste und Kartenmarkern, Shift-Klick-Mehrfachauswahl von Checkpoints mit Sammelaktionen (Typ zuweisen, als Pflicht markieren, sperren, löschen)
+- Feature-Übersicht in den Einstellungen: alle schaltbaren Features (Social-Share-Karten, Sound-Effekte, Offline-Kartenkacheln, Kategorien, Spielmodi) an einer Stelle mit Suche, Toggle und Sprung zur jeweiligen Detail-Konfiguration
+- Freundliche Platzhalter statt leerer Listen (Checkpoint-Liste, Fahrerliste, Leaderboard vor Rennstart, Übersicht "Letzte Aktivität") mit direkten Schnellaktionen
+- Social-Share-Karten: automatisch generiertes Ergebnis-Bild (Top 3, Vereinslogo) nach Rennende zum Herunterladen oder direkten Teilen (Web Share API)
 
 ## Weitere Dateien
 

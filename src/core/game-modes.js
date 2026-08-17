@@ -324,7 +324,7 @@ function renderGameModesSection(evt){
     }).join('')}</div>
   ` : '';
   return `
-    <div class="settings-section game-modes-panel">
+    <div class="settings-section game-modes-panel" id="overview-gamemodes-section">
       <div class="settings-section-head">
         <h3>${t('gameModes.heading')}</h3>
         <button type="button" class="btn btn-sm" aria-expanded="${open}" onclick="toggleGameModesSection()">${open ? t('gameModes.hideSection') : t('gameModes.showSection')}</button>

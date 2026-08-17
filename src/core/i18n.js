@@ -64,6 +64,7 @@ const translations = {
       cardDesignHint: 'Wird automatisch auf Kartenformat zugeschnitten. Ohne Upload wird ein generiertes Stempel-Design mit Event-Name verwendet.',
       emptyTitle: 'Noch keine Fahrerliste',
       emptyHint: 'Trag oben die erwartete Fahreranzahl ein und generiere die Startnummern samt individuellem QR-Code je Fahrer.',
+      emptyStatePrimary: 'Erwartete Fahreranzahl eintragen',
       bibsStamp: 'Startnummern',
       checkinSingular: 'Check-in',
       checkinPlural: 'Check-ins',
@@ -78,6 +79,8 @@ const translations = {
       title: 'Leaderboard',
       noRidersYet: 'Noch keine Fahrerliste angelegt.',
       setUpRidersFirst: 'Leg zuerst unter „Fahrer" die erwartete Fahreranzahl an.',
+      raceNotStartedTitle: 'Rennen läuft noch nicht',
+      raceNotStartedDesc: 'Ergebnisse erscheinen hier, sobald das Rennen gestartet ist.',
       colTeam: 'Team',
       colRider: 'Fahrer',
       colArrived: 'Im Ziel',
@@ -195,6 +198,7 @@ const translations = {
       loadingEvent: 'Lädt Event …',
       noCheckpointsYet: 'Noch keine Checkpoints.',
       activateHint: 'Aktiviere "Checkpoint setzen" und klick auf die Karte.',
+      emptyStatePrimary: 'Checkpoint setzen aktivieren',
       deleteCpConfirm: 'Checkpoint wirklich löschen?',
       bulkSelectedCount: '{count} ausgewählt',
       bulkAssignType: 'Typ zuweisen…',
@@ -686,6 +690,33 @@ const translations = {
       title: 'Etwas ist schiefgelaufen',
       text: 'Keine Sorge — deine Daten sind sicher in der Datenbank gespeichert. Bitte die Seite neu laden.',
       reload: 'Neu laden'
+    },
+    featureRegistry: {
+      heading: 'Feature-Übersicht',
+      desc: 'Alle schaltbaren Features an einer Stelle — Geräte-Einstellungen gelten für alle Events auf diesem Gerät, Event-Einstellungen nur für das aktuell geöffnete Event.',
+      searchPlaceholder: '🔍 Feature suchen…',
+      noMatches: 'Keine Features gefunden.',
+      groupDevice: 'GERÄT',
+      groupEvent: 'EVENT: {name}',
+      configureTitle: 'Konfigurieren',
+      socialShareName: 'Social-Share-Karten',
+      socialShareDesc: 'Automatisch generierte Ergebnis-Bilder nach Rennende, zum Teilen/Herunterladen.',
+      soundHookName: 'Sound-Effekte',
+      soundHookDesc: 'Akustische Signale am Beamer (Start, Zonen-Ereignisse, Ausscheiden, …).',
+      offlineCacheName: 'Offline-Kartenkacheln',
+      offlineCacheDesc: 'Kartenkacheln vorab herunterladen, damit die Karte auch ohne Netz nutzbar bleibt.',
+      categoriesName: 'Kategorien',
+      categoriesDesc: 'Frei definierbare Kategorie-Gruppen pro Fahrer (z. B. Antrieb, Gender).',
+      gameModesName: 'Spielmodi',
+      gameModesDesc: 'Zeitfenster, Bonus-CPs, Battle Royale, Joker und weitere optionale Rennformate.'
+    },
+    socialShare: {
+      createButton: '🎉 Ergebnis-Karte erstellen',
+      previewTitle: 'Ergebnis-Karte',
+      podiumHeading: 'PODIUM',
+      noFinishersYet: 'Noch keine Fahrer im Ziel.',
+      downloadButton: 'Herunterladen',
+      shareButton: 'Teilen'
     }
   }
 };

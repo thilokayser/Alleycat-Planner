@@ -21,7 +21,8 @@ let state = {
   qrScannerActive: false,
   qrScanError: '',
   manifestSettingsOpen: false,
-  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false},
+  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}},
+  featureRegistrySearch: '',
   settingsReturnView: 'dashboard',
   newTypeFormOpen: false,
   newTeamFormOpen: false,
@@ -49,6 +50,7 @@ let state = {
   cpBulkSelectedIds: [],
   pdfPreviewOpen: false,
   pdfPreviewFilename: '',
+  socialShareOpen: false,
 };
 let pdfPreviewDoc = null;
 let map, markersLayer, routeLine, cpMarkers = {};
@@ -275,6 +277,7 @@ function isTypingTarget(el){
 }
 function handleGlobalEscape(){
   if(state.pdfPreviewOpen){ closePdfPreview(); return true; }
+  if(state.socialShareOpen){ closeSocialShareCard(); return true; }
   if(state.commandPaletteOpen){ closeCommandPalette(); return true; }
   if(state.addMode){ toggleAddMode(); return true; }
   return false;
@@ -325,7 +328,7 @@ function typeIconHtml(key){
 async function loadAppSettings(){
   try{
     const res = await storageGet('app:settings');
-    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false}, JSON.parse(res.value));
+    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}}, JSON.parse(res.value));
   }catch(e){ /* keep defaults */ }
 }
 async function saveAppSettings(){
@@ -532,6 +535,7 @@ function renderSettings(){
         <p>${t('settings.intro')}</p>
       </div>
     </div>
+    ${renderFeatureRegistrySection()}
     <div class="settings-section">
       <h3>${t('settings.themeHeading')}</h3>
       <div class="settings-section-desc">${t('settings.themeDesc')}</div>
@@ -551,6 +555,6 @@ function renderSettings(){
     ${renderDataSafetySection()}
   `;
   refreshStorageEstimate();
-  refreshTileCacheTotal();
+  if(isFeatureEnabled('offline_map_cache')) refreshTileCacheTotal();
 }
 

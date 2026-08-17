@@ -18,7 +18,7 @@ const AlleycatSounds = {
   },
   play(key){
     const a = this.sounds[key];
-    if(!a) return Promise.resolve(false);
+    if(!a || !isFeatureEnabled('sound_hook')) return Promise.resolve(false);
     a.currentTime = 0;
     return a.play().then(() => true).catch(() => false);
   },

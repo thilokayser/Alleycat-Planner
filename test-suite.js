@@ -37,7 +37,10 @@
    Sidebar-Collapse, globale Tab-Shortcuts inkl. Eingabefeld-Ausnahme und
    Esc-Abbruch, Command Palette mit Fuzzy-Suche, Outdoor-High-Contrast-Theme,
    Hover-Sync zwischen Checkpoint-Sidebar und Karten-Marker, Bulk-Actions
-   für Checkpoint-Zeilen inkl. Sperr-Guard, In-Page-PDF-Vorschau-Modal).
+   für Checkpoint-Zeilen inkl. Sperr-Guard, In-Page-PDF-Vorschau-Modal),
+   sowie Paket 2 (Phase 16: Feature-Registry mit Device-/Event-Scope-Toggles
+   und Settings-Hub-Suche, generische Empty-State-Komponente, Social-Share-
+   Karten-Rendering per Canvas inkl. In-Page-Vorschau).
 
    Läuft UNVERÄNDERT gegen beide gebauten Varianten (erst `node build.js`):
      - dist/alleycat-dispatch-local.html   (SQLite via sql.js/IndexedDB, oder window.storage)
@@ -1172,6 +1175,99 @@ async function runAlleycatTestSuite(){
     document.body.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
     check('Esc schließt die PDF-Vorschau', !state.pdfPreviewOpen);
     checkEqual('PDF-Vorschau-Root ist nach Schließen leer', document.getElementById('pdf-preview-root').innerHTML, '');
+
+    openRiders();
+    await wait(20);
+  }
+
+  /* 3n) Paket 2 (Phase 16): Feature-Registry, Settings-Hub, Empty-States,
+     Social-Share-Karten. Wie 3m: kein erneutes openEditor(). */
+  {
+    /* Feature-Registry: alle 5 Paket-2-Einträge vorhanden, Default-Werte korrekt */
+    check('FEATURE_REGISTRY enthält alle 5 Paket-2-Einträge', ['social_share_cards', 'sound_hook', 'offline_map_cache', 'categories', 'game_modes'].every(id => !!featureRegistryEntry(id)));
+    check('Social-Share-Karten sind standardmäßig aktiv (Device-Scope)', isFeatureEnabled('social_share_cards'));
+    check('Offline-Kartenkacheln sind standardmäßig inaktiv (Device-Scope)', !isFeatureEnabled('offline_map_cache'));
+    check('Kategorien sind standardmäßig aktiv (Event-Scope)', isFeatureEnabled('categories', evt));
+
+    /* Device-Scope-Toggle: Persistenz in appSettings.featureToggles */
+    toggleFeature('offline_map_cache');
+    check('toggleFeature schaltet Device-Scope-Feature um', isFeatureEnabled('offline_map_cache'));
+    checkEqual('Device-Scope-Toggle wird in appSettings.featureToggles persistiert', state.appSettings.featureToggles.offline_map_cache, true);
+    toggleFeature('offline_map_cache');
+    check('toggleFeature schaltet Device-Scope-Feature zurück', !isFeatureEnabled('offline_map_cache'));
+
+    /* Event-Scope-Toggle: Persistenz in evt.featureFlags, blendet UI-Sektionen aus */
+    toggleFeature('categories');
+    check('toggleFeature schaltet Event-Scope-Feature um', !isFeatureEnabled('categories', evt));
+    checkEqual('Event-Scope-Toggle landet in evt.featureFlags', evt.featureFlags.categories, false);
+    openRiders();
+    check('Deaktivierte Kategorien blenden die Kategorien-Sektion in der Fahrerliste aus', !document.getElementById('view-riders').innerHTML.includes('rider-categories-section'));
+    toggleFeature('categories');
+    openRiders();
+    check('Kategorien-Sektion erscheint nach Reaktivierung wieder', document.getElementById('view-riders').innerHTML.includes('rider-categories-section'));
+
+    toggleFeature('game_modes');
+    openOverview();
+    check('Deaktivierte Spielmodi blenden die Spielmodi-Sektion in der Übersicht aus', !document.getElementById('view-overview').innerHTML.includes('overview-gamemodes-section'));
+    toggleFeature('game_modes');
+    openOverview();
+    check('Spielmodi-Sektion erscheint nach Reaktivierung wieder', document.getElementById('view-overview').innerHTML.includes('overview-gamemodes-section'));
+
+    /* sound_hook gated: AlleycatSounds.play() ruft die Wiedergabe nur bei aktivem Toggle auf */
+    let soundPlayCalled = false;
+    AlleycatSounds.sounds['__test_sound'] = {play: () => { soundPlayCalled = true; return Promise.resolve(); }, currentTime: 0};
+    toggleFeature('sound_hook');
+    await AlleycatSounds.play('__test_sound');
+    check('AlleycatSounds.play() ruft die Wiedergabe nicht auf, wenn sound_hook deaktiviert ist', !soundPlayCalled);
+    toggleFeature('sound_hook');
+    await AlleycatSounds.play('__test_sound');
+    check('AlleycatSounds.play() ruft die Wiedergabe auf, wenn sound_hook aktiviert ist', soundPlayCalled);
+    delete AlleycatSounds.sounds['__test_sound'];
+
+    /* Settings-Hub: Suche filtert, Toggle-Switches je Feature vorhanden, Config-Jump navigiert */
+    state.featureRegistrySearch = 'sound';
+    const filteredGroups = featureRegistryGroups(evt);
+    check('Feature-Suche filtert auf passende Einträge', filteredGroups.device.some(f => f.id === 'sound_hook') && !filteredGroups.device.some(f => f.id === 'offline_map_cache'));
+    state.featureRegistrySearch = '';
+
+    openSettings();
+    check('Settings-Hub rendert die Feature-Übersicht', document.getElementById('view-settings').innerHTML.includes('feature-registry-section'));
+    check('Settings-Hub zeigt einen Toggle-Switch pro sichtbarem Feature', document.querySelectorAll('.feature-row .toggle-switch').length >= 5);
+    closeSettings();
+
+    jumpToFeatureConfig('category-settings');
+    checkEqual('jumpToFeatureConfig("category-settings") navigiert zur Fahreransicht', state.view, 'riders');
+
+    /* Empty States: generische Komponente */
+    const emptyHtml = emptyStateHtml({icon: '🧪', title: 'Testtitel', description: 'Testtext', primaryAction: {label: 'Primär', onclick: 'void(0)'}, secondaryAction: {label: 'Sekundär', onclick: 'void(0)'}});
+    check('emptyStateHtml rendert Icon, Titel, Beschreibung und beide Aktionen', emptyHtml.includes('🧪') && emptyHtml.includes('Testtitel') && emptyHtml.includes('Testtext') && emptyHtml.includes('Primär') && emptyHtml.includes('Sekundär'));
+    check('Leere Checkpoint-Liste nutzt emptyStateHtml (Icon + Primäraktion)', renderCpListRows({checkpoints: []}, false, null).includes('empty-state-icon'));
+
+    /* Leaderboard-Empty-State "Rennen läuft noch nicht" (vor Rennstart, Fahrer aber ohne Fortschritt) */
+    const lbFakeEvt = Object.assign({}, evt, {status: 'planning', riders: evt.riders.map(r => Object.assign({}, r, {finishTime: '', raceStatus: ''}))});
+    const realCurrentEvtForLb = state.currentEvent;
+    state.currentEvent = lbFakeEvt;
+    renderLeaderboard();
+    check('Leaderboard zeigt "Rennen läuft noch nicht" vor dem Start', document.getElementById('view-leaderboard').innerHTML.includes(t('leaderboard.raceNotStartedTitle')));
+    state.currentEvent = realCurrentEvtForLb;
+    renderLeaderboard();
+
+    /* Social-Share-Karten: Canvas-Rendering + In-Page-Vorschau */
+    check('computeSocialShareTopRiders liefert höchstens 3 Fahrer', computeSocialShareTopRiders(evt).length <= 3);
+    const shareCanvas = await renderSocialShareCanvas(evt);
+    check('renderSocialShareCanvas liefert ein 1080x1080-Canvas', shareCanvas.width === 1080 && shareCanvas.height === 1080);
+
+    const statusBeforeShare = evt.status;
+    evt.status = 'completed';
+    openOverview();
+    check('"Ergebnis-Karte erstellen"-Button erscheint bei Status "Abgeschlossen"', document.getElementById('view-overview').innerHTML.includes(t('socialShare.createButton')));
+    await checkNoThrowAsync('openSocialShareCard läuft ohne Fehler', openSocialShareCard);
+    check('Social-Share-Vorschau ist nach dem Erstellen geöffnet', state.socialShareOpen);
+    check('Social-Share-Vorschau-Modal ist im DOM vorhanden', !!document.querySelector('.socialshare-box'));
+    document.body.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+    check('Esc schließt die Social-Share-Vorschau', !state.socialShareOpen);
+    checkEqual('Social-Share-Root ist nach Schließen leer', document.getElementById('social-share-root').innerHTML, '');
+    evt.status = statusBeforeShare;
 
     openRiders();
     await wait(20);

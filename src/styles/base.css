@@ -1273,6 +1273,68 @@
     .leaderboard-search{max-width:none;}
   }
 
+  /* ---------- empty states (icon + optional actions) ---------- */
+  .empty-state-icon{font-size:34px; margin-bottom:6px;}
+  .empty-state-actions{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:14px;}
+  .empty-state-compact{
+    border:none; padding:10px 0; text-align:left; color:var(--steel);
+  }
+  .empty-state-compact .display{
+    font-family:'JetBrains Mono',monospace; text-transform:none; font-size:12px; color:var(--steel); margin-bottom:0;
+  }
+
+  /* ---------- feature registry / settings hub ---------- */
+  .feature-registry-search{
+    width:100%; max-width:360px; padding:9px 12px; margin-bottom:14px;
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:4px;
+    color:var(--chalk); font-family:'JetBrains Mono',monospace; font-size:12px;
+  }
+  .feature-group-heading{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em;
+    color:var(--steel); margin:14px 0 8px;
+  }
+  .feature-row-list{display:flex; flex-direction:column; gap:8px;}
+  .feature-row{
+    display:flex; align-items:center; gap:12px; padding:10px 14px;
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:4px;
+  }
+  .feature-row-icon{font-size:18px; width:24px; text-align:center; flex-shrink:0;}
+  .feature-row-info{flex:1; min-width:0;}
+  .feature-row-name{font-family:'Oswald',sans-serif; text-transform:uppercase; font-weight:600; font-size:13px; color:var(--chalk);}
+  .feature-row-desc{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--steel); margin-top:2px;}
+  .feature-row-gear{flex-shrink:0; padding:6px 10px;}
+  .toggle-switch{position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0;}
+  .toggle-switch input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer;}
+  .toggle-switch-track{
+    position:absolute; inset:0; background:var(--asphalt-3); border:1px solid var(--asphalt-3);
+    border-radius:11px; transition:background 0.15s;
+  }
+  .toggle-switch-track::before{
+    content:''; position:absolute; top:2px; left:2px; width:16px; height:16px;
+    background:var(--chalk); border-radius:50%; transition:transform 0.15s;
+  }
+  .toggle-switch input:checked + .toggle-switch-track{background:var(--hivis); border-color:var(--hivis);}
+  .toggle-switch input:checked + .toggle-switch-track::before{transform:translateX(16px); background:var(--ink);}
+  .toggle-switch input:focus-visible + .toggle-switch-track{outline:2px solid var(--hivis); outline-offset:2px;}
+
+  /* ---------- social share preview ---------- */
+  .socialshare-overlay{
+    position:fixed; inset:0; background:rgba(10,10,10,0.75); z-index:7000;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .socialshare-box{
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:3px solid var(--hivis);
+    border-radius:6px; width:min(520px, 100%); max-height:100%; display:flex; flex-direction:column;
+    box-shadow:0 12px 40px rgba(0,0,0,0.5); overflow:hidden;
+  }
+  .socialshare-head{
+    display:flex; align-items:center; gap:10px; padding:10px 14px;
+    border-bottom:1px solid var(--asphalt-3); flex-shrink:0;
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--steel);
+  }
+  .socialshare-spacer{flex:1;}
+  .socialshare-image{width:100%; display:block; overflow-y:auto;}
+
   /* ---------- outdoor theme: enlarged controls + heavier borders ----------
      Color contrast comes entirely from the theme's CSS variables (themes.css)
      and cascades everywhere for free. Font sizes are hardcoded per-element
@@ -1292,3 +1354,6 @@
   :root[data-theme="outdoor"] .bottom-nav-item{min-width:44px; min-height:44px;}
   :root[data-theme="outdoor"] .cp-row{border-width:2px;}
   :root[data-theme="outdoor"] .sidebar-resize-handle, :root[data-theme="outdoor"] .sidebar-collapse-toggle{width:26px;}
+  :root[data-theme="outdoor"] .toggle-switch{width:48px; height:28px;}
+  :root[data-theme="outdoor"] .toggle-switch-track::before{width:22px; height:22px;}
+  :root[data-theme="outdoor"] .toggle-switch input:checked + .toggle-switch-track::before{transform:translateX(20px);}

@@ -148,6 +148,6 @@ function renderDataSafetySection(){
         <span id="persistent-storage-status"></span>
       </div>
     </div>
-    ${renderOfflineReadinessSection()}
+    ${isFeatureEnabled('offline_map_cache') ? renderOfflineReadinessSection() : ''}
   `;
 }
