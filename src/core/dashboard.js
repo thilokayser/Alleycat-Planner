@@ -432,7 +432,7 @@ function renderOverview(){
   const widgetsHtml = visibleWidgets.length ? `
     <div class="overview-widget-grid">${visibleWidgets.map(key => renderOverviewWidget(key, evt)).join('')}</div>
   ` : `
-    <div class="empty-state">
+    <div class="empty-state" style="margin-bottom:20px;">
       <div class="display">${t('overview.emptyTitle')}</div>
       <p>${t('overview.emptyHint')}</p>
     </div>
@@ -449,10 +449,10 @@ function renderOverview(){
       </div>
     </div>
     ${renderBackupStatusLine(evt)}
-    ${renderBeamerOverviewSection(evt)}
-    ${renderGameModesSection(evt)}
     ${settingsPanel}
     ${widgetsHtml}
+    ${renderBeamerOverviewSection(evt)}
+    ${renderGameModesSection(evt)}
   `;
 }
 function renderBackupStatusLine(evt){

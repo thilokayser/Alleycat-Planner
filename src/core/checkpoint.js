@@ -383,7 +383,6 @@ function onEventDateInput(value){
 function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
         const itemLocked = locked || cp.locked;
         const editing = state.editingId === cp.id;
-        const loadCount = (evt.riders || []).filter(r => (r.completed || []).includes(cp.id)).length;
         const twStatus = cpTimeWindowStatus(cp);
         const staffCount = (cp.staff || []).length;
         let editBlock = '';
@@ -527,7 +526,6 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
               </div>` : ''}
             </div>
             <div class="cp-row-meta" onclick="event.stopPropagation()">
-              <span class="cp-load-badge" title="${t('checkpoint.loadBadgeTitle')}">${t('checkpoint.loadBadgeIcon')} ${loadCount}</span>
               ${twStatus ? `<span class="cp-tw-badge cp-tw-${twStatus}">${t('checkpoint.timeWindowStatus.' + twStatus)}</span>` : ''}
               ${cp.gameHidden && isGameModeEnabled(evt, 'prerequisite') ? `<span class="cp-hidden-badge" title="${t('gameModes.hiddenBadgeTitle')}">${isCpRevealed(evt, cp) ? t('gameModes.revealedBadge') : t('gameModes.hiddenBadge')}</span>` : ''}
               ${isGameModeEnabled(evt, 'zone_active') && isCpClosedByZone(evt, cp) ? `<span class="cp-hidden-badge cp-closed-badge" title="${t('gameModes.zoneClosedBadgeTitle')}">${t('gameModes.zoneClosedBadge')}</span>` : ''}

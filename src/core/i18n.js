@@ -232,8 +232,6 @@ const translations = {
       lockedHint: 'Dieser Checkpoint ist manuell gesperrt.',
       duplicate: 'Duplizieren',
       duplicateSuffix: '{name} (Kopie)',
-      loadBadgeTitle: 'Anzahl Check-ins an diesem Checkpoint',
-      loadBadgeIcon: '👥',
       staffBadgeIcon: '☎',
       timeWindowStatus: {
         upcoming: 'Fenster noch nicht offen',
@@ -580,6 +578,8 @@ const translations = {
       },
       heading: 'Spielmodi',
       hint: 'Vordefinierte Modi an-/ausschaltbar mit Parametern — kein freier Regel-Baukasten. Mehrere Modi können gleichzeitig aktiv sein.',
+      showSection: 'Anzeigen',
+      hideSection: 'Ausblenden',
       scoringSwitchConfirm: 'Wertung wechselt von Zeit zu Punkten. Zeit bleibt als Zusatzinfo im Leaderboard sichtbar. Fortfahren?',
       scoringPointsBanner: 'Wertung läuft nach Punkten — Zeit ist nur noch Zusatzinfo.',
       timeWindowBlocked: 'Check-in außerhalb des Zeitfensters ({reason}) — mit aktivem Modus „Zeitfenster-CPs" nicht möglich.',

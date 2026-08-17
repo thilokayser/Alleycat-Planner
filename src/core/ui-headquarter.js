@@ -42,6 +42,7 @@ let state = {
   bulkImportErrors: [],
   bulkImportValidRows: [],
   actionUndoHandlers: {},
+  gameModesSectionOpen: false,
 };
 let map, markersLayer, routeLine;
 let qrScanStream = null;

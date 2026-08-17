@@ -299,27 +299,37 @@ function renderGameModeConfigForm(evt, mode){
       return '';
   }
 }
+function toggleGameModesSection(){
+  state.gameModesSectionOpen = !state.gameModesSectionOpen;
+  renderOverview();
+}
 function renderGameModesSection(evt){
   evt.gameModes = evt.gameModes || [];
-  const rows = GAME_MODE_TYPES.map(type => {
-    const mode = getGameMode(evt, type) || withGameModeDefaults({type});
-    return `
-      <div class="game-mode-row">
-        <label class="checkbox-row game-mode-toggle">
-          <input type="checkbox" ${mode.enabled ? 'checked' : ''} onchange="toggleGameMode('${type}', this.checked)">
-          <span class="game-mode-name">${gameModeLabel(type)}</span>
-        </label>
-        <div class="game-mode-desc">${gameModeDesc(type)}</div>
-        ${mode.enabled ? `<div class="game-mode-config">${renderGameModeConfigForm(evt, mode)}</div>` : ''}
-      </div>
-    `;
-  }).join('');
+  const open = state.gameModesSectionOpen;
+  const body = open ? `
+    <div class="settings-section-desc">${t('gameModes.hint')}</div>
+    ${evt.scoringMode === 'points' ? `<div class="game-mode-scoring-banner">${t('gameModes.scoringPointsBanner')}</div>` : ''}
+    <div class="game-mode-list">${GAME_MODE_TYPES.map(type => {
+      const mode = getGameMode(evt, type) || withGameModeDefaults({type});
+      return `
+        <div class="game-mode-row">
+          <label class="checkbox-row game-mode-toggle">
+            <input type="checkbox" ${mode.enabled ? 'checked' : ''} onchange="toggleGameMode('${type}', this.checked)">
+            <span class="game-mode-name">${gameModeLabel(type)}</span>
+          </label>
+          <div class="game-mode-desc">${gameModeDesc(type)}</div>
+          ${mode.enabled ? `<div class="game-mode-config">${renderGameModeConfigForm(evt, mode)}</div>` : ''}
+        </div>
+      `;
+    }).join('')}</div>
+  ` : '';
   return `
     <div class="settings-section game-modes-panel">
-      <h3>${t('gameModes.heading')}</h3>
-      <div class="settings-section-desc">${t('gameModes.hint')}</div>
-      ${evt.scoringMode === 'points' ? `<div class="game-mode-scoring-banner">${t('gameModes.scoringPointsBanner')}</div>` : ''}
-      <div class="game-mode-list">${rows}</div>
+      <div class="settings-section-head">
+        <h3>${t('gameModes.heading')}</h3>
+        <button type="button" class="btn btn-sm" aria-expanded="${open}" onclick="toggleGameModesSection()">${open ? t('gameModes.hideSection') : t('gameModes.showSection')}</button>
+      </div>
+      ${body}
     </div>
   `;
 }
