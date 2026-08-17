@@ -121,3 +121,8 @@ async function initStorageBackend(){
 function renderStorageDashboardExtras(){
   return '';
 }
+/* No-op: this variant's storage is shared across every organizer on the
+   installation (PHP backend, or a shared window.storage), so auto-creating
+   a demo event here would clutter a board other people already use. See
+   the local variant's seedDemoEventIfNeeded() for the real implementation. */
+async function seedDemoEventIfNeeded(){}

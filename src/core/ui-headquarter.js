@@ -202,6 +202,7 @@ async function init(){
   applyStaticTranslations();
   await loadCustomCheckpointTypes();
   await loadEventsIndex();
+  await seedDemoEventIfNeeded();
   state.loading = false;
   render();
   setInterval(checkStartDialog, 1000);

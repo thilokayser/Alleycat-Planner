@@ -34,6 +34,7 @@ const CORE_FILES = [
   'rules-engine.js',
   'game-modes.js',
   'dashboard.js',
+  'demo-event.js',
   'sound-hook.js',
   'live-sync.js',
   'beamer.js',

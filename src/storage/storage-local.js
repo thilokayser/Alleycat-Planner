@@ -142,3 +142,20 @@ function renderStorageDashboardExtras(){
     <button class="btn" onclick="exportSqliteFile()" title="Komplette lokale Datenbank als .sqlite-Datei sichern">SQLite exportieren</button>
   `;
 }
+/* Seeds the fictional demo event (demo-event.js) exactly once, only into a
+   genuinely empty, private local install — never when hasSharedStorage (this
+   build embedded with a shared window.storage, same clutter risk as the
+   server variant). Gated on a persisted flag rather than "events list is
+   empty" so deleting the demo (or every real event later) never brings it
+   back — it's a first-run affordance, not a permanent fixture. */
+async function seedDemoEventIfNeeded(){
+  if(hasSharedStorage) return;
+  if(await storageGet('demoEvent:seeded')) return;
+  if(state.eventsIndex.length === 0){
+    const evt = buildDemoEvent();
+    state.eventsIndex.push({id: evt.id, name: evt.name, date: evt.date});
+    await saveEventsIndex();
+    await storageSet('event:' + evt.id, JSON.stringify(evt));
+  }
+  await storageSet('demoEvent:seeded', '1');
+}
