@@ -26,8 +26,10 @@ function withEventDefaults(evt){
     dashboardWidgetVisibility: {statusTiles: true, cpLoad: true, recentActivity: false, categoryDistribution: false, miniLeaderboard: false, countdown: true, todos: false},
     soundHooks: {},
     lastBackupAt: '',
-    tileCacheUpdatedAt: ''
+    tileCacheUpdatedAt: '',
+    pdfBlocks: []
   }, evt);
+  merged.pdfBlocks = (merged.pdfBlocks || []).map(withPdfBlockDefaults);
   merged.checkpoints = (merged.checkpoints || []).map(withCheckpointDefaults);
   merged.riders = (merged.riders || []).map(withRiderDefaults);
   merged.manifestSettings = withManifestSettingsDefaults(merged.manifestSettings);

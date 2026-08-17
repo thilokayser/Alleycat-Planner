@@ -519,6 +519,37 @@ const translations = {
       totalLoading: 'Lade Cache-Größe…',
       totalText: 'Gesamter Kartenkacheln-Cache: {count} Kacheln, {mb} MB',
       firstTimeHint: 'Hinweis: iOS/Safari können Offline-Daten bei längerer Nichtbenutzung des Tabs entfernen. Cache daher kurz vor dem Event aktualisieren.'
+    },
+    pdfBlocks: {
+      type: {
+        waiver: 'Haftungsausschluss',
+        rules: 'Renn-Regeln',
+        sponsors: 'Sponsoren',
+        checkpoint_list: 'Checkpoint-Übersicht',
+        notes: 'Notizen',
+        custom_text: 'Eigener Text',
+        emergency_info: 'Notfall-Infos'
+      },
+      toggleButton: 'PDF-Baukasten',
+      hint: 'Zusätzliche Seiten, die an Manifest und/oder Spokecards-PDF angehängt werden — Reihenfolge per Pfeil-Buttons, pro Block wählbar für welche Dokumente er gilt.',
+      empty: 'Noch keine Blöcke angelegt.',
+      targetManifest: 'Manifest',
+      targetSpokecards: 'Spokecards',
+      contentPlaceholder: 'Text…',
+      customTitlePlaceholder: 'Titel für diesen Block',
+      waiverShowSignature: 'Unterschriftszeile anzeigen',
+      waiverShowDate: 'Datum-Feld anzeigen',
+      checkpointListAuto: 'Wird automatisch aus den Checkpoints erzeugt — kein Text nötig.',
+      sponsorsEmpty: 'Keine Logos hinterlegt.',
+      emptyContent: 'Kein Inhalt hinterlegt.',
+      dateFieldLabel: 'Datum',
+      signatureFieldLabel: 'Unterschrift',
+      exportTemplate: 'Als Vorlage exportieren',
+      importTemplate: 'Vorlage importieren',
+      deleteConfirm: 'Diesen Block wirklich löschen?',
+      importPreview: '{count} Block/Blöcke aus der Datei importieren?',
+      importFailed: 'Import fehlgeschlagen: Die Datei ist keine gültige PDF-Baukasten-Vorlage.',
+      spokecardsHint: 'Zusätzliche Seiten für die Spokecards (Waiver, Sponsoren, …) verwaltet im'
     }
   }
 };

@@ -472,6 +472,36 @@
   .manifest-settings-image input[type=file]{color:var(--chalk); font-family:'Inter',sans-serif; font-size:12px; max-width:220px;}
   .manifest-image-preview{width:70px; height:44px; object-fit:cover; border-radius:3px; border:1px solid var(--asphalt-3);}
   .manifest-header-image{width:100%; border-radius:2px; margin-bottom:18px; display:block;}
+
+  /* ---------- PDF-Baukasten ---------- */
+  .pdf-blocks-panel{
+    width:100%; max-width:760px; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:4px;
+    padding:14px 16px; margin-bottom:18px;
+  }
+  .pdf-block-list{display:flex; flex-direction:column; gap:10px; margin:12px 0;}
+  .pdf-block-row{background:var(--asphalt); border:1px solid var(--asphalt-3); border-radius:4px; padding:10px 12px;}
+  .pdf-block-row-head{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+  .pdf-block-move{display:flex; gap:2px;}
+  .pdf-block-enabled{
+    font-family:'JetBrains Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.03em;
+    color:var(--chalk); display:flex; align-items:center; gap:6px; flex:1; min-width:140px;
+  }
+  .pdf-block-targets{display:flex; gap:10px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--steel);}
+  .pdf-block-targets label{display:flex; align-items:center; gap:4px; cursor:pointer;}
+  .pdf-block-editor{margin-top:10px; display:flex; flex-direction:column; gap:8px;}
+  .pdf-block-editor input[type=text]{
+    padding:7px 9px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt-2);
+    color:var(--chalk); font-family:'Inter',sans-serif; font-size:12.5px;
+  }
+  .pdf-block-textarea{
+    width:100%; min-height:70px; padding:8px 10px; border-radius:3px; border:1px solid var(--asphalt-3);
+    background:var(--asphalt-2); color:var(--chalk); font-family:'Inter',sans-serif; font-size:12.5px; resize:vertical;
+  }
+  .pdf-block-sponsor-logos{display:flex; flex-wrap:wrap; gap:10px;}
+  .pdf-block-sponsor-logo{display:flex; flex-direction:column; align-items:center; gap:4px;}
+  .pdf-block-sponsor-logo img{width:90px; height:45px; object-fit:contain; background:var(--chalk); border-radius:3px;}
+  .pdf-block-add-row{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
+  .pdf-block-template-row{display:flex; gap:8px; flex-wrap:wrap; padding-top:12px; border-top:1px dashed var(--asphalt-3);}
   .waybill{
     width:100%; min-width:0; max-width:760px;
     background:var(--paper);

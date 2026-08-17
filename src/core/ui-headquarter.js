@@ -33,6 +33,7 @@ let state = {
   leaderboardTeamFilter: '',
   overviewSettingsOpen: false,
   cpListGroupBy: 'order',
+  pdfBlocksPanelOpen: false,
 };
 let map, markersLayer, routeLine;
 let qrScanStream = null;

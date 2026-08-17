@@ -19,7 +19,9 @@
    Datensicherheit & Offline (Auto-Backup-Seam, Beforeunload-Warnung,
    Wake Lock, Storage-APIs persist/estimate, Offline-Kartenkacheln-Cache
    inkl. Bounding-Box/Tile-Index-Mathematik und Staleness-Warnung),
-   Renn-Zustandsmaschine
+   PDF-Baukasten (Block-CRUD/Reihenfolge/Ziel-Dokumente, JSON-Vorlagen-
+   Export/Import, Anhängen an Manifest- und Spokecards-PDF unabhängig
+   von deren jsPDF-Einheiten), Renn-Zustandsmaschine
    (Planung/Bereit/Läuft/Abgeschlossen inkl. CP-Struktur-Sperre und
    Override), kompletter Ziel-Check-in-Flow
    (bestätigen/zurücksetzen/Undo-Toast/Speichern & schließen/Übersicht),
@@ -550,6 +552,78 @@ async function runAlleycatTestSuite(){
     toggleOfflineEventSelected(evt.id, false);
   }
 
+  /* 3i) PDF-Baukasten */
+  {
+    checkEqual('Event hat leere pdfBlocks per Default', evt.pdfBlocks.length, 0);
+    addPdfBlock('waiver');
+    addPdfBlock('sponsors');
+    addPdfBlock('checkpoint_list');
+    checkEqual('addPdfBlock legt 3 Blöcke an', evt.pdfBlocks.length, 3);
+    checkEqual('Neuer Block hat Default-Target "manifest"', evt.pdfBlocks[0].targetDocuments.join(','), 'manifest');
+
+    const waiverBlock = evt.pdfBlocks[0];
+    onPdfBlockContentChange(waiverBlock.id, 'Teilnahme auf eigene Gefahr.\n\nZweiter Absatz.');
+    checkEqual('onPdfBlockContentChange setzt Inhalt', waiverBlock.content, 'Teilnahme auf eigene Gefahr.\n\nZweiter Absatz.');
+    onPdfBlockConfigToggle(waiverBlock.id, 'showSignatureLine', true);
+    checkEqual('onPdfBlockConfigToggle setzt Config', waiverBlock.config.showSignatureLine, true);
+    togglePdfBlockTargetDocument(waiverBlock.id, 'spokecards', true);
+    check('togglePdfBlockTargetDocument fügt Ziel hinzu', waiverBlock.targetDocuments.includes('spokecards'));
+    togglePdfBlockEnabled(waiverBlock.id, false);
+    checkEqual('togglePdfBlockEnabled deaktiviert Block', waiverBlock.enabled, false);
+    togglePdfBlockEnabled(waiverBlock.id, true);
+
+    const idsBefore = evt.pdfBlocks.slice().sort((a, b) => a.sortOrder - b.sortOrder).map(b => b.id);
+    movePdfBlock(evt.pdfBlocks[1].id, -1);
+    const idsAfter = evt.pdfBlocks.slice().sort((a, b) => a.sortOrder - b.sortOrder).map(b => b.id);
+    checkEqual('movePdfBlock vertauscht Reihenfolge', idsAfter[0], idsBefore[1]);
+    movePdfBlock(idsAfter[0], 1);
+
+    const customBlock = withPdfBlockDefaults({type: 'custom_text'});
+    checkEqual('pdfBlockTitle nutzt Typ-Label ohne customTitle', pdfBlockTitle(customBlock), t('pdfBlocks.type.custom_text'));
+    customBlock.config.customTitle = 'Mein Titel';
+    checkEqual('pdfBlockTitle nutzt customTitle wenn gesetzt', pdfBlockTitle(customBlock), 'Mein Titel');
+
+    const sponsorsBlock = evt.pdfBlocks.find(b => b.type === 'sponsors');
+    sponsorsBlock.config.logos = [];
+    onPdfBlockSponsorLogoUpload(sponsorsBlock.id, {files: [new File(['x'], 'logo.png', {type: 'image/png'})], value: ''});
+    await wait(20);
+    check('onPdfBlockSponsorLogoUpload fügt Logo hinzu', sponsorsBlock.config.logos.length === 1);
+    removePdfBlockSponsorLogo(sponsorsBlock.id, 0);
+    checkEqual('removePdfBlockSponsorLogo entfernt Logo', sponsorsBlock.config.logos.length, 0);
+
+    await checkNoThrowAsync('appendPdfBlocks (Manifest, pt-Einheiten) läuft ohne Fehler', async () => {
+      const { jsPDF } = window.jspdf;
+      appendPdfBlocks(new jsPDF({unit: 'pt', format: 'a4'}), evt, 'manifest');
+    });
+    await checkNoThrowAsync('appendPdfBlocks (Spokecards, mm-Einheiten) läuft ohne Fehler', async () => {
+      const { jsPDF } = window.jspdf;
+      appendPdfBlocks(new jsPDF({unit: 'mm', format: 'a4'}), evt, 'spokecards');
+    });
+    await checkNoThrowAsync('exportManifestPDF mit aktivem Baukasten läuft ohne Fehler', exportManifestPDF);
+    await checkNoThrowAsync('buildSpokeCardsDoc mit aktivem Baukasten läuft ohne Fehler', () => buildSpokeCardsDoc(evt));
+
+    const countBeforeImport = evt.pdfBlocks.length;
+    const templateJson = JSON.stringify(evt.pdfBlocks);
+    evt.pdfBlocks = [];
+    const origConfirmPdf = window.confirm;
+    window.confirm = () => true;
+    await onImportPdfBlocksFile({value: '', files: [new File([templateJson], 'template.json', {type: 'application/json'})]});
+    checkEqual('JSON-Vorlagen-Import stellt Blockanzahl wieder her', evt.pdfBlocks.length, countBeforeImport);
+
+    openManifest();
+    state.pdfBlocksPanelOpen = true;
+    render();
+    await wait(20);
+    check('PDF-Baukasten-Panel rendert im Manifest-Toolbar', document.querySelector('.pdf-blocks-panel') !== null);
+    checkEqual('Block-Zeilen im Panel entsprechen Blockanzahl', document.querySelectorAll('.pdf-block-row').length, evt.pdfBlocks.length);
+    state.pdfBlocksPanelOpen = false;
+
+    const countBeforeDelete = evt.pdfBlocks.length;
+    deletePdfBlock(evt.pdfBlocks[0].id);
+    window.confirm = origConfirmPdf;
+    checkEqual('deletePdfBlock entfernt Block', evt.pdfBlocks.length, countBeforeDelete - 1);
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -570,6 +644,7 @@ async function runAlleycatTestSuite(){
   checkEqual('cp.staff persistiert', reloaded && reloaded.checkpoints[1].staff.length, evt.checkpoints[1].staff.length);
   checkEqual('soundHooks persistiert', reloaded && reloaded.soundHooks && reloaded.soundHooks.race_start && reloaded.soundHooks.race_start.name, 'go.mp3');
   checkEqual('lastBackupAt persistiert', !!(reloaded && reloaded.lastBackupAt), !!evt.lastBackupAt);
+  checkEqual('pdfBlocks persistiert', reloaded && reloaded.pdfBlocks.length, evt.pdfBlocks.length);
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();

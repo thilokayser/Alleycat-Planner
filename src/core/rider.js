@@ -198,6 +198,7 @@ function renderRiders(){
       ` : ''}
     </div>
     ${riders.length ? `<div class="riders-hint">${t('rider.spokecardHint')}</div>` : ''}
+    ${riders.length ? `<div class="riders-hint">${t('pdfBlocks.spokecardsHint')} <a href="#" onclick="event.preventDefault(); openManifest(); state.pdfBlocksPanelOpen = true; render();">${t('pdfBlocks.toggleButton')}</a></div>` : ''}
     ${state.printPopupBlocked ? `<div class="riders-hint warn">${t('rider.printPopupBlocked')}</div>` : ''}
     <div class="settings-section" style="margin:0 0 22px;">
       <h3 style="font-size:15px;">${t('rider.teamsHeading')}</h3>

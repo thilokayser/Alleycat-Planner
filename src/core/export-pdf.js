@@ -1,3 +1,108 @@
+/* ---------------- PDF-Baukasten: block-append rendering ----------------
+   Margins/line-heights are computed as fractions of the doc's own page
+   size rather than fixed pt values, so this same function works whether
+   the caller's jsPDF instance uses 'pt' units (manifest) or 'mm' units
+   (spokecards) — only font sizes stay in fixed pt, since jsPDF's
+   setFontSize() is always in points regardless of the document unit. */
+function appendPdfBlocks(doc, evt, targetDocType){
+  const blocks = ((evt.pdfBlocks || [])).filter(b => b.enabled && (b.targetDocuments || []).includes(targetDocType)).sort((a, b) => a.sortOrder - b.sortOrder);
+  if(!blocks.length) return;
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const marginX = pageW * 0.08;
+  const pageRight = pageW - marginX;
+  const topY = pageH * 0.09;
+  const bottomLimit = pageH * 0.92;
+  const lineH = pageH * 0.018;
+  const INK = '#241f18', HIVIS = '#ff5f1f', STEEL = '#5b5340';
+
+  blocks.forEach(b => {
+    doc.addPage();
+    let y = topY;
+    doc.setTextColor(INK);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+    doc.text(pdfBlockTitle(b), marginX, y);
+    y += pageH * 0.012;
+    doc.setDrawColor(HIVIS); doc.setLineWidth(1);
+    doc.line(marginX, y, pageRight, y);
+    y += pageH * 0.03;
+
+    y = renderPdfBlockContentToDoc(doc, b, evt, marginX, pageRight, y, bottomLimit, topY, lineH);
+
+    if(b.type === 'waiver' && (b.config.showSignatureLine || b.config.showDateField)){
+      y += pageH * 0.03;
+      if(y > bottomLimit - pageH * 0.06){ doc.addPage(); y = topY; }
+      doc.setDrawColor(STEEL); doc.setLineWidth(0.6);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(STEEL);
+      if(b.config.showDateField){
+        const w = (pageRight - marginX) * 0.28;
+        doc.line(marginX, y, marginX + w, y);
+        doc.text(t('pdfBlocks.dateFieldLabel'), marginX, y + pageH * 0.014);
+      }
+      if(b.config.showSignatureLine){
+        const sigX = marginX + (pageRight - marginX) * 0.4;
+        doc.line(sigX, y, pageRight, y);
+        doc.text(t('pdfBlocks.signatureFieldLabel'), sigX, y + pageH * 0.014);
+      }
+    }
+  });
+}
+function renderPdfBlockContentToDoc(doc, b, evt, marginX, pageRight, y, bottomLimit, topY, lineH){
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+  doc.setTextColor('#241f18');
+
+  if(b.type === 'sponsors'){
+    const logos = b.config.logos || [];
+    if(!logos.length){
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor('#5b5340');
+      doc.text(t('pdfBlocks.sponsorsEmpty'), marginX, y);
+      return y + lineH;
+    }
+    const gap = (pageRight - marginX) * 0.03;
+    const logoW = (pageRight - marginX - gap * 2) / 3;
+    const logoH = logoW * 0.5;
+    let x = marginX, col = 0;
+    logos.forEach(l => {
+      if(y + logoH > bottomLimit){ doc.addPage(); y = topY; x = marginX; col = 0; }
+      try{ doc.addImage(l.dataUrl, x, y, logoW, logoH, undefined, 'FAST'); }catch(e){ /* unsupported image format — skip tile */ }
+      col++;
+      if(col >= 3){ col = 0; x = marginX; y += logoH + lineH; }
+      else x += logoW + gap;
+    });
+    return y + logoH + lineH;
+  }
+
+  if(b.type === 'checkpoint_list'){
+    const checkpoints = evt.checkpoints.slice().sort((a, c) => a.order - c.order);
+    checkpoints.forEach(cp => {
+      if(y > bottomLimit){ doc.addPage(); y = topY; }
+      doc.setFont('courier', 'bold'); doc.setFontSize(9); doc.setTextColor('#241f18');
+      doc.text(String(cp.order).padStart(2, '0'), marginX, y);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+      doc.text(cp.name || '—', marginX + (pageRight - marginX) * 0.06, y);
+      y += lineH;
+    });
+    return y;
+  }
+
+  const content = b.content || '';
+  if(!content.trim()){
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor('#5b5340');
+    doc.text(t('pdfBlocks.emptyContent'), marginX, y);
+    return y + lineH;
+  }
+  content.split(/\n{2,}/).forEach(paragraph => {
+    const lines = doc.splitTextToSize(paragraph, pageRight - marginX);
+    lines.forEach(line => {
+      if(y > bottomLimit){ doc.addPage(); y = topY; }
+      doc.text(line, marginX, y);
+      y += lineH;
+    });
+    y += lineH * 0.5;
+  });
+  return y;
+}
+
 /* ---------------- manifest + PDF export ---------------- */
 function withManifestSettingsDefaults(ms){
   return Object.assign({
@@ -148,6 +253,7 @@ async function buildSpokeCardsDoc(evt){
     const qr = await renderQrDataUrl(String(riders[i].bib), 300);
     drawSpokeCardBack(doc, x, y, cardW, cardH, evt, riders[i], qr);
   }
+  appendPdfBlocks(doc, evt, 'spokecards');
   return doc;
 }
 async function exportSpokeCardsPDF(){
@@ -405,6 +511,7 @@ async function exportManifestPDF(){
   const showKey = {nr: 'showNr', checkpoint: 'showCheckpoint', typ: 'showTyp', clue: 'showClue', koordinaten: 'showKoordinaten', punch: 'showPunch'};
   const visibleCols = columnDefs.filter(c => ms[showKey[c.key]]);
   if(!visibleCols.length){
+    appendPdfBlocks(doc, evt, 'manifest');
     doc.save((evt.name || 'manifest').replace(/\s+/g, '_').toLowerCase() + '-manifest.pdf');
     evt.manifestGenerated = true;
     debouncedSave();
@@ -504,6 +611,7 @@ async function exportManifestPDF(){
   doc.text(t('exportPdf.productFooter'), marginX, 806);
   doc.text(t('exportPdf.autoGenFooter'), pageRight, 806, {align: 'right'});
 
+  appendPdfBlocks(doc, evt, 'manifest');
   doc.save((evt.name || 'manifest').replace(/\s+/g,'_').toLowerCase() + '-manifest.pdf');
   evt.manifestGenerated = true;
   debouncedSave();
@@ -548,10 +656,12 @@ function renderManifest(){
       <div class="mono" style="color:var(--steel); font-size:11px;">${t(evt.checkpoints.length === 1 ? 'exportPdf.checkpointCountSingular' : 'exportPdf.checkpointCountPlural', {count: evt.checkpoints.length})}</div>
       <div class="manifest-toolbar-actions">
         <button class="btn" onclick="toggleManifestSettings()">${state.manifestSettingsOpen ? '\u25be' : '\u25b8'} ${t('exportPdf.customize')}</button>
+        <button class="btn" onclick="togglePdfBlocksPanel()">${state.pdfBlocksPanelOpen ? '\u25be' : '\u25b8'} ${t('pdfBlocks.toggleButton')}</button>
         <button class="btn" onclick="printManifest()">${t('exportPdf.print')}</button>
         <button class="btn btn-primary" onclick="exportManifestPDF()">${t('exportPdf.exportAsPdf')}</button>
       </div>
     </div>
+    ${state.pdfBlocksPanelOpen ? renderPdfBlocksPanel(evt) : ''}
     ${state.manifestSettingsOpen ? `
       <div class="manifest-settings-panel">
         <div class="manifest-settings-cols">
