@@ -203,23 +203,20 @@ function renderRiders(){
           <input type="text" inputmode="numeric" value="${evt.expectedRiders || 0}" oninput="onExpectedRidersInput(this.value)">
         </div>
         <button class="btn" onclick="generateRiderSlots()">${t('rider.generateSlots')}</button>
+        <button class="btn btn-ghost" onclick="toggleBulkImportPanel()">${state.bulkImportOpen ? t('common.cancel') : t('bulkImport.openButton')}</button>
       </div>
       ${riders.length ? `
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn" onclick="window.print()">${t('rider.printBibs')}</button>
+          <button class="btn btn-ghost" onclick="window.print()">${t('rider.printBibs')}</button>
           <button class="btn" onclick="exportRidersPDF()" ${state.riderSheetGenerating ? 'disabled' : ''}>${state.riderSheetGenerating ? t('common.generating') : t('rider.bibsPdf')}</button>
-          <button class="btn" onclick="printSpokeCardsPDF()" ${state.spokeCardsGenerating ? 'disabled' : ''}>${state.spokeCardsGenerating ? t('common.generating') : t('rider.printSpokecards')}</button>
+          <button class="btn btn-ghost" onclick="printSpokeCardsPDF()" ${state.spokeCardsGenerating ? 'disabled' : ''}>${state.spokeCardsGenerating ? t('common.generating') : t('rider.printSpokecards')}</button>
           <button class="btn btn-primary" onclick="exportSpokeCardsPDF()" ${state.spokeCardsGenerating ? 'disabled' : ''}>${state.spokeCardsGenerating ? t('rider.generatingSpokecards') : t('rider.spokecardsPdf')}</button>
         </div>
       ` : ''}
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn" onclick="toggleBulkImportPanel()">${state.bulkImportOpen ? t('common.cancel') : t('bulkImport.openButton')}</button>
-      </div>
     </div>
     ${renderBulkImportPanel()}
     ${renderActionLogPanel(evt)}
-    ${riders.length ? `<div class="riders-hint">${t('rider.spokecardHint')}</div>` : ''}
-    ${riders.length ? `<div class="riders-hint">${t('pdfBlocks.spokecardsHint')} <a href="#" onclick="event.preventDefault(); openManifest(); state.pdfBlocksPanelOpen = true; render();">${t('pdfBlocks.toggleButton')}</a></div>` : ''}
+    ${riders.length ? `<div class="riders-hint">${t('rider.spokecardHint')} ${t('pdfBlocks.spokecardsHint')} <a href="#" onclick="event.preventDefault(); openManifest(); state.pdfBlocksPanelOpen = true; render();">${t('pdfBlocks.toggleButton')}</a></div>` : ''}
     ${state.printPopupBlocked ? `<div class="riders-hint warn">${t('rider.printPopupBlocked')}</div>` : ''}
     <div class="settings-section" style="margin:0 0 22px;">
       <h3 style="font-size:15px;">${t('rider.teamsHeading')}</h3>

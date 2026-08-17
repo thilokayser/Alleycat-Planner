@@ -55,7 +55,7 @@ const translations = {
       printSpokecards: 'Spokecards drucken',
       spokecardsPdf: 'Spokecards (PDF)',
       generatingSpokecards: 'Generiere Spokecards…',
-      spokecardHint: 'Spokecards im Pokerkarten-Format (63,5 × 88,9 mm): Vorderseite mit Event-Design, Rückseite mit individuellem QR-Code je Fahrer. Die PDF enthält erst alle Vorderseiten, danach alle Rückseiten in gleicher Reihenfolge — zum Duplex-Drucken oder für den Copyshop.',
+      spokecardHint: 'Spokecards im Pokerkarten-Format (63,5 × 88,9 mm): Vorderseite mit Event-Design, Rückseite mit individuellem QR-Code je Fahrer — zuerst alle Vorderseiten, dann alle Rückseiten, für Duplex-Druck oder Copyshop.',
       printPopupBlocked: 'Pop-up wurde vom Browser blockiert. Bitte Pop-ups für diese Seite erlauben und „Spokecards drucken" erneut klicken.',
       teamsHeading: 'Teams',
       noTeamsYet: 'Noch keine Teams angelegt.',

@@ -610,7 +610,7 @@
   /* ---------- Riders ---------- */
   #view-riders{flex-direction:column; overflow:auto; background:var(--asphalt); padding:36px 40px;}
   .riders-toolbar{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px; margin-bottom:22px;}
-  .riders-count-field{display:flex; align-items:flex-end; gap:8px;}
+  .riders-count-field{display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap;}
   .riders-count-field label{display:block; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;}
   .riders-count-field input{
     width:90px; font-family:'JetBrains Mono',monospace; font-size:14px; padding:8px 10px;
@@ -656,6 +656,7 @@
     width:100%; text-align:center; font-family:'JetBrains Mono',monospace; font-size:10.5px;
     border:1px dashed var(--stamp); background:#faf6ea; color:#8a3a30;
     border-radius:2px; padding:4px 6px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .rider-emergency-input::placeholder{color:#b28f86;}
   .rider-team-row{width:100%; display:flex; align-items:center; gap:6px; justify-content:center;}
@@ -989,8 +990,12 @@
     color:var(--chalk); margin-bottom:12px;
   }
   .overview-widget-empty{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--steel);}
-  .overview-status-tiles{display:flex; flex-wrap:wrap; gap:8px;}
-  .overview-status-tile{flex:1; min-width:64px; background:var(--asphalt-3); border-radius:3px; padding:10px 6px; text-align:center;}
+  /* Grid, not flex+flex:1 — a trailing lone tile (odd counts, e.g. 5 status
+     groups) would otherwise wrap alone and stretch to the full row width.
+     Grid's column tracks are shared across rows, so a lone tile keeps the
+     same width as the ones above it instead. */
+  .overview-status-tiles{display:grid; grid-template-columns:repeat(auto-fill, minmax(64px, 1fr)); gap:8px;}
+  .overview-status-tile{background:var(--asphalt-3); border-radius:3px; padding:10px 6px; text-align:center;}
   .overview-status-tile-count{display:block; font-family:'JetBrains Mono',monospace; font-size:21px; font-weight:700; color:var(--chalk); line-height:1.2;}
   .overview-status-tile-label{display:block; font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--steel); margin-top:2px;}
   /* Status is carried by a tinted tile background rather than colored text on
@@ -1085,8 +1090,8 @@
 
   /* ---------- overview: beamer & sound-hook bar ---------- */
   .overview-beamer-bar{
-    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:6px;
-    padding:16px 18px; margin-bottom:18px; display:flex; flex-direction:column; gap:12px;
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:2px solid var(--hivis);
+    border-radius:4px; padding:16px 18px; margin-bottom:18px; display:flex; flex-direction:column; gap:12px;
   }
   .overview-beamer-info{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
   .overview-beamer-hint{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--steel); line-height:1.4;}
@@ -1267,6 +1272,15 @@
        Outdoor-Theme already handles the same problem (base.css's outdoor block,
        min-height:48px) but scoped to touch-relevant widths instead of a theme. */
     .btn-sm{min-height:44px; padding:8px 14px; display:inline-flex; align-items:center; justify-content:center;}
+    /* Same touch-target gap as .btn-sm above, for the two icon-only delete
+       affordances that aren't a .btn: the rider-card corner button and the
+       category-option chip's remove button. Kept short of 44px on purpose —
+       both sit on small, tightly packed surfaces (a ~150px rider card, a
+       chip inline with its sibling chips) where a full 44px circle would
+       overlap the QR code / crowd neighboring chips; this still roughly
+       triples the rider-delete hit area over the 20px default. */
+    .rider-delete-btn{width:32px; height:32px; line-height:30px; font-size:17px;}
+    .category-option-chip button{padding:8px 9px; font-size:14px;}
   }
 
   @media (max-width: 520px){
