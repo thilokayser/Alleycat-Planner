@@ -41,6 +41,9 @@ Beide Varianten prüfen zusätzlich zuerst, ob `window.storage` verfügbar ist (
 - Spielmodi-Engine: 7 vordefinierte, unabhängig kombinierbare Modi (Zeitfenster-CPs, Bonus-CPs mit Rang-Punkten, Geheime CPs mit Freischalt-Vorbedingung, Battle Royale mit schrumpfender Zone, Wildcard/Joker-Checkpoint pro Fahrer, Kettenreaktion-Bonus bei perfekter Reihenfolge, Sudden-Death-Ausscheiden bei Inaktivität) — Aktivieren eines punktevergebenden Modus schaltet das Leaderboard auf Punkte-Wertung um (Zeit bleibt als Zusatzinfo sichtbar), Punkte-Herkunft ist pro Fahrer einsehbar
 - Live-Beamer für Spielmodi: sobald mindestens ein Modus aktiv ist, erweitert sich die Beamer-Ansicht automatisch um Punkte-Leaderboard, Live-Ticker der letzten Ereignisse (Bonus gesichert, Checkpoint enthüllt, Zone schrumpft, Fahrer ausgeschieden/im Ziel) mit Sound-Hooks je Ereignis, eine kleine Battle-Royale-Zonenkarte und ein Vollbild-Overlay bei Ausscheiden — bei keinem aktiven Modus verhält sich der Beamer unverändert wie ohne Spielmodi
 - Ziel-Check-in-Flow mit Bestätigen/Zurücksetzen inkl. Undo, sowie DNF-/DNS-Markierung
+- CSV-Bulk-Import für Fahrerlisten: Spalten-Zuordnung (Startnummer/Name/Team/Notfallkontakt), Validierung vor dem Import mit Fehlerliste statt stillem Scheitern, legt fehlende Teams automatisch an
+- Fehlerbildschirm statt weißem Bildschirm bei einem unerwarteten Programmfehler, mit Hinweis dass die Daten sicher gespeichert sind
+- Generisches Undo/Aktions-Log für die letzten Aktionen (z. B. Fahrer gelöscht, Kategorie geändert) — zusätzlich zum bestehenden Ziel-Check-in-Undo
 - Leaderboard mit kombinierbaren Filtern (Status, Team, Kategorien) und Export als CSV (Excel-DE-kompatibel, semikolon-getrennt, optional aufgeteilt nach Team/Kategorie)
 - Manifest- sowie Startnummern-/Spokecards-PDF-Export
 - Routen-Export als GPX

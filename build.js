@@ -17,6 +17,8 @@ const CORE_FILES = [
   'checkpoint.js',
   'team.js',
   'category.js',
+  'action-log.js',
+  'bulk-import.js',
   'map.js',
   'rider.js',
   'checkin.js',

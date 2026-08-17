@@ -31,7 +31,8 @@ function withEventDefaults(evt){
     scoringMode: 'time',
     gameModes: [],
     ruleRuntimeState: {},
-    pointsLedger: []
+    pointsLedger: [],
+    actionLog: []
   }, evt);
   merged.pdfBlocks = (merged.pdfBlocks || []).map(withPdfBlockDefaults);
   merged.gameModes = (merged.gameModes || []).map(withGameModeDefaults);

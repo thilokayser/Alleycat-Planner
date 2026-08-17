@@ -67,7 +67,9 @@ const translations = {
       bibsStamp: 'Startnummern',
       checkinSingular: 'Check-in',
       checkinPlural: 'Check-ins',
-      reduceConfirm: 'Beim Verkleinern gehen {count} bereits erfasste {noun} verloren (Bib {bibs}). Fortfahren?'
+      reduceConfirm: 'Beim Verkleinern gehen {count} bereits erfasste {noun} verloren (Bib {bibs}). Fortfahren?',
+      deleteTitle: 'Fahrer löschen',
+      deleteConfirm: 'Fahrer #{bib} wirklich löschen?'
     },
     leaderboard: {
       noEventSelected: 'Kein Event ausgewählt.',
@@ -622,6 +624,41 @@ const translations = {
       tickerFinished: '🏁 {name} im Ziel',
       zoneNextShrinkIn: 'Nächste Verkleinerung in {time}',
       eliminationOverlayText: '{name} ist ausgeschieden'
+    },
+    bulkImport: {
+      openButton: 'CSV importieren',
+      uploadHint: 'CSV-Datei mit Fahrerliste wählen (Trennzeichen , oder ; wird automatisch erkannt). Spalten werden im nächsten Schritt zugeordnet.',
+      errorEmptyFile: 'Die Datei enthält keine lesbaren Zeilen.',
+      hasHeaderLabel: 'Erste Zeile ist Kopfzeile',
+      fieldBib: 'Startnummer',
+      fieldName: 'Name',
+      fieldTeam: 'Team',
+      fieldEmergency: 'Notfallkontakt',
+      columnNone: '— nicht zuordnen —',
+      columnFallback: 'Spalte',
+      validateButton: 'Prüfen',
+      errorNoBibColumn: 'Bitte eine Spalte für die Startnummer zuordnen.',
+      errorInvalidBib: 'Ungültige Startnummer: „{value}"',
+      errorDuplicateBib: 'Doppelte Startnummer {bib} in der Datei.',
+      errorLinePrefix: 'Zeile {line}:',
+      summaryValid: '{count} gültige Zeilen bereit zum Import',
+      summaryErrors: '{count} Zeilen mit Fehlern (werden übersprungen)',
+      previewMore: '… und {count} weitere',
+      applyButton: 'Import durchführen ({count})'
+    },
+    actionLog: {
+      panelTitle: 'Letzte Aktionen',
+      undoAction: 'Rückgängig',
+      riderDeleted: 'Fahrer #{bib} {name} gelöscht',
+      categoryChanged: 'Kategorie „{group}" von Fahrer #{bib} geändert',
+      categoryGroupDeleted: 'Kategorie-Gruppe „{name}" gelöscht',
+      categoryOptionDeleted: 'Kategorie-Option „{value}" ({group}) gelöscht',
+      bulkImportApplied: 'CSV-Import: {created} neu, {updated} aktualisiert'
+    },
+    errorBoundary: {
+      title: 'Etwas ist schiefgelaufen',
+      text: 'Keine Sorge — deine Daten sind sicher in der Datenbank gespeichert. Bitte die Seite neu laden.',
+      reload: 'Neu laden'
     }
   }
 };

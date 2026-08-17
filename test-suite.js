@@ -29,8 +29,11 @@
    Override), kompletter Ziel-Check-in-Flow
    (bestätigen/zurücksetzen/Undo-Toast/Speichern & schließen/Übersicht),
    Leaderboard inkl. Team-Wertung-Tab und kombinierbaren Filtern, Manifest,
-   PDF-Export (Startnummern + Spokecards + Personal-Briefing) und
-   Storage-Roundtrip.
+   PDF-Export (Startnummern + Spokecards + Personal-Briefing),
+   Storage-Roundtrip, sowie QoL-Features (CSV-Bulk-Import inkl.
+   Spalten-Zuordnung/Validierung/Fehlerliste, globale Error-Boundary,
+   generisches Undo-/Aktions-Log für Fahrer-Löschung und
+   Kategorie-Änderungen).
 
    Läuft UNVERÄNDERT gegen beide gebauten Varianten (erst `node build.js`):
      - dist/alleycat-dispatch-local.html   (SQLite via sql.js/IndexedDB, oder window.storage)
@@ -917,6 +920,127 @@ async function runAlleycatTestSuite(){
       catch(e){ threw = true; }
       check('broadcastLiveEvent wirft nicht (auch ohne Empfänger)', !threw);
     }
+  }
+
+  /* 3l) QoL: Bulk-Import, Error Boundary, Undo-Log (Phase 13) */
+  {
+    /* Sauberer Log-Stand für diesen Abschnitt (3c hat bereits Einträge erzeugt) */
+    evt.actionLog = [];
+
+    /* CSV-Parsing: Trennzeichen-Erkennung + Quoting */
+    checkEqual('detectCsvDelimiter erkennt Semikolon', detectCsvDelimiter('a;b;c\n1;2;3'), ';');
+    checkEqual('detectCsvDelimiter erkennt Komma', detectCsvDelimiter('a,b,c\n1,2,3'), ',');
+    const csvText = `Startnummer;Name;Team;Notfallkontakt\n42;"Zoe ""Z"" Fast";Rot;123\n43;Yannick;;456\nabc;Bad;;789\n42;Dup;;000\n`;
+    const csvRows = parseCsvText(csvText);
+    checkEqual('parseCsvText liefert Header + 4 Datenzeilen', csvRows.length, 5);
+    checkEqual('parseCsvText löst verdoppelte Anführungszeichen korrekt auf', csvRows[1][1], 'Zoe "Z" Fast');
+    const guessedMap = guessBulkImportMapping(csvRows[0]);
+    checkEqual('guessBulkImportMapping erkennt Startnummer-Spalte', guessedMap.bib, '0');
+    checkEqual('guessBulkImportMapping erkennt Name-Spalte', guessedMap.name, '1');
+    checkEqual('guessBulkImportMapping erkennt Team-Spalte', guessedMap.team, '2');
+    checkEqual('guessBulkImportMapping erkennt Notfallkontakt-Spalte', guessedMap.emergency, '3');
+
+    /* Validierung vor Import: fehlende/doppelte Startnummern landen als Fehlerliste statt stillem Scheitern */
+    state.bulkImportRows = csvRows;
+    state.bulkImportHasHeader = true;
+    state.bulkImportMapping = guessedMap;
+    runBulkImportValidation();
+    checkEqual('Validierung erkennt 2 Fehlerzeilen (ungültig + doppelt)', state.bulkImportErrors.length, 2);
+    check('Validierung meldet ungültige Startnummer', state.bulkImportErrors.some(e => e.message.includes('Ungültige Startnummer')));
+    check('Validierung meldet doppelte Startnummer', state.bulkImportErrors.some(e => e.message.includes('Doppelte Startnummer')));
+    checkEqual('Validierung liefert genau 2 gültige Zeilen', state.bulkImportValidRows.length, 2);
+
+    /* Fehlende Spalten-Zuordnung wird ebenfalls als Fehler gemeldet, nicht stillschweigend übersprungen */
+    state.bulkImportMapping = {bib: '', name: '', team: '', emergency: ''};
+    runBulkImportValidation();
+    checkEqual('Fehlende Bib-Zuordnung erzeugt genau einen Fehler', state.bulkImportErrors.length, 1);
+    checkEqual('Ohne Bib-Zuordnung keine gültigen Zeilen', state.bulkImportValidRows.length, 0);
+    state.bulkImportMapping = guessedMap;
+    runBulkImportValidation();
+
+    /* Import anwenden: legt neue Fahrer + fehlendes Team an, erweitert erwartete Fahrerzahl */
+    const ridersBefore = evt.riders.length;
+    const teamsBefore = evt.teams.length;
+    const expectedBefore = evt.expectedRiders;
+    applyBulkImportRows();
+    checkEqual('Bulk-Import legt 2 neue Fahrer an', evt.riders.length, ridersBefore + 2);
+    checkEqual('Bulk-Import legt genau 1 neues Team an ("Rot")', evt.teams.length, teamsBefore + 1);
+    checkEqual('Bulk-Import erweitert erwartete Fahrerzahl auf die höchste importierte Bib', evt.expectedRiders, 43);
+    const importedRider = evt.riders.find(r => r.bib === 42);
+    const rotTeam = evt.teams.find(tm => tm.name === 'Rot');
+    check('Importierter Fahrer ist dem neu angelegten Team zugeordnet', !!importedRider && !!rotTeam && importedRider.teamId === rotTeam.id);
+
+    /* Undo macht den gesamten Import inkl. Team wieder rückgängig */
+    let logEntry = evt.actionLog[evt.actionLog.length - 1];
+    check('Bulk-Import erzeugt Undo-Log-Eintrag mit aktivem Handler', !!logEntry && !!state.actionUndoHandlers[logEntry.id]);
+    undoLoggedAction(logEntry.id);
+    checkEqual('Undo stellt ursprüngliche Fahrerzahl wieder her', evt.riders.length, ridersBefore);
+    checkEqual('Undo entfernt das neu angelegte Team wieder', evt.teams.length, teamsBefore);
+    checkEqual('Undo stellt erwartete Fahrerzahl wieder her', evt.expectedRiders, expectedBefore);
+    checkEqual('Undo entfernt den Log-Eintrag wieder', evt.actionLog.length, 0);
+
+    /* applyBulkImportRows mit leerer Auswahl ist ein No-op */
+    state.bulkImportValidRows = [];
+    applyBulkImportRows();
+    checkEqual('Import ohne gültige Zeilen ändert Fahrerzahl nicht', evt.riders.length, ridersBefore);
+    state.bulkImportOpen = false;
+    state.bulkImportRows = [];
+    state.bulkImportErrors = [];
+    state.bulkImportValidRows = [];
+
+    /* Fahrer löschen + Rückgängig (Undo-Log-Beispiel 1 aus der Spec) */
+    evt.riders.push(withRiderDefaults({bib: 99, name: 'Temp <b>XSS</b>'}));
+    const origConfirm4 = window.confirm;
+    window.confirm = () => true;
+    deleteRider(99);
+    window.confirm = origConfirm4;
+    check('deleteRider entfernt den Fahrer aus der Liste', !evt.riders.some(r => r.bib === 99));
+    logEntry = evt.actionLog[evt.actionLog.length - 1];
+    checkEqual('deleteRider-Log-Eintrag korrekt beschriftet', logEntry.label, 'Fahrer #99 Temp <b>XSS</b> gelöscht');
+    check('deleteRider-Undo-Handler ist unmittelbar verfügbar', !!state.actionUndoHandlers[logEntry.id]);
+    check('Aktions-Log-Panel escaped den Fahrernamen', renderActionLogPanel(evt).includes('&lt;b&gt;') && !renderActionLogPanel(evt).includes('<b>XSS'));
+    undoLoggedAction(logEntry.id);
+    check('Undo stellt den gelöschten Fahrer wieder her', evt.riders.some(r => r.bib === 99));
+    evt.riders = evt.riders.filter(r => r.bib !== 99);
+    evt.actionLog = [];
+
+    /* Kategorie geändert (Undo-Log-Beispiel 2 aus der Spec) */
+    const catGroup = evt.categoryGroups[0];
+    const catRider = evt.riders[0];
+    const previousCatValue = catRider.categories[catGroup.id];
+    onRiderCategoryChange(catRider.bib, catGroup.id, 'Frei/Fixed-Test');
+    checkEqual('Kategorie-Änderung wird sofort übernommen', catRider.categories[catGroup.id], 'Frei/Fixed-Test');
+    logEntry = evt.actionLog[evt.actionLog.length - 1];
+    check('Kategorie-Änderung erzeugt Undo-Log-Eintrag', !!logEntry && logEntry.label.includes('Kategorie'));
+    undoLoggedAction(logEntry.id);
+    checkEqual('Undo stellt vorherigen Kategorie-Wert wieder her', catRider.categories[catGroup.id], previousCatValue);
+    evt.actionLog = [];
+
+    /* Aktions-Log: Kappung auf die letzten 5 Einträge */
+    for(let i = 0; i < 8; i++) logUndoableAction(evt, 'Testaktion ' + i, () => {});
+    checkEqual('Aktions-Log wird auf 5 Einträge gekappt', evt.actionLog.length, 5);
+    checkEqual('Aktions-Log behält den jeweils neuesten Eintrag', evt.actionLog[4].label, 'Testaktion 7');
+    checkEqual('renderActionLogPanel liefert leeren String ohne Einträge', renderActionLogPanel({actionLog: []}), '');
+    evt.actionLog = [];
+    state.actionUndoHandlers = {};
+
+    /* Error Boundary: Fehlerbildschirm statt weißem Bildschirm, Daten bleiben unangetastet im Speicher */
+    const ebRoot = document.getElementById('error-boundary-root');
+    showErrorBoundary(new Error('Test-Fehler für Verifikation'));
+    check('Error Boundary zeigt Fehlerbildschirm statt weißem Bildschirm', !!document.querySelector('.error-boundary-overlay'));
+    check('Error Boundary zeigt Reload-Button', !!document.querySelector('.error-boundary-box button'));
+    showErrorBoundary(new Error('Zweiter Fehler'));
+    checkEqual('Error Boundary zeigt sich nicht mehrfach übereinander', document.querySelectorAll('.error-boundary-overlay').length, 1);
+    ebRoot.innerHTML = '';
+    delete ebRoot.dataset.shown;
+
+    /* Aufräumen: dieser Abschnitt hat mehrere Undo-Toasts ausgelöst (eigene 6s-Timer) —
+       #toast-root leeren, damit spätere Tests (Abschnitt 7: Undo-Toast beim Check-in)
+       nicht versehentlich den Rückgängig-Button eines hier ausgelösten Toasts treffen. */
+    document.getElementById('toast-root').innerHTML = '';
+
+    openRiders();
+    await wait(20);
   }
 
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */

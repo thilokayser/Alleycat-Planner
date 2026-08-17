@@ -58,12 +58,23 @@ function renameCategoryGroup(id, name){
   debouncedSave();
 }
 function deleteCategoryGroup(id){
-  if(!confirm(t('category.deleteGroupConfirm'))) return;
   const evt = state.currentEvent;
-  evt.categoryGroups = (evt.categoryGroups || []).filter(g => g.id !== id);
+  const idx = (evt.categoryGroups || []).findIndex(g => g.id === id);
+  if(idx === -1) return;
+  if(!confirm(t('category.deleteGroupConfirm'))) return;
+  const group = evt.categoryGroups[idx];
+  const affected = (evt.riders || []).filter(r => r.categories && r.categories[id] !== undefined).map(r => ({bib: r.bib, value: r.categories[id]}));
+  evt.categoryGroups = evt.categoryGroups.filter(g => g.id !== id);
   (evt.riders || []).forEach(r => { if(r.categories) delete r.categories[id]; });
-  debouncedSave();
   renderRiders();
+  logUndoableAction(evt, t('actionLog.categoryGroupDeleted', {name: group.name}), () => {
+    evt.categoryGroups.splice(idx, 0, group);
+    affected.forEach(({bib, value}) => {
+      const r = (evt.riders || []).find(x => x.bib === bib);
+      if(r){ r.categories = r.categories || {}; r.categories[id] = value; }
+    });
+    renderRiders();
+  });
 }
 function addCategoryOption(groupId){
   const evt = state.currentEvent;
@@ -95,23 +106,40 @@ function deleteCategoryOption(groupId, value){
   const evt = state.currentEvent;
   const group = ((evt && evt.categoryGroups) || []).find(g => g.id === groupId);
   if(!group) return;
-  const affected = (evt.riders || []).filter(r => r.categories && r.categories[groupId] === value).length;
-  const msg = affected > 0 ? t('category.deleteOptionConfirmWithRiders', {count: affected}) : t('category.deleteOptionConfirm');
+  const affectedRiders = (evt.riders || []).filter(r => r.categories && r.categories[groupId] === value);
+  const msg = affectedRiders.length > 0 ? t('category.deleteOptionConfirmWithRiders', {count: affectedRiders.length}) : t('category.deleteOptionConfirm');
   if(!confirm(msg)) return;
+  const optionIdx = group.options.indexOf(value);
+  const affectedBibs = affectedRiders.map(r => r.bib);
   group.options = group.options.filter(o => o !== value);
   (evt.riders || []).forEach(r => {
     if(r.categories && r.categories[groupId] === value) delete r.categories[groupId];
   });
-  debouncedSave();
   renderRiders();
+  logUndoableAction(evt, t('actionLog.categoryOptionDeleted', {value, group: group.name}), () => {
+    if(!group.options.includes(value)) group.options.splice(Math.min(optionIdx, group.options.length), 0, value);
+    affectedBibs.forEach(bib => {
+      const r = (evt.riders || []).find(x => x.bib === bib);
+      if(r){ r.categories = r.categories || {}; r.categories[groupId] = value; }
+    });
+    renderRiders();
+  });
 }
 function onRiderCategoryChange(bib, groupId, value){
-  const r = (state.currentEvent.riders || []).find(r => r.bib === bib);
+  const evt = state.currentEvent;
+  const r = (evt.riders || []).find(r => r.bib === bib);
   if(!r) return;
   r.categories = r.categories || {};
+  const previous = r.categories[groupId];
+  if(previous === (value || undefined)) return;
   if(value) r.categories[groupId] = value;
   else delete r.categories[groupId];
-  debouncedSave();
+  const group = (evt.categoryGroups || []).find(g => g.id === groupId);
+  logUndoableAction(evt, t('actionLog.categoryChanged', {bib, group: (group && group.name) || ''}), () => {
+    if(previous) r.categories[groupId] = previous;
+    else delete r.categories[groupId];
+    renderRiders();
+  });
 }
 function exportCategoriesJSON(){
   const evt = state.currentEvent;

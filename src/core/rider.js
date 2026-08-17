@@ -48,6 +48,19 @@ function onRiderEmergencyInput(bib, value){
   r.emergencyContact = value;
   debouncedSave();
 }
+function deleteRider(bib){
+  const evt = state.currentEvent;
+  const idx = (evt.riders || []).findIndex(r => r.bib === bib);
+  if(idx === -1) return;
+  if(!confirm(t('rider.deleteConfirm', {bib}))) return;
+  const removed = evt.riders[idx];
+  evt.riders.splice(idx, 1);
+  renderRiders();
+  logUndoableAction(evt, t('actionLog.riderDeleted', {bib, name: removed.name || ''}), () => {
+    evt.riders.splice(idx, 0, removed);
+    renderRiders();
+  });
+}
 
 
 function renderQrDataUrl(text, sizePx){
@@ -80,6 +93,7 @@ function renderRiders(){
   const groups = (evt.categoryGroups || []).slice().sort((a,b) => a.sortOrder - b.sortOrder);
   const cards = riders.map(r => `
     <div class="rider-card">
+      <button type="button" class="rider-delete-btn" title="${t('rider.deleteTitle')}" onclick="deleteRider(${r.bib})">&times;</button>
       <div class="rider-qr" id="qr-${r.bib}"></div>
       <div class="rider-bib">#${r.bib}</div>
       <input type="text" class="rider-name-input" placeholder="${t('rider.namePlaceholder')}" value="${escapeHtml(r.name || '')}" oninput="onRiderNameInput(${r.bib}, this.value)">
@@ -197,7 +211,12 @@ function renderRiders(){
           <button class="btn btn-primary" onclick="exportSpokeCardsPDF()" ${state.spokeCardsGenerating ? 'disabled' : ''}>${state.spokeCardsGenerating ? t('rider.generatingSpokecards') : t('rider.spokecardsPdf')}</button>
         </div>
       ` : ''}
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" onclick="toggleBulkImportPanel()">${state.bulkImportOpen ? t('common.cancel') : t('bulkImport.openButton')}</button>
+      </div>
     </div>
+    ${renderBulkImportPanel()}
+    ${renderActionLogPanel(evt)}
     ${riders.length ? `<div class="riders-hint">${t('rider.spokecardHint')}</div>` : ''}
     ${riders.length ? `<div class="riders-hint">${t('pdfBlocks.spokecardsHint')} <a href="#" onclick="event.preventDefault(); openManifest(); state.pdfBlocksPanelOpen = true; render();">${t('pdfBlocks.toggleButton')}</a></div>` : ''}
     ${state.printPopupBlocked ? `<div class="riders-hint warn">${t('rider.printPopupBlocked')}</div>` : ''}

@@ -34,6 +34,14 @@ let state = {
   overviewSettingsOpen: false,
   cpListGroupBy: 'order',
   pdfBlocksPanelOpen: false,
+  bulkImportOpen: false,
+  bulkImportStep: 'upload',
+  bulkImportRows: [],
+  bulkImportHasHeader: true,
+  bulkImportMapping: {bib: '', name: '', team: '', emergency: ''},
+  bulkImportErrors: [],
+  bulkImportValidRows: [],
+  actionUndoHandlers: {},
 };
 let map, markersLayer, routeLine;
 let qrScanStream = null;
@@ -75,6 +83,33 @@ function showToast({message, actionLabel, onAction, duration = 6000}){
   timer = setTimeout(dismiss, duration);
 }
 
+
+/* ---------------- error boundary ----------------
+   No framework, so no component-tree boundary — the closest equivalent
+   is a global window error/unhandledrejection listener. All writes go
+   through debouncedSave()/saveCurrentEvent() already, so by the time an
+   uncaught error reaches here the last known-good state is very likely
+   already persisted; this overlay exists to replace whatever half-broken
+   DOM state a crash leaves behind with a reassuring, recoverable screen
+   instead (spec 4.17). Registered at module load, not inside init(), so
+   it's active even if init() itself throws. */
+function showErrorBoundary(err){
+  const root = document.getElementById('error-boundary-root');
+  if(!root || root.dataset.shown === '1') return;
+  root.dataset.shown = '1';
+  console.error('Unerwarteter Fehler:', err);
+  root.innerHTML = `
+    <div class="error-boundary-overlay">
+      <div class="error-boundary-box">
+        <div class="error-boundary-title">${t('errorBoundary.title')}</div>
+        <p class="error-boundary-text">${t('errorBoundary.text')}</p>
+        <button class="btn btn-primary" onclick="location.reload()">${t('errorBoundary.reload')}</button>
+      </div>
+    </div>
+  `;
+}
+window.addEventListener('error', (e) => { showErrorBoundary((e && (e.error || e.message)) || e); });
+window.addEventListener('unhandledrejection', (e) => { showErrorBoundary(e && e.reason); });
 
 /* ---------------- storage-agnostic persistence ---------------- */
 async function loadEventsIndex(){
@@ -180,6 +215,7 @@ async function openEditor(id){
   state.loading = true; state.view = 'editor'; render();
   const evt = await loadEvent(id);
   state.currentEvent = withEventDefaults(evt || {id, name:t('common.unnamedEvent'), date:'', checkpoints:[]});
+  state.actionUndoHandlers = {};
   registerEventSounds(state.currentEvent);
   state.loading = false;
   render();
