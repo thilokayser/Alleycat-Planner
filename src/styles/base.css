@@ -1258,6 +1258,15 @@
     table.manifest-table{table-layout:fixed;}
     table.manifest-table th, table.manifest-table td{overflow-wrap:anywhere;}
     .m-coord, .score-line{white-space:normal;}
+
+    /* .btn-sm's default padding:5px 10px/font-size:11px (~25px tall) misses the
+       44x44pt touch-target minimum — fine on desktop with a mouse, risky on a
+       touchscreen where it's used for frequent actions (event-card
+       Bearbeiten/Exportieren/Löschen, Check-in "Speichern & schließen", …).
+       Bumped only at this breakpoint rather than globally, matching how the
+       Outdoor-Theme already handles the same problem (base.css's outdoor block,
+       min-height:48px) but scoped to touch-relevant widths instead of a theme. */
+    .btn-sm{min-height:44px; padding:8px 14px; display:inline-flex; align-items:center; justify-content:center;}
   }
 
   @media (max-width: 520px){
