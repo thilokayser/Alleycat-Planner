@@ -9,12 +9,16 @@
    Haversine-Distanzberechnung, Dashboard-Übersicht mit anpassbaren
    Widgets (Status-Kacheln/CP-Auslastung/Aktivität/Kategorie-Verteilung/
    Mini-Leaderboard/Countdown/To-dos, inkl. Sichtbarkeit + Reihenfolge),
-   Renn-Zustandsmaschine
+   Checkpoint-Liste (manuelles Sperren/Duplizieren/Inline-Positionsedit/
+   Zeitfenster-Status/Gruppierung nach Typ) und Checkpoint-Personal
+   (CRUD, Dashboard-To-do, Personal-Briefing-PDF getrennt vom
+   Fahrer-Manifest), Renn-Zustandsmaschine
    (Planung/Bereit/Läuft/Abgeschlossen inkl. CP-Struktur-Sperre und
    Override), kompletter Ziel-Check-in-Flow
    (bestätigen/zurücksetzen/Undo-Toast/Speichern & schließen/Übersicht),
    Leaderboard inkl. Team-Wertung-Tab und kombinierbaren Filtern, Manifest,
-   PDF-Export (Startnummern + Spokecards) und Storage-Roundtrip.
+   PDF-Export (Startnummern + Spokecards + Personal-Briefing) und
+   Storage-Roundtrip.
 
    Läuft UNVERÄNDERT gegen beide gebauten Varianten (erst `node build.js`):
      - dist/alleycat-dispatch-local.html   (SQLite via sql.js/IndexedDB, oder window.storage)
@@ -318,6 +322,88 @@ async function runAlleycatTestSuite(){
     checkEqual('Zurückverschieben stellt Original-Reihenfolge wieder her', evt.dashboardWidgetOrder[0], orderBefore[0]);
   }
 
+  /* 3f) Checkpoint-Liste: Sperren, Duplizieren, Inline-Position, Personal */
+  {
+    const cp0 = evt.checkpoints[0];
+    const cp1 = evt.checkpoints[1];
+
+    checkEqual('Checkpoint startet ungesperrt', cp0.locked, false);
+    toggleCpLocked(cp0.id);
+    checkEqual('toggleCpLocked sperrt Checkpoint', cp0.locked, true);
+
+    const orderBefore = evt.checkpoints.map(c => c.id);
+    moveCp(cp0.id, 1);
+    checkEqual('moveCp blockiert bei gesperrtem Checkpoint', evt.checkpoints.map(c => c.id).join(','), orderBefore.join(','));
+
+    duplicateCheckpoint(cp0.id);
+    checkEqual('duplicateCheckpoint blockiert bei gesperrtem Checkpoint', evt.checkpoints.length, CHECKPOINT_TYPES.length);
+
+    toggleCpLocked(cp0.id);
+    checkEqual('toggleCpLocked entsperrt wieder', cp0.locked, false);
+
+    const beforeDupCount = evt.checkpoints.length;
+    duplicateCheckpoint(cp1.id);
+    checkEqual('duplicateCheckpoint legt Kopie an', evt.checkpoints.length, beforeDupCount + 1);
+    const dup = evt.checkpoints[evt.checkpoints.length - 1];
+    check('Duplikat hat neue ID', dup.id !== cp1.id);
+    check('Duplikat-Name enthält "(Kopie)"', dup.name.includes('Kopie'));
+    checkEqual('Duplikat hat leicht versetzte Position', dup.lat, cp1.lat + 0.0005);
+    evt.checkpoints = evt.checkpoints.filter(c => c.id !== dup.id);
+
+    const latBefore = cp0.lat, lngBefore = cp0.lng;
+    onEditLat(cp0.id, '52.5');
+    onEditLng(cp0.id, '9.5');
+    checkEqual('onEditLat aktualisiert Position', cp0.lat, 52.5);
+    checkEqual('onEditLng aktualisiert Position', cp0.lng, 9.5);
+    cp0.lat = latBefore; cp0.lng = lngBefore;
+
+    const cpTw = withCheckpointDefaults({
+      id: 'tw1', order: 1, lat: 0, lng: 0, name: 'TW', timeWindowEnabled: true,
+      timeWindowStart: toLocalDateTimeInputValue(new Date(Date.now() - 3600000)),
+      timeWindowEnd: toLocalDateTimeInputValue(new Date(Date.now() - 1800000))
+    });
+    checkEqual('cpTimeWindowStatus: geschlossen wenn Ende in Vergangenheit', cpTimeWindowStatus(cpTw), 'closed');
+    cpTw.timeWindowStart = toLocalDateTimeInputValue(new Date(Date.now() + 1800000));
+    cpTw.timeWindowEnd = toLocalDateTimeInputValue(new Date(Date.now() + 3600000));
+    checkEqual('cpTimeWindowStatus: upcoming wenn Start in Zukunft', cpTimeWindowStatus(cpTw), 'upcoming');
+    cpTw.timeWindowStart = toLocalDateTimeInputValue(new Date(Date.now() - 1800000));
+    cpTw.timeWindowEnd = toLocalDateTimeInputValue(new Date(Date.now() + 1800000));
+    checkEqual('cpTimeWindowStatus: open wenn jetzt im Fenster', cpTimeWindowStatus(cpTw), 'open');
+    checkEqual('cpTimeWindowStatus: null wenn deaktiviert', cpTimeWindowStatus(withCheckpointDefaults({id: 'tw2'})), null);
+
+    onCpListGroupByChange('type');
+    checkEqual('cpListGroupBy gesetzt', state.cpListGroupBy, 'type');
+    renderSidebar();
+    check('Gruppierung nach Typ zeigt Gruppen-Überschriften', document.querySelectorAll('.cp-group-heading').length > 0);
+    onCpListGroupByChange('order');
+    renderSidebar();
+
+    checkEqual('Checkpoint startet ohne Personal', cp1.staff.length, 0);
+    addCpStaff(cp1.id);
+    checkEqual('addCpStaff fügt Eintrag hinzu', cp1.staff.length, 1);
+    const staffEntry = cp1.staff[0];
+    onCpStaffFieldChange(cp1.id, staffEntry.id, 'name', 'Erika Mustermann');
+    onCpStaffFieldChange(cp1.id, staffEntry.id, 'phone', '0170999999');
+    onCpStaffFieldChange(cp1.id, staffEntry.id, 'role', 'Marshal');
+    checkEqual('onCpStaffFieldChange setzt Namen', cp1.staff[0].name, 'Erika Mustermann');
+    checkEqual('onCpStaffFieldChange setzt Telefon', cp1.staff[0].phone, '0170999999');
+
+    const todosStaff = computeDashboardTodos(evt);
+    const staffTodo = todosStaff.find(td => td.key === 'noStaff');
+    check('computeDashboardTodos erkennt Checkpoints ohne Personal', !!staffTodo);
+    checkEqual('Todo-Text nennt korrekte Anzahl', staffTodo && staffTodo.text, t('overview.todoNoStaff', {count: evt.checkpoints.length - 1}));
+
+    removeCpStaff(cp1.id, staffEntry.id);
+    checkEqual('removeCpStaff entfernt Eintrag', cp1.staff.length, 0);
+
+    await checkNoThrowAsync('Personal-Briefing-PDF (buildStaffBriefingDoc) läuft ohne Fehler', () => buildStaffBriefingDoc(evt));
+
+    let selectCpErr = null;
+    try { selectCp(cp0.id); selectCp(cp0.id); } catch(e){ selectCpErr = e.message; }
+    check('selectCp (inkl. Karten-Zentrierung) läuft ohne Fehler', selectCpErr === null);
+    state.editingId = null;
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -334,6 +420,8 @@ async function runAlleycatTestSuite(){
   checkEqual('checkpointOrderMode persistiert', reloaded && reloaded.checkpointOrderMode, 'frei');
   checkEqual('dashboardWidgetOrder persistiert', reloaded && reloaded.dashboardWidgetOrder.length, DASHBOARD_WIDGET_KEYS.length);
   checkEqual('dashboardWidgetVisibility persistiert', reloaded && reloaded.dashboardWidgetVisibility.statusTiles, true);
+  checkEqual('cp.locked persistiert', reloaded && reloaded.checkpoints[0].locked, evt.checkpoints[0].locked);
+  checkEqual('cp.staff persistiert', reloaded && reloaded.checkpoints[1].staff.length, evt.checkpoints[1].staff.length);
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();

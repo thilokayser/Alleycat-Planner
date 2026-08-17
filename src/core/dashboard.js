@@ -226,6 +226,8 @@ function computeDashboardTodos(evt){
   });
   if(!evt.spokecardsPrinted || !evt.bibsPrinted) todos.push({key: 'notPrinted', text: t('overview.todoNotPrinted')});
   if(!evt.manifestGenerated) todos.push({key: 'noManifest', text: t('overview.todoNoManifest')});
+  const staffMissingCount = (evt.checkpoints || []).filter(cp => !(cp.staff || []).length).length;
+  if(staffMissingCount > 0) todos.push({key: 'noStaff', text: t('overview.todoNoStaff', {count: staffMissingCount})});
   return todos;
 }
 

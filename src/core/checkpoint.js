@@ -8,8 +8,13 @@ function withCheckpointDefaults(cp){
     punchCode: '',
     timeWindowEnabled: false,
     timeWindowStart: '',
-    timeWindowEnd: ''
+    timeWindowEnd: '',
+    locked: false,
+    staff: []
   }, cp);
+}
+function withCpStaffDefaults(s){
+  return Object.assign({id: uid('staff'), name: '', phone: '', role: '', shiftNote: '', notes: ''}, s);
 }
 /* Single source of truth for all checkpoint-type behavior. Add an entry here
    to introduce a new type — every dropdown, icon, manifest cell and check-in
@@ -91,6 +96,8 @@ function findCp(id){
 function selectCp(id){
   state.editingId = (state.editingId === id) ? null : id;
   renderSidebar();
+  const cp = findCp(id);
+  if(cp && map) map.flyTo([cp.lat, cp.lng], Math.max(map.getZoom(), 15), {duration: 0.6});
 }
 function onCpDragStart(e, id){
   e.stopPropagation();
@@ -150,6 +157,7 @@ function onCpDragEnd(e){
 function moveCp(id, dir){
   const list = state.currentEvent.checkpoints;
   const idx = list.findIndex(c => c.id === id);
+  if(idx === -1 || list[idx].locked || isCpLocked(state.currentEvent)) return;
   const swap = idx + dir;
   if(swap < 0 || swap >= list.length) return;
   [list[idx], list[swap]] = [list[swap], list[idx]];
@@ -158,11 +166,19 @@ function moveCp(id, dir){
   renderSidebar();
   redrawMarkers();
 }
+function toggleCpLocked(id){
+  const cp = findCp(id); if(!cp || isCpLocked(state.currentEvent)) return;
+  cp.locked = !cp.locked;
+  debouncedSave();
+  renderSidebar();
+}
 function askDeleteCp(id){
   state.confirmDeleteCpId = id;
   renderSidebar();
 }
 function confirmDeleteCp(id){
+  const cp = findCp(id);
+  if(cp && (cp.locked || isCpLocked(state.currentEvent))) return;
   state.currentEvent.checkpoints = state.currentEvent.checkpoints.filter(c => c.id !== id);
   state.currentEvent.checkpoints.forEach((c,i) => c.order = i+1);
   if(state.editingId === id) state.editingId = null;
@@ -226,6 +242,61 @@ function onEditTimeWindowEnd(id, value){
   debouncedSave();
   redrawMarkers();
 }
+function onEditLat(id, value){
+  const cp = findCp(id); if(!cp) return;
+  const n = parseFloat(value);
+  if(isNaN(n)) return;
+  cp.lat = n;
+  debouncedSave();
+  redrawMarkers();
+}
+function onEditLng(id, value){
+  const cp = findCp(id); if(!cp) return;
+  const n = parseFloat(value);
+  if(isNaN(n)) return;
+  cp.lng = n;
+  debouncedSave();
+  redrawMarkers();
+}
+function duplicateCheckpoint(id){
+  const evt = state.currentEvent;
+  const cp = findCp(id); if(!cp || isCpLocked(evt) || cp.locked) return;
+  const copy = Object.assign({}, cp, {
+    id: uid('cp'),
+    order: evt.checkpoints.length + 1,
+    name: cp.name ? t('checkpoint.duplicateSuffix', {name: cp.name}) : cp.name,
+    lat: cp.lat + 0.0005,
+    lng: cp.lng + 0.0005,
+    locked: false,
+    staff: (cp.staff || []).map(s => Object.assign({}, s, {id: uid('staff')}))
+  });
+  evt.checkpoints.push(copy);
+  debouncedSave();
+  state.editingId = copy.id;
+  renderSidebar();
+  redrawMarkers();
+}
+
+/* ---------------- checkpoint personnel ---------------- */
+function addCpStaff(cpId){
+  const cp = findCp(cpId); if(!cp || isCpLocked(state.currentEvent) || cp.locked) return;
+  cp.staff = cp.staff || [];
+  cp.staff.push(withCpStaffDefaults({}));
+  debouncedSave();
+  renderSidebar();
+}
+function removeCpStaff(cpId, staffId){
+  const cp = findCp(cpId); if(!cp) return;
+  cp.staff = (cp.staff || []).filter(s => s.id !== staffId);
+  debouncedSave();
+  renderSidebar();
+}
+function onCpStaffFieldChange(cpId, staffId, field, value){
+  const cp = findCp(cpId); if(!cp) return;
+  const s = (cp.staff || []).find(s => s.id === staffId); if(!s) return;
+  s[field] = value;
+  debouncedSave();
+}
 function toggleSettings(){
   state.settingsOpen = !state.settingsOpen;
   renderSidebar();
@@ -257,6 +328,20 @@ function toggleAddMode(){
   state.addMode = !state.addMode;
   renderSidebar();
 }
+function cpTimeWindowStatus(cp){
+  if(!cp.timeWindowEnabled || !cp.timeWindowStart || !cp.timeWindowEnd) return null;
+  const now = new Date();
+  const start = new Date(cp.timeWindowStart);
+  const end = new Date(cp.timeWindowEnd);
+  if(isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+  if(now < start) return 'upcoming';
+  if(now > end) return 'closed';
+  return 'open';
+}
+function onCpListGroupByChange(value){
+  state.cpListGroupBy = value;
+  renderSidebar();
+}
 function onCheckpointOrderModeChange(value){
   const evt = state.currentEvent;
   if(!evt || isCpLocked(evt)) return;
@@ -282,26 +367,24 @@ function onEventDateInput(value){
 }
 
 /* ---------------- render: editor sidebar ---------------- */
-function renderSidebar(){
-  const el = document.getElementById('sidebar');
-  if(state.loading || !state.currentEvent){
-    el.innerHTML = `<div class="loading-row">${t('checkpoint.loadingEvent')}</div>`;
-    return;
-  }
-  const evt = state.currentEvent;
-  const locked = isCpLocked(evt);
-  const routeInfo = evt.checkpointOrderMode === 'fest' ? computeRouteLegs(evt.checkpoints) : null;
-  const rows = evt.checkpoints.length === 0
-    ? `<div class="cp-list-empty">${t('checkpoint.noCheckpointsYet')}<br>${t('checkpoint.activateHint')}</div>`
-    : evt.checkpoints.map((cp, cpIdx) => {
+function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
+        const itemLocked = locked || cp.locked;
         const editing = state.editingId === cp.id;
+        const loadCount = (evt.riders || []).filter(r => (r.completed || []).includes(cp.id)).length;
+        const twStatus = cpTimeWindowStatus(cp);
+        const staffCount = (cp.staff || []).length;
         let editBlock = '';
-        if(editing && locked){
+        if(editing && itemLocked){
           editBlock = `
             <div class="cp-edit-readonly" onclick="event.stopPropagation()">
               <div class="cp-readonly-row"><b>${t('checkpoint.checkpointTypeLabel')}:</b> ${escapeHtml(getCheckpointType(cp.type).fullLabel)}</div>
               ${cp.clue ? `<div class="cp-readonly-row"><b>${t('checkpoint.clueLabel')}:</b> ${escapeHtml(cp.clue)}</div>` : ''}
               <div class="cp-readonly-row"><b>${t('checkpoint.coordinatesLabel')}:</b> ${cp.lat.toFixed(5)}, ${cp.lng.toFixed(5)}</div>
+              ${cp.locked ? `<div class="cp-readonly-row">${t('checkpoint.lockedHint')}</div>` : ''}
+              ${staffCount ? `
+                <div class="cp-readonly-row"><b>${t('checkpoint.staffHeading')}:</b></div>
+                ${cp.staff.map(s => `<div class="cp-readonly-staff-row">${escapeHtml(s.name || t('checkpoint.staffUnnamed'))}${s.role ? ' · ' + escapeHtml(s.role) : ''}${s.phone ? ` · <a href="tel:${escapeHtml(s.phone)}">${escapeHtml(s.phone)}</a>` : ''}</div>`).join('')}
+              ` : ''}
             </div>`;
         } else if(editing){
           if(state.confirmDeleteCpId === cp.id){
@@ -345,7 +428,10 @@ function renderSidebar(){
                   </div>
                   <div>
                     <label>${t('checkpoint.coordinatesLabel')}</label>
-                    <div class="coord-readout">${cp.lat.toFixed(5)}, ${cp.lng.toFixed(5)}</div>
+                    <div class="coord-edit-row">
+                      <input type="number" step="0.00001" class="mono coord-input" value="${cp.lat}" onchange="onEditLat('${cp.id}', this.value)">
+                      <input type="number" step="0.00001" class="mono coord-input" value="${cp.lng}" onchange="onEditLng('${cp.id}', this.value)">
+                    </div>
                   </div>
                 </div>
                 <label class="checkbox-row">
@@ -368,34 +454,86 @@ function renderSidebar(){
                   </div>
                 </div>
                 ` : ''}
+                <div class="cp-staff-section">
+                  <label>${t('checkpoint.staffHeading')}</label>
+                  ${(cp.staff || []).map(s => `
+                    <div class="cp-staff-entry">
+                      <div class="cp-staff-row">
+                        <input type="text" placeholder="${t('checkpoint.staffNamePlaceholder')}" value="${escapeHtml(s.name)}" oninput="onCpStaffFieldChange('${cp.id}', '${s.id}', 'name', this.value)">
+                        <input type="tel" placeholder="${t('checkpoint.staffPhonePlaceholder')}" value="${escapeHtml(s.phone)}" oninput="onCpStaffFieldChange('${cp.id}', '${s.id}', 'phone', this.value)">
+                      </div>
+                      <div class="cp-staff-row">
+                        <input type="text" placeholder="${t('checkpoint.staffRolePlaceholder')}" value="${escapeHtml(s.role)}" oninput="onCpStaffFieldChange('${cp.id}', '${s.id}', 'role', this.value)">
+                        <input type="text" placeholder="${t('checkpoint.staffShiftPlaceholder')}" value="${escapeHtml(s.shiftNote)}" oninput="onCpStaffFieldChange('${cp.id}', '${s.id}', 'shiftNote', this.value)">
+                      </div>
+                      <input type="text" class="cp-staff-notes" placeholder="${t('checkpoint.staffNotesPlaceholder')}" value="${escapeHtml(s.notes)}" oninput="onCpStaffFieldChange('${cp.id}', '${s.id}', 'notes', this.value)">
+                      <button type="button" class="btn btn-sm btn-danger" onclick="removeCpStaff('${cp.id}', '${s.id}')">${t('checkpoint.removeStaff')}</button>
+                    </div>
+                  `).join('')}
+                  <button type="button" class="btn btn-sm" onclick="addCpStaff('${cp.id}')">${t('checkpoint.addStaff')}</button>
+                </div>
                 <div class="edit-actions">
+                  <button class="btn btn-sm" onclick="duplicateCheckpoint('${cp.id}')">${t('checkpoint.duplicate')}</button>
                   <button class="btn btn-danger btn-sm" onclick="askDeleteCp('${cp.id}')">${t('checkpoint.deleteCheckpoint')}</button>
                 </div>
               </div>`;
           }
         }
         return `
-          <div class="cp-row ${editing ? 'editing' : ''} ${cp.mandatory ? '' : 'optional'} ${locked ? 'locked' : ''}" data-cp-id="${cp.id}" onclick="selectCp('${cp.id}')">
+          <div class="cp-row ${editing ? 'editing' : ''} ${cp.mandatory ? '' : 'optional'} ${itemLocked ? 'locked' : ''}" data-cp-id="${cp.id}" onclick="selectCp('${cp.id}')">
             <div class="cp-row-top">
-              <span class="cp-drag-handle" title="${t('checkpoint.dragToReorder')}" ${locked ? '' : `onpointerdown="onCpDragStart(event, '${cp.id}')"`} onclick="event.stopPropagation()">
+              <span class="cp-drag-handle" title="${t('checkpoint.dragToReorder')}" ${(itemLocked || groupView) ? '' : `onpointerdown="onCpDragStart(event, '${cp.id}')"`} onclick="event.stopPropagation()">
                 <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.4"/><circle cx="7.5" cy="2.5" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13.5" r="1.4"/><circle cx="7.5" cy="13.5" r="1.4"/></svg>
               </span>
               <div class="cp-no">${cp.order}</div>
               <div class="cp-name" id="row-name-${cp.id}">${escapeHtml(cp.name || t('checkpoint.noName'))}</div>
               <span class="tag-type">${typeLabel(cp.type)}</span>
               <label class="cp-quick-toggle" title="${t('checkpoint.mandatoryCheckpointTitle')}" onclick="event.stopPropagation()">
-                <input type="checkbox" ${cp.mandatory ? 'checked' : ''} ${locked ? 'disabled' : ''} onchange="onEditMandatory('${cp.id}', this.checked)">
+                <input type="checkbox" ${cp.mandatory ? 'checked' : ''} ${itemLocked ? 'disabled' : ''} onchange="onEditMandatory('${cp.id}', this.checked)">
                 ${t('checkpoint.mandatoryQuickToggle')}
               </label>
+              ${!groupView ? `
               <div class="cp-order-btns" onclick="event.stopPropagation()">
-                <button onclick="moveCp('${cp.id}', -1)" title="${t('checkpoint.moveUp')}" ${locked ? 'disabled' : ''}>&uarr;</button>
-                <button onclick="moveCp('${cp.id}', 1)" title="${t('checkpoint.moveDown')}" ${locked ? 'disabled' : ''}>&darr;</button>
-              </div>
+                <button onclick="moveCp('${cp.id}', -1)" title="${t('checkpoint.moveUp')}" ${itemLocked ? 'disabled' : ''}>&uarr;</button>
+                <button onclick="moveCp('${cp.id}', 1)" title="${t('checkpoint.moveDown')}" ${itemLocked ? 'disabled' : ''}>&darr;</button>
+              </div>` : ''}
+            </div>
+            <div class="cp-row-meta" onclick="event.stopPropagation()">
+              <span class="cp-load-badge" title="${t('checkpoint.loadBadgeTitle')}">${t('checkpoint.loadBadgeIcon')} ${loadCount}</span>
+              ${twStatus ? `<span class="cp-tw-badge cp-tw-${twStatus}">${t('checkpoint.timeWindowStatus.' + twStatus)}</span>` : ''}
+              ${staffCount ? `<span class="cp-staff-badge" title="${t('checkpoint.staffHeading')}">${t('checkpoint.staffBadgeIcon')} ${staffCount}</span>` : ''}
+              <span class="cp-row-icon-actions">
+                <button type="button" class="cp-icon-btn" onclick="duplicateCheckpoint('${cp.id}')" title="${t('checkpoint.duplicate')}" ${itemLocked ? 'disabled' : ''}>⧉</button>
+                <button type="button" class="cp-icon-btn" onclick="toggleCpLocked('${cp.id}')" title="${cp.locked ? t('checkpoint.unlock') : t('checkpoint.lock')}" ${locked ? 'disabled' : ''}>${cp.locked ? '🔒' : '🔓'}</button>
+              </span>
             </div>
             ${editBlock}
           </div>
           ${routeInfo && routeInfo.legs[cpIdx] ? `<div class="cp-leg-distance">↓ ${routeInfo.legs[cpIdx].km.toFixed(2)} km</div>` : ''}`;
-      }).join('');
+}
+function renderCpListRows(evt, locked, routeInfo){
+  if(evt.checkpoints.length === 0) return `<div class="cp-list-empty">${t('checkpoint.noCheckpointsYet')}<br>${t('checkpoint.activateHint')}</div>`;
+  if(state.cpListGroupBy === 'type'){
+    return CHECKPOINT_TYPES.filter(ct => evt.checkpoints.some(cp => cp.type === ct.key)).map(ct => {
+      const group = evt.checkpoints.filter(cp => cp.type === ct.key).slice().sort((a, b) => a.order - b.order);
+      return `
+        <div class="cp-group-heading">${typeIconHtml(ct.key)} ${escapeHtml(ct.fullLabel)} <span class="cp-group-count">${group.length}</span></div>
+        ${group.map((cp) => renderCpRow(cp, evt.checkpoints.indexOf(cp), evt, locked, null, true)).join('')}
+      `;
+    }).join('');
+  }
+  return evt.checkpoints.map((cp, cpIdx) => renderCpRow(cp, cpIdx, evt, locked, routeInfo, false)).join('');
+}
+function renderSidebar(){
+  const el = document.getElementById('sidebar');
+  if(state.loading || !state.currentEvent){
+    el.innerHTML = `<div class="loading-row">${t('checkpoint.loadingEvent')}</div>`;
+    return;
+  }
+  const evt = state.currentEvent;
+  const locked = isCpLocked(evt);
+  const routeInfo = evt.checkpointOrderMode === 'fest' ? computeRouteLegs(evt.checkpoints) : null;
+  const rows = renderCpListRows(evt, locked, routeInfo);
 
   el.innerHTML = `
     <div class="sidebar-head">
@@ -469,10 +607,18 @@ function renderSidebar(){
       </button>
       <div class="addmode-hint">${state.addMode ? t('checkpoint.addModeHintActive') : t('checkpoint.addModeHintInactive')}</div>
     </div>
+    <div class="cp-group-by-row">
+      <label>${t('checkpoint.groupByLabel')}</label>
+      <select onchange="onCpListGroupByChange(this.value)">
+        <option value="order" ${state.cpListGroupBy !== 'type' ? 'selected' : ''}>${t('checkpoint.groupByOrder')}</option>
+        <option value="type" ${state.cpListGroupBy === 'type' ? 'selected' : ''}>${t('checkpoint.groupByType')}</option>
+      </select>
+    </div>
     <div class="cp-list">${rows}</div>
     <div class="sidebar-foot">
       <button class="btn" onclick="exportRouteGPX()">${t('checkpoint.exportGpx')}</button>
       <button class="btn" onclick="openManifest()">${t('checkpoint.generateManifest')}</button>
+      <button class="btn" onclick="exportStaffBriefingPDF()">${t('checkpoint.exportStaffBriefing')}</button>
     </div>
   `;
 }

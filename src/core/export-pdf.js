@@ -210,6 +210,84 @@ async function exportRidersPDF(){
 }
 
 
+/* ---------------- personal-briefing export (organizer-only, never rider-facing) ---------------- */
+async function buildStaffBriefingDoc(evt){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit: 'pt', format: 'a4'});
+  const marginX = 48;
+  const pageRight = 548;
+  let y = 56;
+  const INK = '#241f18', HIVIS = '#ff5f1f', STEEL = '#5b5340';
+
+  doc.setTextColor(INK);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(20);
+  doc.text(t('exportPdf.staffBriefingTitle'), marginX, y);
+  y += 6;
+  doc.setDrawColor(HIVIS); doc.setLineWidth(1.4);
+  doc.line(marginX, y, pageRight, y);
+  y += 16;
+  doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5);
+  doc.setTextColor(STEEL);
+  doc.text(t('exportPdf.staffBriefingInternalNote'), marginX, y);
+  y += 22;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+  doc.setTextColor(INK);
+  doc.text(evt.name || t('common.unnamedEvent'), marginX, y);
+  y += 24;
+
+  const checkpoints = evt.checkpoints.slice().sort((a, b) => a.order - b.order);
+  checkpoints.forEach(cp => {
+    const staff = cp.staff || [];
+    const blockHeight = 16 + staff.length * 26 + (staff.length ? 0 : 14) + 8;
+    if(y + blockHeight > 780){ doc.addPage(); y = 56; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    doc.setTextColor(INK);
+    doc.text(String(cp.order).padStart(2, '0') + '  ' + (cp.name || t('checkpoint.noName')), marginX, y);
+    y += 15;
+    if(!staff.length){
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9);
+      doc.setTextColor(STEEL);
+      doc.text(t('exportPdf.staffBriefingNoneAssigned'), marginX + 12, y);
+      y += 14;
+    } else {
+      staff.forEach(s => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+        doc.setTextColor(INK);
+        const parts = [s.name || t('checkpoint.staffUnnamed')];
+        if(s.role) parts.push(s.role);
+        if(s.phone) parts.push(s.phone);
+        doc.text('• ' + parts.join(' · '), marginX + 12, y);
+        if(s.shiftNote){
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(8);
+          doc.setTextColor(STEEL);
+          doc.text(s.shiftNote, marginX + 300, y, {maxWidth: pageRight - marginX - 300});
+        }
+        y += 13;
+        if(s.notes){
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+          doc.setTextColor(STEEL);
+          doc.text(s.notes, marginX + 20, y, {maxWidth: pageRight - marginX - 20});
+          y += 13;
+        }
+      });
+    }
+    y += 8;
+  });
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+  doc.setTextColor(STEEL);
+  doc.text(t('exportPdf.productFooter'), marginX, 806);
+  doc.text(t('exportPdf.staffBriefingFooter'), pageRight, 806, {align: 'right'});
+  return doc;
+}
+async function exportStaffBriefingPDF(){
+  const evt = state.currentEvent;
+  if(!evt || !window.jspdf || !evt.checkpoints || !evt.checkpoints.length) return;
+  const doc = await buildStaffBriefingDoc(evt);
+  doc.save((evt.name || 'personal-briefing').replace(/\s+/g, '_').toLowerCase() + '-personal-briefing.pdf');
+}
+
 /* ---------------- manifest export ---------------- */
 function printManifest(){
   if(state.currentEvent){

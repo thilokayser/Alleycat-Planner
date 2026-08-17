@@ -32,6 +32,7 @@ let state = {
   leaderboardTab: 'individual',
   leaderboardTeamFilter: '',
   overviewSettingsOpen: false,
+  cpListGroupBy: 'order',
 };
 let map, markersLayer, routeLine;
 let qrScanStream = null;

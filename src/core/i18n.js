@@ -167,7 +167,11 @@ const translations = {
       noCheckpointsYet: 'Noch keine Checkpoints — leg welche im Karten-Editor an.',
       allColumnsHidden: 'Alle Spalten ausgeblendet — unter „Anpassen" mindestens eine Spalte aktivieren.',
       windowLabel: 'Fenster: ',
-      headquarterManifest: 'Headquarter Manifest'
+      headquarterManifest: 'Headquarter Manifest',
+      staffBriefingTitle: 'PERSONAL-BRIEFING',
+      staffBriefingInternalNote: 'Nur für den Organizer — nicht an Fahrer weitergeben.',
+      staffBriefingNoneAssigned: 'Kein Personal zugewiesen.',
+      staffBriefingFooter: 'Intern — nicht Teil des Fahrer-Manifests'
     },
     checkpoint: {
       types: {
@@ -220,7 +224,33 @@ const translations = {
       exportGpx: 'GPX exportieren',
       generateManifest: 'Manifest generieren',
       mandatoryQuickToggle: 'Pflicht',
-      mandatoryCheckpointTitle: 'Pflicht-Checkpoint'
+      mandatoryCheckpointTitle: 'Pflicht-Checkpoint',
+      lock: 'Sperren',
+      unlock: 'Entsperren',
+      lockedHint: 'Dieser Checkpoint ist manuell gesperrt.',
+      duplicate: 'Duplizieren',
+      duplicateSuffix: '{name} (Kopie)',
+      loadBadgeTitle: 'Anzahl Check-ins an diesem Checkpoint',
+      loadBadgeIcon: '👥',
+      staffBadgeIcon: '☎',
+      timeWindowStatus: {
+        upcoming: 'Fenster noch nicht offen',
+        open: 'Fenster offen',
+        closed: 'Fenster geschlossen'
+      },
+      groupByLabel: 'Liste gruppieren',
+      groupByOrder: 'Nach Reihenfolge',
+      groupByType: 'Nach Checkpoint-Typ',
+      staffHeading: 'Personal',
+      staffUnnamed: '(ohne Namen)',
+      staffNamePlaceholder: 'Name',
+      staffPhonePlaceholder: 'Telefon',
+      staffRolePlaceholder: 'Rolle (optional)',
+      staffShiftPlaceholder: 'Schicht (optional)',
+      staffNotesPlaceholder: 'Notizen (optional)',
+      addStaff: '+ Person hinzufügen',
+      removeStaff: 'Entfernen',
+      exportStaffBriefing: 'Personal-Briefing (PDF)'
     },
     checkin: {
       unconfirmedToast: 'Fahrer #{bib} ist wieder „nicht im Ziel".',
@@ -396,7 +426,8 @@ const translations = {
       todoNoCapacity: 'Erwartete Fahrerzahl ist noch nicht gesetzt.',
       todoCategoryGroupEmpty: 'Kategorie-Gruppe „{name}" hat noch keine zugeordneten Fahrer.',
       todoNotPrinted: 'Startnummern/Spokecards sind noch nicht gedruckt.',
-      todoNoManifest: 'Manifest wurde noch nicht erzeugt.'
+      todoNoManifest: 'Manifest wurde noch nicht erzeugt.',
+      todoNoStaff: '{count} Checkpoints ohne zugewiesenes Personal.'
     },
     raceState: {
       planning: 'In Planung',
