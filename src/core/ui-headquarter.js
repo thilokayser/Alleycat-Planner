@@ -98,6 +98,7 @@ async function saveCurrentEvent(){
   setSaveStatus('saving');
   const ok = await storageSet('event:' + state.currentEvent.id, JSON.stringify(state.currentEvent));
   setSaveStatus(ok ? 'saved' : 'error');
+  if(ok) broadcastEventUpdated(state.currentEvent.id);
 }
 function debouncedSave(){
   setSaveStatus('pending');
@@ -148,6 +149,7 @@ function applyStaticTranslations(){
   if(legendRoute) legendRoute.textContent = t('map.routeLegend');
 }
 async function init(){
+  if(isBeamerRoute()){ await initBeamer(); return; }
   if(!(await initStorageBackend())) return;
   await loadAppSettings();
   applyAppSettings();
@@ -157,6 +159,7 @@ async function init(){
   state.loading = false;
   render();
   setInterval(checkStartDialog, 1000);
+  window.addEventListener('hashchange', () => { if(isBeamerRoute()) location.reload(); });
 }
 
 

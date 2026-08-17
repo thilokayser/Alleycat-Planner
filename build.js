@@ -26,6 +26,8 @@ const CORE_FILES = [
   'export-pdf.js',
   'race-state.js',
   'dashboard.js',
+  'sound-hook.js',
+  'beamer.js',
   'ui-headquarter.js'
 ];
 

@@ -35,6 +35,7 @@ Beide Varianten prüfen zusätzlich zuerst, ob `window.storage` verfügbar ist (
 - Übersicht-Tab pro Event mit anpassbaren Widgets (Status-Kacheln, Checkpoint-Auslastung, letzte Aktivität, Kategorie-Verteilung, Mini-Leaderboard, Live-Countdown, nächste To-dos) — Sichtbarkeit und Reihenfolge frei einstellbar, pro Event gespeichert
 - Checkpoint-Reihenfolge frei oder fest wählbar — bei fester Reihenfolge warnt der Ziel-Check-in bei Out-of-Order-Bestätigungen (mit protokolliertem Override) und zeigt Luftlinien-Distanzen zwischen den Checkpoints inkl. Gesamtdistanz
 - Checkpoint-Liste mit Live-Auslastung, Zeitfenster-Status, manuellem Sperren/Duplizieren einzelner Checkpoints und Gruppierung nach Reihenfolge oder Typ; Checkpoint-Personal (Name/Telefon/Rolle/Schicht) mit eigenem, organizer-internem Personal-Briefing-PDF (nie auf Fahrer-Manifest/Spokecards)
+- Beamer-Ansicht (eigene Route, zweiter Tab/Rechner): Countdown bis Startzeit mit Anzahl angemeldeter Fahrer, Vollbild-GO-Overlay mit Sound-Trigger beim Rennstart, danach Live-Leaderboard (Zeit seit Start, Platz, Name, Startnummer, Checkpoint-Fortschritt) — synchronisiert per BroadcastChannel + Storage-Polling; eigenständiges Sound-Hook-Modul (Datei-Upload pro Event, Test-Button)
 - Ziel-Check-in-Flow mit Bestätigen/Zurücksetzen inkl. Undo, sowie DNF-/DNS-Markierung
 - Leaderboard mit kombinierbaren Filtern (Status, Team, Kategorien) und Export als CSV (Excel-DE-kompatibel, semikolon-getrennt, optional aufgeteilt nach Team/Kategorie)
 - Manifest- sowie Startnummern-/Spokecards-PDF-Export

@@ -12,7 +12,10 @@
    Checkpoint-Liste (manuelles Sperren/Duplizieren/Inline-Positionsedit/
    Zeitfenster-Status/Gruppierung nach Typ) und Checkpoint-Personal
    (CRUD, Dashboard-To-do, Personal-Briefing-PDF getrennt vom
-   Fahrer-Manifest), Renn-Zustandsmaschine
+   Fahrer-Manifest), Beamer-Ansicht (Route-Erkennung, Countdown-/GO-/
+   Live-Phasen-Rendering, Sortierung/Fortschritt/Restzeit-Helfer,
+   BroadcastChannel-Fallback) und Sound-Hook-Modul (register/play/
+   isRegistered, Event-gebundene soundHooks inkl. Persistenz), Renn-Zustandsmaschine
    (Planung/Bereit/Läuft/Abgeschlossen inkl. CP-Struktur-Sperre und
    Override), kompletter Ziel-Check-in-Flow
    (bestätigen/zurücksetzen/Undo-Toast/Speichern & schließen/Übersicht),
@@ -404,6 +407,90 @@ async function runAlleycatTestSuite(){
     state.editingId = null;
   }
 
+  /* 3g) Beamer-Ansicht + Sound-Hook */
+  {
+    /* Route-Erkennung: echtes Setzen von location.hash würde den in
+       init() registrierten hashchange->reload()-Listener auslösen und
+       damit den laufenden Testlauf abbrechen — hier daher nur die
+       Baseline außerhalb der Beamer-Route prüfen. */
+    checkEqual('isBeamerRoute() ist false außerhalb der Beamer-Route', isBeamerRoute(), false);
+    checkEqual('beamerEventIdFromHash() liefert null ohne Beamer-Hash', beamerEventIdFromHash(), null);
+
+    checkEqual('SOUND_EVENTS enthält "race_start"', typeof SOUND_EVENTS.race_start, 'string');
+    checkEqual('AlleycatSounds: unbekannter Key spielt nichts ab (kein Fehler)', await AlleycatSounds.play('nope'), false);
+    checkEqual('AlleycatSounds: unbekannter Key ist nicht registriert', AlleycatSounds.isRegistered('race_start'), false);
+    AlleycatSounds.register('race_start', 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+    checkEqual('AlleycatSounds.register registriert den Sound', AlleycatSounds.isRegistered('race_start'), true);
+    AlleycatSounds.unregister('race_start');
+    checkEqual('AlleycatSounds.unregister entfernt den Sound wieder', AlleycatSounds.isRegistered('race_start'), false);
+
+    checkEqual('Event hat leeres soundHooks-Objekt per Default', Object.keys(evt.soundHooks).length, 0);
+    evt.soundHooks.race_start = {name: 'go.mp3', dataUrl: 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='};
+    registerEventSounds(evt);
+    checkEqual('registerEventSounds registriert vorhandene Event-Sounds', AlleycatSounds.isRegistered('race_start'), true);
+    await checkNoThrowAsync('testPlaySoundHook läuft ohne Fehler', () => testPlaySoundHook('race_start'));
+    removeSoundHook('race_start');
+    check('removeSoundHook entfernt Event-Eintrag', !evt.soundHooks.race_start);
+    checkEqual('removeSoundHook meldet Sound bei AlleycatSounds ab', AlleycatSounds.isRegistered('race_start'), false);
+    /* für den Persistenz-Check in Abschnitt 4 wieder setzen */
+    evt.soundHooks.race_start = {name: 'go.mp3', dataUrl: 'data:audio/wav;base64,AAA='};
+
+    const beamerHtml = renderBeamerOverviewSection(evt);
+    check('renderBeamerOverviewSection zeigt Öffnen-Button', beamerHtml.includes('openBeamerView'));
+    check('renderBeamerOverviewSection zeigt Sound-Zeile für race_start', beamerHtml.includes('go.mp3'));
+
+    const synthEvt = {
+      name: 'Synth-Beamer-Event',
+      status: 'planning', startMode: 'scheduled', startTime: toLocalDateTimeInputValue(new Date(Date.now() + 65000)),
+      checkpoints: [{id: 'sa', order: 1}],
+      riders: [
+        {bib: 1, name: 'Alice', completed: ['sa'], finishTime: toLocalDateTimeInputValue(new Date()), raceStatus: ''},
+        {bib: 2, name: 'Bob', completed: ['sa'], finishTime: '', raceStatus: ''},
+        {bib: 3, name: '', completed: [], finishTime: '', raceStatus: ''},
+        {bib: 4, name: 'Nina', completed: [], finishTime: '', raceStatus: 'dnf'}
+      ]
+    };
+    checkEqual('computeBeamerRegistered zählt nur benannte Fahrer', computeBeamerRegistered(synthEvt), 3);
+    const beamerSorted = sortBeamerRiders(synthEvt);
+    checkEqual('sortBeamerRiders: 1 Finisher', beamerSorted.finished.length, 1);
+    checkEqual('sortBeamerRiders: 1 unterwegs', beamerSorted.underway.length, 1);
+    checkEqual('sortBeamerRiders: 1 DNF/DNS', beamerSorted.dnfDns.length, 1);
+    checkEqual('sortBeamerRiders: unbenannter Fahrer wird ignoriert', beamerSorted.finished.length + beamerSorted.underway.length + beamerSorted.dnfDns.length, 3);
+    checkEqual('beamerProgressLabel zeigt Fortschritt', beamerProgressLabel(synthEvt, synthEvt.riders[0]), '1/1');
+    checkEqual('beamerElapsedFinish ohne startConfirmedAt liefert Platzhalter', beamerElapsedFinish(synthEvt, synthEvt.riders[0]), '—');
+    synthEvt.startConfirmedAt = toLocalDateTimeInputValue(new Date(Date.now() - 600000));
+    checkEqual('beamerElapsedFinish ohne finishTime liefert Platzhalter', beamerElapsedFinish(synthEvt, synthEvt.riders[1]), '—');
+    check('beamerElapsedFinish mit Start+Ziel liefert Uhrzeit-String', /^\d+:\d{2}$/.test(beamerElapsedFinish(synthEvt, synthEvt.riders[0])));
+
+    const countdownHtml = renderBeamerCountdownPhase(synthEvt);
+    check('renderBeamerCountdownPhase zeigt Event-Namen', countdownHtml.includes('Synth-Beamer-Event'));
+    check('renderBeamerCountdownPhase zeigt Anzahl registrierter Fahrer', countdownHtml.includes(t('beamer.registeredRidersLabel') + ': 3'));
+    const noneStartEvt = Object.assign({}, synthEvt, {startMode: 'manual', startTime: ''});
+    check('renderBeamerCountdownPhase zeigt Warte-Text ohne geplante Startzeit', renderBeamerCountdownPhase(noneStartEvt).includes(t('beamer.waitingForStart')));
+
+    synthEvt.status = 'running';
+    const liveHtml = renderBeamerLivePhase(synthEvt);
+    check('renderBeamerLivePhase zeigt Renn-Uhr', liveHtml.includes(t('beamer.raceClockLabel')));
+    check('renderBeamerLivePhase listet Finisher mit Platz 1', liveHtml.includes('beamer-lb-rank">1'));
+    check('renderBeamerLivePhase markiert unterwegs-Fahrer', liveHtml.includes(t('beamer.underwayLabel')));
+    check('renderBeamerLivePhase zeigt DNF/DNS-Fußzeile', liveHtml.includes(t('beamer.dnsDnfFooter', {count: 1})));
+    synthEvt.status = 'completed';
+    check('renderBeamerLivePhase zeigt Abschluss-Banner', renderBeamerLivePhase(synthEvt).includes(t('beamer.raceCompletedBanner')));
+
+    /* GO-Trigger: nur die synchrone Phase (inkl. abgewartetem Sound-Play)
+       prüfen, nicht den vollen 4s-Timer bis zum Live-Übergang abwarten. */
+    beamerState = {eventId: 'synth', evt: synthEvt, phase: 'countdown', audioBlocked: false};
+    await checkNoThrowAsync('triggerGoSequence läuft ohne Fehler', () => triggerGoSequence());
+    checkEqual('triggerGoSequence wechselt Phase auf "go"', beamerState.phase, 'go');
+    clearTimeout(beamerGoTimeout);
+    beamerState = null;
+
+    const ch = getBeamerChannel();
+    check('getBeamerChannel liefert BroadcastChannel oder null (Fallback)', ch === null || (typeof BroadcastChannel !== 'undefined' && ch instanceof BroadcastChannel));
+    await checkNoThrowAsync('broadcastEventUpdated läuft ohne Fehler', () => broadcastEventUpdated(evt.id));
+    await checkNoThrowAsync('broadcastRaceStart läuft ohne Fehler', () => broadcastRaceStart(evt.id));
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -422,6 +509,7 @@ async function runAlleycatTestSuite(){
   checkEqual('dashboardWidgetVisibility persistiert', reloaded && reloaded.dashboardWidgetVisibility.statusTiles, true);
   checkEqual('cp.locked persistiert', reloaded && reloaded.checkpoints[0].locked, evt.checkpoints[0].locked);
   checkEqual('cp.staff persistiert', reloaded && reloaded.checkpoints[1].staff.length, evt.checkpoints[1].staff.length);
+  checkEqual('soundHooks persistiert', reloaded && reloaded.soundHooks && reloaded.soundHooks.race_start && reloaded.soundHooks.race_start.name, 'go.mp3');
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();

@@ -455,6 +455,31 @@ const translations = {
       completePrompt: 'Vorbereitung abschließen',
       startPrompt: 'Rennen jetzt starten',
       completeRacePrompt: 'Rennen abschließen'
+    },
+    beamer: {
+      openButton: '🖥️ Beamer-Ansicht öffnen',
+      hintNewTab: 'Läuft im selben Browser wie HQ (neuer Tab) — für einen externen Beamer-Rechner die Server-Variante nutzen.',
+      soundRaceStartLabel: 'Start-Signal (GO!)',
+      soundUploadButton: 'Datei wählen',
+      soundTestButton: 'Testen',
+      soundNoneSet: 'Kein Sound hinterlegt',
+      soundTooLarge: 'Datei zu groß (max. 2 MB).',
+      waitingForStart: 'Wartet auf Start',
+      registeredRidersLabel: 'Angemeldete Fahrer',
+      eventNotFound: 'Event nicht gefunden.',
+      goText: '🚦 GO!',
+      clickToActivateAudio: 'Klicken zum Aktivieren des Sounds',
+      raceClockLabel: 'Zeit seit Start',
+      raceDurationLabel: 'Gesamtzeit',
+      tableRank: 'Platz',
+      tableName: 'Name',
+      tableBib: 'Nr.',
+      tableProgress: 'Checkpoints',
+      tableTime: 'Zeit',
+      noFinishersYet: 'Noch keine Ankünfte im Ziel.',
+      raceCompletedBanner: 'Rennen abgeschlossen',
+      underwayLabel: 'unterwegs',
+      dnsDnfFooter: '{count} ausgeschieden / nicht gestartet'
     }
   }
 };

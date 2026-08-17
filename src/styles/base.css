@@ -940,6 +940,56 @@
   }
   .start-dialog-title{font-family:'Oswald',sans-serif; font-size:20px; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px;}
 
+  /* ---------- overview: beamer & sound-hook bar ---------- */
+  .overview-beamer-bar{
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:6px;
+    padding:16px 18px; margin-bottom:18px; display:flex; flex-direction:column; gap:12px;
+  }
+  .overview-beamer-info{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .overview-beamer-hint{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--steel); line-height:1.4;}
+  .sound-hook-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:12px;}
+  .sound-hook-label{color:var(--steel); text-transform:uppercase; letter-spacing:0.05em; font-size:10.5px; min-width:140px;}
+  .sound-hook-filename{color:var(--chalk);}
+  .sound-hook-empty{color:var(--steel); font-style:italic;}
+
+  /* ---------- beamer view ---------- */
+  #beamer-root{
+    position:fixed; inset:0; z-index:5000; background:var(--asphalt);
+    align-items:center; justify-content:center; overflow:auto;
+  }
+  .beamer-message{color:var(--steel); font-family:'JetBrains Mono',monospace; font-size:16px;}
+  .beamer-phase{display:flex; flex-direction:column; align-items:center; width:100%; max-width:1100px; padding:40px 24px; gap:18px;}
+  .beamer-event-name{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:0.04em; font-weight:700; font-size:28px; color:var(--chalk);}
+  .beamer-countdown-phase{align-items:center; justify-content:center; min-height:100vh;}
+  .beamer-countdown{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:min(18vw, 180px); line-height:1; color:var(--hivis); letter-spacing:0.02em;}
+  .beamer-registered{font-family:'JetBrains Mono',monospace; font-size:20px; color:var(--steel);}
+  .beamer-go-overlay{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:24px;
+    background:var(--hivis); animation:beamer-go-fade 4s ease-in-out forwards;
+  }
+  .beamer-go-text{font-family:'Oswald',sans-serif; font-weight:700; font-size:min(22vw, 220px); color:var(--asphalt); animation:beamer-go-pulse 0.9s ease-in-out infinite;}
+  @keyframes beamer-go-pulse{0%,100%{transform:scale(1);} 50%{transform:scale(1.06);}}
+  @keyframes beamer-go-fade{0%{opacity:0;} 12%{opacity:1;} 88%{opacity:1;} 100%{opacity:1;}}
+  .beamer-audio-unlock{
+    font-family:'JetBrains Mono',monospace; font-size:18px; color:var(--asphalt); background:rgba(0,0,0,0.15);
+    padding:12px 22px; border-radius:6px; cursor:pointer;
+  }
+  .beamer-live-phase{min-height:100vh; justify-content:flex-start; padding-top:32px;}
+  .beamer-live-head{display:flex; align-items:baseline; justify-content:space-between; width:100%; gap:20px; flex-wrap:wrap;}
+  .beamer-race-clock{font-family:'JetBrains Mono',monospace; font-size:24px; color:var(--hivis-2);}
+  .beamer-race-clock span:first-child{color:var(--steel); font-size:13px; text-transform:uppercase; letter-spacing:0.06em; margin-right:8px;}
+  .beamer-completed-banner{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:0.04em; font-size:18px; color:var(--ok);}
+  .beamer-lb-table{width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace;}
+  .beamer-lb-table th{
+    text-align:left; text-transform:uppercase; letter-spacing:0.05em; font-size:12px; color:var(--steel);
+    padding:8px 12px; border-bottom:2px solid var(--asphalt-3);
+  }
+  .beamer-lb-table td{padding:10px 12px; font-size:18px; color:var(--chalk); border-bottom:1px solid var(--asphalt-3);}
+  .beamer-lb-table td.beamer-lb-rank{font-weight:700; color:var(--hivis); width:60px;}
+  .beamer-lb-table td.beamer-lb-bib{color:var(--steel);}
+  .beamer-lb-table tr.beamer-lb-underway td{color:var(--steel); font-style:italic;}
+  .beamer-lb-footer{font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--steel); align-self:flex-start;}
+
   @media print{
     body *{visibility:hidden;}
     #print-root, #print-root *{visibility:visible;}

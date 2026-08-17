@@ -50,6 +50,7 @@ function startRace(evt){
   evt.cpLockOverride = false;
   state.addMode = false;
   closeStartDialog();
+  broadcastRaceStart(evt.id);
   debouncedSave();
   render();
 }

@@ -23,7 +23,8 @@ function withEventDefaults(evt){
     categoryGroups: [],
     checkpointOrderMode: 'frei',
     dashboardWidgetOrder: DASHBOARD_WIDGET_KEYS.slice(),
-    dashboardWidgetVisibility: {statusTiles: true, cpLoad: true, recentActivity: false, categoryDistribution: false, miniLeaderboard: false, countdown: true, todos: false}
+    dashboardWidgetVisibility: {statusTiles: true, cpLoad: true, recentActivity: false, categoryDistribution: false, miniLeaderboard: false, countdown: true, todos: false},
+    soundHooks: {}
   }, evt);
   merged.checkpoints = (merged.checkpoints || []).map(withCheckpointDefaults);
   merged.riders = (merged.riders || []).map(withRiderDefaults);
@@ -430,6 +431,7 @@ function renderOverview(){
         <button type="button" class="btn btn-sm" onclick="toggleOverviewSettings()">${state.overviewSettingsOpen ? t('overview.doneCustomizing') : t('overview.customize')}</button>
       </div>
     </div>
+    ${renderBeamerOverviewSection(evt)}
     ${settingsPanel}
     ${widgetsHtml}
   `;
