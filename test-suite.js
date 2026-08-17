@@ -15,7 +15,11 @@
    Fahrer-Manifest), Beamer-Ansicht (Route-Erkennung, Countdown-/GO-/
    Live-Phasen-Rendering, Sortierung/Fortschritt/Restzeit-Helfer,
    BroadcastChannel-Fallback) und Sound-Hook-Modul (register/play/
-   isRegistered, Event-gebundene soundHooks inkl. Persistenz), Renn-Zustandsmaschine
+   isRegistered, Event-gebundene soundHooks inkl. Persistenz),
+   Datensicherheit & Offline (Auto-Backup-Seam, Beforeunload-Warnung,
+   Wake Lock, Storage-APIs persist/estimate, Offline-Kartenkacheln-Cache
+   inkl. Bounding-Box/Tile-Index-Mathematik und Staleness-Warnung),
+   Renn-Zustandsmaschine
    (Planung/Bereit/Läuft/Abgeschlossen inkl. CP-Struktur-Sperre und
    Override), kompletter Ziel-Check-in-Flow
    (bestätigen/zurücksetzen/Undo-Toast/Speichern & schließen/Übersicht),
@@ -491,6 +495,61 @@ async function runAlleycatTestSuite(){
     await checkNoThrowAsync('broadcastRaceStart läuft ohne Fehler', () => broadcastRaceStart(evt.id));
   }
 
+  /* 3h) Datensicherheit & Offline */
+  {
+    checkEqual('Event hat leeren lastBackupAt per Default', evt.lastBackupAt, '');
+    checkEqual('Event hat leeren tileCacheUpdatedAt per Default', evt.tileCacheUpdatedAt, '');
+
+    const backup = await exportBackupBlob(evt);
+    check('exportBackupBlob liefert Blob+Dateiname (oder null bei geteiltem Storage)', backup === null || (backup.blob instanceof Blob && typeof backup.filename === 'string'));
+
+    await checkNoThrowAsync('triggerBackupNow läuft ohne Fehler', () => triggerBackupNow(true));
+    if(typeof hasSharedStorage === 'undefined' || !hasSharedStorage){
+      check('triggerBackupNow setzt lastBackupAt', !!evt.lastBackupAt);
+    }
+    checkEqual('formatMinutesAgo erkennt "gerade eben"', formatMinutesAgo(toLocalDateTimeInputValue(new Date())), t('dataSafety.justNow'));
+
+    const wakeLockOk = await requestWakeLock();
+    check('requestWakeLock läuft ohne Fehler (true/false je nach Support)', wakeLockOk === true || wakeLockOk === false);
+    releaseWakeLock();
+
+    const persistResult = await requestPersistentStorage();
+    check('requestPersistentStorage läuft ohne Fehler (true/false/null)', persistResult === true || persistResult === false || persistResult === null);
+    const estimate = await getStorageEstimate();
+    check('getStorageEstimate läuft ohne Fehler (Objekt oder null)', estimate === null || typeof estimate.usedMB === 'number');
+
+    check('beforeunload-Listener läuft ohne Fehler', (() => {
+      try{ window.dispatchEvent(new Event('beforeunload', {cancelable: true})); return true; }
+      catch(e){ return false; }
+    })());
+
+    const synthCps = [{lat: 50.0, lng: 8.0}, {lat: 50.02, lng: 8.02}];
+    const bounds = computeCheckpointBoundsWithBuffer(synthCps, 500);
+    check('computeCheckpointBoundsWithBuffer erweitert die Bounding Box', bounds.minLat < 50.0 && bounds.maxLat > 50.02 && bounds.minLng < 8.0 && bounds.maxLng > 8.02);
+    const tiles = tilesInBounds(bounds, 13, 14);
+    check('tilesInBounds liefert Kacheln für beide Zoomstufen', tiles.some(tl => tl.z === 13) && tiles.some(tl => tl.z === 14));
+    checkEqual('tileCacheKey-Format', tileCacheKey(13, 5, 9), '13/5/9');
+
+    checkEqual('offlineTileCacheStaleness: kein Cache -> null', offlineTileCacheStaleness({tileCacheUpdatedAt: ''}), null);
+    checkEqual('offlineTileCacheStaleness: >24h -> warn', offlineTileCacheStaleness({tileCacheUpdatedAt: toLocalDateTimeInputValue(new Date(Date.now() - 25 * 3600000))}), 'warn');
+    checkEqual('offlineTileCacheStaleness: >3 Tage -> danger', offlineTileCacheStaleness({tileCacheUpdatedAt: toLocalDateTimeInputValue(new Date(Date.now() - 4 * 86400000))}), 'danger');
+
+    const staleEvt = Object.assign({}, evt, {tileCacheUpdatedAt: toLocalDateTimeInputValue(new Date(Date.now() - 4 * 86400000))});
+    const staleTodo = computeDashboardTodos(staleEvt).find(td => td.key === 'tileCacheStale');
+    check('computeDashboardTodos meldet veralteten Kartenkacheln-Cache', !!staleTodo && staleTodo.severity === 'danger');
+
+    const cacheStatsBefore = await getTileCacheStats();
+    check('getTileCacheStats läuft ohne Fehler', typeof cacheStatsBefore.count === 'number' && typeof cacheStatsBefore.bytes === 'number');
+    check('createOfflineTileLayer liefert eine Leaflet-TileLayer-Instanz', createOfflineTileLayer('https://x/{z}/{x}/{y}.png', {}) instanceof L.TileLayer);
+
+    await checkNoThrowAsync('refreshOfflineReadiness läuft ohne Fehler', () => refreshOfflineReadiness());
+    check('refreshOfflineReadiness befüllt offlineUiState.events als Array', Array.isArray(offlineUiState.events));
+    toggleOfflineEventSelected(evt.id, true);
+    const offlineEstimate = computeOfflineEstimateForSelected();
+    check('computeOfflineEstimateForSelected liefert numerische Kachelanzahl', typeof offlineEstimate.tileCount === 'number');
+    toggleOfflineEventSelected(evt.id, false);
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -510,6 +569,7 @@ async function runAlleycatTestSuite(){
   checkEqual('cp.locked persistiert', reloaded && reloaded.checkpoints[0].locked, evt.checkpoints[0].locked);
   checkEqual('cp.staff persistiert', reloaded && reloaded.checkpoints[1].staff.length, evt.checkpoints[1].staff.length);
   checkEqual('soundHooks persistiert', reloaded && reloaded.soundHooks && reloaded.soundHooks.race_start && reloaded.soundHooks.race_start.name, 'go.mp3');
+  checkEqual('lastBackupAt persistiert', !!(reloaded && reloaded.lastBackupAt), !!evt.lastBackupAt);
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();

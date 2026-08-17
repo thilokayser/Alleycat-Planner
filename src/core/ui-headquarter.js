@@ -21,7 +21,7 @@ let state = {
   qrScannerActive: false,
   qrScanError: '',
   manifestSettingsOpen: false,
-  appSettings: {theme: 'feldpost', iconPack: 'emoji'},
+  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false},
   settingsReturnView: 'dashboard',
   newTypeFormOpen: false,
   newTeamFormOpen: false,
@@ -159,6 +159,8 @@ async function init(){
   state.loading = false;
   render();
   setInterval(checkStartDialog, 1000);
+  startAutoBackup();
+  armPersistentStorageRequest();
   window.addEventListener('hashchange', () => { if(isBeamerRoute()) location.reload(); });
 }
 
@@ -235,7 +237,7 @@ function typeIconHtml(key){
 async function loadAppSettings(){
   try{
     const res = await storageGet('app:settings');
-    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji'}, JSON.parse(res.value));
+    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false}, JSON.parse(res.value));
   }catch(e){ /* keep defaults */ }
 }
 async function saveAppSettings(){
@@ -296,6 +298,7 @@ function render(){
   if(state.view === 'checkin') renderCheckin();
   if(state.view === 'leaderboard') renderLeaderboard();
   if(state.view === 'settings') renderSettings();
+  syncWakeLockForView();
 }
 
 const NAV_ITEMS = [
@@ -337,6 +340,7 @@ function renderTopbar(){
     `<button class="btn ${state.view === item.view ? 'btn-primary' : ''}" onclick="${item.onclick(evtId)}">${item.label}</button>`;
   actions.innerHTML = `
     <button class="btn btn-ghost" onclick="goDashboard()">${t('ui.backToAllEvents')}</button>
+    ${state.currentEvent.status === 'running' ? `<span class="running-hint">${t('dataSafety.keepTabOpenHint')}</span>` : ''}
     ${renderStatusControl(state.currentEvent)}
     <span class="topbar-nav-buttons">${NAV_ITEMS.map(navBtn).join('')}</span>
   `;
@@ -455,6 +459,9 @@ function renderSettings(){
       <div class="type-list">${typeRows}</div>
       ${newTypeForm}
     </div>
+    ${renderDataSafetySection()}
   `;
+  refreshStorageEstimate();
+  refreshTileCacheTotal();
 }
 

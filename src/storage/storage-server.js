@@ -103,6 +103,13 @@ async function submitPhpSetup(){
   location.reload();
 }
 
+async function exportBackupBlob(evt){
+  if(hasSharedStorage || !evt) return null;
+  const slug = (evt.name || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'event';
+  const ts = toLocalDateTimeInputValue(new Date()).replace(/[:T]/g, '-');
+  return {blob: new Blob([JSON.stringify(evt, null, 2)], {type: 'application/json'}), filename: `alleycat-autobackup-${slug}-${ts}.json`};
+}
+
 /* ---------------- storage capability seams (used by shared core/*.js) ---------------- */
 async function initStorageBackend(){
   if(!hasSharedStorage && !getPhpConfig()){

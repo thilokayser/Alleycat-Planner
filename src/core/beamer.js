@@ -128,6 +128,7 @@ async function initBeamer(){
   }
   beamerState.phase = (beamerState.evt.status === 'running' || beamerState.evt.status === 'completed') ? 'live' : 'countdown';
   renderBeamer();
+  requestWakeLock();
   beamerPollInterval = setInterval(async () => { await loadBeamerEvent(); renderBeamer(); }, 7000);
   beamerTickInterval = setInterval(updateBeamerTick, 1000);
   const ch = getBeamerChannel();

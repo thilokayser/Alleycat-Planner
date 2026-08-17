@@ -4,11 +4,10 @@ function initMap(){
   if(!container) return;
   if(!map){
     map = L.map('map', {zoomControl:true}).setView([50.1109, 8.6821], 13);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    createOfflineTileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       subdomains: 'abcd',
-      maxZoom: 20,
-      detectRetina: true
+      maxZoom: 20
     }).addTo(map);
     markersLayer = L.layerGroup().addTo(map);
     map.on('click', onMapClick);

@@ -122,6 +122,13 @@ async function onImportSqliteFile(input){
   }
 }
 
+async function exportBackupBlob(evt){
+  if(!sqlDb || !evt) return null;
+  const slug = (evt.name || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'event';
+  const ts = toLocalDateTimeInputValue(new Date()).replace(/[:T]/g, '-');
+  return {blob: new Blob([sqlDb.export()], {type: 'application/x-sqlite3'}), filename: `alleycat-autobackup-${slug}-${ts}.sqlite`};
+}
+
 /* ---------------- storage capability seams (used by shared core/*.js) ---------------- */
 async function initStorageBackend(){
   await initSqliteStorage();

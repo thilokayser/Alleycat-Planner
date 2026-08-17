@@ -28,6 +28,8 @@ const CORE_FILES = [
   'dashboard.js',
   'sound-hook.js',
   'beamer.js',
+  'offline-tiles.js',
+  'data-safety.js',
   'ui-headquarter.js'
 ];
 

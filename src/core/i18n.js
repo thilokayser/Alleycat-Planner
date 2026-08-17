@@ -427,7 +427,8 @@ const translations = {
       todoCategoryGroupEmpty: 'Kategorie-Gruppe „{name}" hat noch keine zugeordneten Fahrer.',
       todoNotPrinted: 'Startnummern/Spokecards sind noch nicht gedruckt.',
       todoNoManifest: 'Manifest wurde noch nicht erzeugt.',
-      todoNoStaff: '{count} Checkpoints ohne zugewiesenes Personal.'
+      todoNoStaff: '{count} Checkpoints ohne zugewiesenes Personal.',
+      todoTileCacheStale: '⚠ Kartenkacheln-Cache ist {days} Tage alt — iOS/Safari können Offline-Daten bei längerer Nichtbenutzung entfernen. Vor dem Event aktualisieren.'
     },
     raceState: {
       planning: 'In Planung',
@@ -480,6 +481,44 @@ const translations = {
       raceCompletedBanner: 'Rennen abgeschlossen',
       underwayLabel: 'unterwegs',
       dnsDnfFooter: '{count} ausgeschieden / nicht gestartet'
+    },
+    dataSafety: {
+      justNow: 'gerade eben',
+      minutesAgo: 'vor {mins} Min.',
+      multiDownloadHint: 'Alleycat Dispatch sichert die Datenbank während des laufenden Rennens automatisch per Download. Der Browser fragt dafür ggf. mehrfach nach einer Download-Bestätigung — das ist normal.',
+      backupTriggered: 'Backup wurde heruntergeladen.',
+      backupHeading: 'Auto-Backup',
+      backupDesc: 'Solange ein Rennen läuft, wird die Datenbank in einstellbarem Intervall automatisch als Datei heruntergeladen — zusätzliche Absicherung gegen Datenverlust im Browser.',
+      intervalLabel: 'Intervall',
+      intervalUnit: 'Minuten (nur während "Läuft" aktiv)',
+      backupNowButton: 'Jetzt sichern',
+      storageHeading: 'Speicher',
+      storageDesc: 'Browser-Speichernutzung dieser App (Events, Kartenkacheln-Cache) und Schutz vor stiller Löschung durch den Browser.',
+      storageEstimateLoading: 'Lade Speichernutzung…',
+      storageEstimateText: '{used} MB von {quota} MB genutzt ({percent}%)',
+      storageEstimateUnsupported: 'Speicherschätzung wird von diesem Browser nicht unterstützt.',
+      storageEstimateHighUsage: '⚠ Speicher zu über 80% ausgelastet — ältere Events ggf. exportieren und aus dem Browser entfernen.',
+      requestPersistButton: 'Persistenten Speicher anfragen',
+      persistGranted: 'Gewährt (oder bereits aktiv).',
+      persistDenied: 'Nicht gewährt — keine Garantie, App funktioniert trotzdem weiter.',
+      lastBackupLine: 'Letztes Backup: {time}',
+      noBackupYet: 'Noch kein Backup heruntergeladen.',
+      keepTabOpenHint: '⚠ Tab bitte offen lassen'
+    },
+    offlineTiles: {
+      heading: 'Offline-Bereitschaft (Kartenkacheln)',
+      desc: 'Lädt Kartenkacheln rund um die Checkpoints eines Events vorab herunter, damit die Karte auch ohne Netzverbindung am Renntag nutzbar bleibt. Nur Events im Status „Bereit" oder „Läuft" (Checkpoints stehen fest).',
+      loading: 'Lade Events…',
+      cachedAt: 'Zuletzt gecacht: {time}',
+      neverCached: 'Noch nicht gecacht.',
+      noEligibleEvents: 'Keine Events im Status „Bereit" oder „Läuft".',
+      progress: 'Lade Kacheln… {done}/{total}',
+      progressFailed: '({failed} fehlgeschlagen)',
+      cacheNowButton: 'Ausgewählte jetzt cachen',
+      estimateText: '~{tiles} Kacheln (~{mb} MB geschätzt)',
+      totalLoading: 'Lade Cache-Größe…',
+      totalText: 'Gesamter Kartenkacheln-Cache: {count} Kacheln, {mb} MB',
+      firstTimeHint: 'Hinweis: iOS/Safari können Offline-Daten bei längerer Nichtbenutzung des Tabs entfernen. Cache daher kurz vor dem Event aktualisieren.'
     }
   }
 };

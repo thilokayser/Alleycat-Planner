@@ -990,6 +990,30 @@
   .beamer-lb-table tr.beamer-lb-underway td{color:var(--steel); font-style:italic;}
   .beamer-lb-footer{font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--steel); align-self:flex-start;}
 
+  /* ---------- data safety: running-hint, backup line, todo severity ---------- */
+  .running-hint{
+    font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.04em;
+    color:var(--stamp); display:flex; align-items:center;
+  }
+  .overview-backup-line{
+    display:flex; align-items:center; gap:12px; font-family:'JetBrains Mono',monospace; font-size:11.5px;
+    color:var(--steel); margin-bottom:16px;
+  }
+  .overview-todo-list li.todo-warn{color:#d9a406;}
+  .overview-todo-list li.todo-warn::before{content:'⚠'; color:#d9a406;}
+  .overview-todo-list li.todo-danger{color:var(--stamp);}
+  .overview-todo-list li.todo-danger::before{content:'⚠'; color:var(--stamp);}
+
+  /* ---------- settings: data-safety + offline-readiness sections ---------- */
+  .data-safety-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--chalk);}
+  .data-safety-row input[type=number]{padding:6px 8px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:'JetBrains Mono',monospace;}
+  .data-safety-warning{color:var(--stamp); font-family:'JetBrains Mono',monospace; font-size:11.5px; margin-bottom:10px;}
+  .offline-event-list{display:flex; flex-direction:column; gap:6px; margin-bottom:12px;}
+  .offline-event-row{display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--chalk); flex-wrap:wrap;}
+  .offline-event-name{font-weight:600;}
+  .offline-event-meta{color:var(--steel); font-size:11px;}
+  .offline-progress{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--hivis-2); margin-top:6px;}
+
   @media print{
     body *{visibility:hidden;}
     #print-root, #print-root *{visibility:visible;}

@@ -24,7 +24,9 @@ function withEventDefaults(evt){
     checkpointOrderMode: 'frei',
     dashboardWidgetOrder: DASHBOARD_WIDGET_KEYS.slice(),
     dashboardWidgetVisibility: {statusTiles: true, cpLoad: true, recentActivity: false, categoryDistribution: false, miniLeaderboard: false, countdown: true, todos: false},
-    soundHooks: {}
+    soundHooks: {},
+    lastBackupAt: '',
+    tileCacheUpdatedAt: ''
   }, evt);
   merged.checkpoints = (merged.checkpoints || []).map(withCheckpointDefaults);
   merged.riders = (merged.riders || []).map(withRiderDefaults);
@@ -229,6 +231,11 @@ function computeDashboardTodos(evt){
   if(!evt.manifestGenerated) todos.push({key: 'noManifest', text: t('overview.todoNoManifest')});
   const staffMissingCount = (evt.checkpoints || []).filter(cp => !(cp.staff || []).length).length;
   if(staffMissingCount > 0) todos.push({key: 'noStaff', text: t('overview.todoNoStaff', {count: staffMissingCount})});
+  const tileSeverity = offlineTileCacheStaleness(evt);
+  if(tileSeverity){
+    const days = Math.floor((Date.now() - new Date(evt.tileCacheUpdatedAt).getTime()) / 86400000);
+    todos.push({key: 'tileCacheStale', text: t('overview.todoTileCacheStale', {days}), severity: tileSeverity});
+  }
   return todos;
 }
 
@@ -327,7 +334,7 @@ function renderCountdownWidget(evt){
 function renderTodosWidget(evt){
   const todos = computeDashboardTodos(evt);
   const body = todos.length ? `
-    <ul class="overview-todo-list">${todos.map(td => `<li>${td.text}</li>`).join('')}</ul>
+    <ul class="overview-todo-list">${todos.map(td => `<li class="${td.severity ? 'todo-' + td.severity : ''}">${td.text}</li>`).join('')}</ul>
   ` : `<div class="overview-widget-empty">${t('overview.allDone')}</div>`;
   return overviewWidgetWrap('todos', body);
 }
@@ -431,8 +438,20 @@ function renderOverview(){
         <button type="button" class="btn btn-sm" onclick="toggleOverviewSettings()">${state.overviewSettingsOpen ? t('overview.doneCustomizing') : t('overview.customize')}</button>
       </div>
     </div>
+    ${renderBackupStatusLine(evt)}
     ${renderBeamerOverviewSection(evt)}
     ${settingsPanel}
     ${widgetsHtml}
+  `;
+}
+function renderBackupStatusLine(evt){
+  if(typeof hasSharedStorage !== 'undefined' && hasSharedStorage) return '';
+  if(!evt.lastBackupAt && evt.status !== 'running') return '';
+  const text = evt.lastBackupAt ? t('dataSafety.lastBackupLine', {time: formatMinutesAgo(evt.lastBackupAt)}) : t('dataSafety.noBackupYet');
+  return `
+    <div class="overview-backup-line">
+      <span>${text}</span>
+      ${evt.status === 'running' ? `<button type="button" class="btn btn-sm" onclick="triggerBackupNow(false)">${t('dataSafety.backupNowButton')}</button>` : ''}
+    </div>
   `;
 }
