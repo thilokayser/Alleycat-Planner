@@ -396,6 +396,8 @@ const translations = {
       customize: 'Widgets anpassen',
       doneCustomizing: 'Fertig',
       settingsHint: 'Sichtbarkeit und Reihenfolge der Widgets — pro Event gespeichert.',
+      moveUpLabel: '{name} nach oben verschieben',
+      moveDownLabel: '{name} nach unten verschieben',
       emptyTitle: 'Keine Widgets sichtbar',
       emptyHint: 'Über „Widgets anpassen" mindestens ein Widget einblenden.',
       widgetTitleStatusTiles: 'Status-Kacheln',

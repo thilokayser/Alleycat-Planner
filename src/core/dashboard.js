@@ -421,8 +421,8 @@ function renderOverview(){
             ${overviewWidgetTitle(key)}
           </label>
           <span class="overview-settings-move">
-            <button type="button" class="btn btn-sm" ${i === 0 ? 'disabled' : ''} onclick="moveOverviewWidget('${key}', -1)">&uarr;</button>
-            <button type="button" class="btn btn-sm" ${i === order.length - 1 ? 'disabled' : ''} onclick="moveOverviewWidget('${key}', 1)">&darr;</button>
+            <button type="button" class="btn btn-sm" aria-label="${t('overview.moveUpLabel', {name: overviewWidgetTitle(key)})}" ${i === 0 ? 'disabled' : ''} onclick="moveOverviewWidget('${key}', -1)">&uarr;</button>
+            <button type="button" class="btn btn-sm" aria-label="${t('overview.moveDownLabel', {name: overviewWidgetTitle(key)})}" ${i === order.length - 1 ? 'disabled' : ''} onclick="moveOverviewWidget('${key}', 1)">&darr;</button>
           </span>
         </div>
       `).join('')}
@@ -445,7 +445,7 @@ function renderOverview(){
         <p>${subtitle}</p>
       </div>
       <div>
-        <button type="button" class="btn btn-sm" onclick="toggleOverviewSettings()">${state.overviewSettingsOpen ? t('overview.doneCustomizing') : t('overview.customize')}</button>
+        <button type="button" class="btn btn-sm" aria-expanded="${state.overviewSettingsOpen}" onclick="toggleOverviewSettings()">${state.overviewSettingsOpen ? t('overview.doneCustomizing') : t('overview.customize')}</button>
       </div>
     </div>
     ${renderBackupStatusLine(evt)}

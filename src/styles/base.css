@@ -924,7 +924,7 @@
     padding:3px 8px; border-radius:3px; white-space:nowrap;
   }
   .status-badge.status-planning{background:rgba(124,131,136,0.18); color:var(--steel);}
-  .status-badge.status-ready{background:rgba(217,164,6,0.18); color:#d9a406;}
+  .status-badge.status-ready{background:rgba(217,164,6,0.18); color:var(--warn);}
   .status-badge.status-running{background:rgba(92,138,92,0.2); color:var(--ok); animation:status-pulse 2s ease-in-out infinite;}
   .status-badge.status-completed{background:rgba(91,140,255,0.18); color:#5b8cff;}
   @keyframes status-pulse{
@@ -958,10 +958,10 @@
   .overview-settings-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:4px 0;}
   .overview-settings-row .checkbox-row{margin-bottom:0;}
   .overview-settings-move{display:flex; gap:4px;}
-  .overview-settings-move .btn{padding:2px 9px;}
-  .overview-widget-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:16px;}
+  .overview-settings-move .btn{padding:7px 11px; min-width:32px; min-height:28px;}
+  .overview-widget-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(min(300px,100%),1fr)); gap:16px;}
   .overview-widget{
-    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-left:4px solid var(--hivis);
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:2px solid var(--hivis);
     border-radius:4px; padding:16px 18px;
   }
   .overview-widget-head h3{
@@ -973,9 +973,13 @@
   .overview-status-tile{flex:1; min-width:64px; background:var(--asphalt-3); border-radius:3px; padding:10px 6px; text-align:center;}
   .overview-status-tile-count{display:block; font-family:'JetBrains Mono',monospace; font-size:21px; font-weight:700; color:var(--chalk); line-height:1.2;}
   .overview-status-tile-label{display:block; font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--steel); margin-top:2px;}
-  .overview-status-tile.underway .overview-status-tile-count{color:var(--hivis-2);}
-  .overview-status-tile.finished .overview-status-tile-count{color:var(--ok);}
-  .overview-status-tile.dnf .overview-status-tile-count, .overview-status-tile.dns .overview-status-tile-count{color:var(--stamp);}
+  /* Status is carried by a tinted tile background rather than colored text on
+     var(--asphalt-3) — the brand colors (var(--hivis-2)/var(--ok)/var(--stamp))
+     don't reliably clear 3:1 for large text against that background in every
+     theme; text stays var(--chalk), which does clear 6:1+ everywhere. */
+  .overview-status-tile.underway{background:var(--tile-underway-bg);}
+  .overview-status-tile.finished{background:var(--tile-finished-bg);}
+  .overview-status-tile.dnf, .overview-status-tile.dns{background:var(--tile-alert-bg);}
   .overview-cp-load-list{display:flex; flex-direction:column; gap:6px;}
   .overview-cp-load-row{display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px; color:var(--chalk);}
   .overview-cp-load-count{font-family:'JetBrains Mono',monospace; color:var(--hivis-2); font-weight:700;}
@@ -1091,8 +1095,8 @@
     display:flex; align-items:center; gap:12px; font-family:'JetBrains Mono',monospace; font-size:11.5px;
     color:var(--steel); margin-bottom:16px;
   }
-  .overview-todo-list li.todo-warn{color:#d9a406;}
-  .overview-todo-list li.todo-warn::before{content:'⚠'; color:#d9a406;}
+  .overview-todo-list li.todo-warn{color:var(--warn);}
+  .overview-todo-list li.todo-warn::before{content:'⚠'; color:var(--warn);}
   .overview-todo-list li.todo-danger{color:var(--stamp);}
   .overview-todo-list li.todo-danger::before{content:'⚠'; color:var(--stamp);}
 
