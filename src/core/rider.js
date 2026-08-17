@@ -48,6 +48,18 @@ function onRiderEmergencyInput(bib, value){
   r.emergencyContact = value;
   debouncedSave();
 }
+function toggleTeamsPanel(){
+  state.teamsPanelOpen = !state.teamsPanelOpen;
+  renderRiders();
+}
+function toggleCategoriesPanel(){
+  state.categoriesPanelOpen = !state.categoriesPanelOpen;
+  renderRiders();
+}
+function toggleCardDesignPanel(){
+  state.cardDesignPanelOpen = !state.cardDesignPanelOpen;
+  renderRiders();
+}
 function deleteRider(bib){
   const evt = state.currentEvent;
   const idx = (evt.riders || []).findIndex(r => r.bib === bib);
@@ -213,13 +225,18 @@ function renderRiders(){
           <button class="btn btn-primary" onclick="exportSpokeCardsPDF()" ${state.spokeCardsGenerating ? 'disabled' : ''}>${state.spokeCardsGenerating ? t('rider.generatingSpokecards') : t('rider.spokecardsPdf')}</button>
         </div>
       ` : ''}
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" onclick="toggleTeamsPanel()">${state.teamsPanelOpen ? '▾' : '▸'} ${t('rider.teamsHeading')}</button>
+        ${categoriesEnabled ? `<button class="btn" onclick="toggleCategoriesPanel()">${state.categoriesPanelOpen ? '▾' : '▸'} ${t('category.heading')}</button>` : ''}
+        <button class="btn" onclick="toggleCardDesignPanel()">${state.cardDesignPanelOpen ? '▾' : '▸'} ${t('rider.cardDesignToggle')}</button>
+      </div>
     </div>
     ${renderBulkImportPanel()}
     ${renderActionLogPanel(evt)}
     ${riders.length ? `<div class="riders-hint">${t('rider.spokecardHint')} ${t('pdfBlocks.spokecardsHint')} <a href="#" onclick="event.preventDefault(); openManifest(); state.pdfBlocksPanelOpen = true; render();">${t('pdfBlocks.toggleButton')}</a></div>` : ''}
     ${state.printPopupBlocked ? `<div class="riders-hint warn">${t('rider.printPopupBlocked')}</div>` : ''}
+    ${state.teamsPanelOpen ? `
     <div class="settings-section" style="margin:0 0 22px;">
-      <h3 style="font-size:15px;">${t('rider.teamsHeading')}</h3>
       <div class="team-scoring-mode-row">
         <label>${t('rider.teamScoringModeLabel')}</label>
         <select onchange="onTeamScoringModeChange(this.value)">
@@ -230,25 +247,30 @@ function renderRiders(){
       <div class="type-list">${teamRows || `<div class="riders-hint" style="padding:0;">${t('rider.noTeamsYet')}</div>`}</div>
       ${newTeamForm}
     </div>
+    ` : ''}
     ${categoriesEnabled ? `
-    <div class="settings-section" style="margin:0 0 22px;" id="rider-categories-section">
-      <h3 style="font-size:15px;">${t('category.heading')}</h3>
-      <div class="type-list">${categoryGroupRows || `<div class="riders-hint" style="padding:0;">${t('category.noGroupsYet')}</div>`}</div>
-      ${newCategoryGroupForm}
-      ${groups.length ? `
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
-          <input type="file" id="import-categories-file" accept="application/json,.json" style="display:none;" onchange="onImportCategoriesFile(this)">
-          <button class="btn btn-sm" onclick="document.getElementById('import-categories-file').click()">${t('category.importJson')}</button>
-          <button class="btn btn-sm" onclick="exportCategoriesJSON()">${t('category.exportJson')}</button>
-        </div>
-      ` : `
-        <div style="margin-top:12px;">
-          <input type="file" id="import-categories-file" accept="application/json,.json" style="display:none;" onchange="onImportCategoriesFile(this)">
-          <button class="btn btn-sm" onclick="document.getElementById('import-categories-file').click()">${t('category.importJson')}</button>
-        </div>
-      `}
+    <div id="rider-categories-section">
+      ${state.categoriesPanelOpen ? `
+      <div class="settings-section" style="margin:0 0 22px;">
+        <div class="type-list">${categoryGroupRows || `<div class="riders-hint" style="padding:0;">${t('category.noGroupsYet')}</div>`}</div>
+        ${newCategoryGroupForm}
+        ${groups.length ? `
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+            <input type="file" id="import-categories-file" accept="application/json,.json" style="display:none;" onchange="onImportCategoriesFile(this)">
+            <button class="btn btn-sm" onclick="document.getElementById('import-categories-file').click()">${t('category.importJson')}</button>
+            <button class="btn btn-sm" onclick="exportCategoriesJSON()">${t('category.exportJson')}</button>
+          </div>
+        ` : `
+          <div style="margin-top:12px;">
+            <input type="file" id="import-categories-file" accept="application/json,.json" style="display:none;" onchange="onImportCategoriesFile(this)">
+            <button class="btn btn-sm" onclick="document.getElementById('import-categories-file').click()">${t('category.importJson')}</button>
+          </div>
+        `}
+      </div>
+      ` : ''}
     </div>
     ` : ''}
+    ${state.cardDesignPanelOpen ? `
     <div class="spokecard-design">
       <label>${t('rider.cardDesignLabel')}</label>
       <div class="spokecard-design-row">
@@ -258,6 +280,7 @@ function renderRiders(){
       </div>
       <div class="riders-hint" style="margin:6px 0 0;">${t('rider.cardDesignHint')}</div>
     </div>
+    ` : ''}
     ${riders.length === 0 ? `<div style="max-width:520px; margin:20px auto;">${emptyStateHtml({
       icon: '🚴',
       title: t('rider.emptyTitle'),

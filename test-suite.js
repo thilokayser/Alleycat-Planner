@@ -155,6 +155,11 @@ async function runAlleycatTestSuite(){
   {
     openRiders();
     await wait(20);
+    /* Kategorien-Panel ist seit Paket 4 (Fahrer-Seite im Manifest-Anpassen-Look)
+       standardmäßig eingeklappt — ohne diesen Klick existiert #newcatgroup-name
+       weiter unten nicht im DOM, genau wie ein echter Nutzer erst "Kategorien"
+       aufklappen müsste, bevor das Formular erreichbar ist. */
+    toggleCategoriesPanel();
     addCategoryPreset('drivetrain');
     addCategoryPreset('gender');
     checkEqual('2 Kategorie-Presets hinzugefügt', evt.categoryGroups.length, 2);

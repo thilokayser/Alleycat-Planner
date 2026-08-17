@@ -60,6 +60,7 @@ const translations = {
       teamsHeading: 'Teams',
       noTeamsYet: 'Noch keine Teams angelegt.',
       cardDesignLabel: 'Eigenes Kartendesign (Vorderseite)',
+      cardDesignToggle: 'Kartendesign',
       cardDesignPreviewAlt: 'Kartendesign-Vorschau',
       cardDesignHint: 'Wird automatisch auf Kartenformat zugeschnitten. Ohne Upload wird ein generiertes Stempel-Design mit Event-Name verwendet.',
       emptyTitle: 'Noch keine Fahrerliste',

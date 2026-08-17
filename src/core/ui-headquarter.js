@@ -51,6 +51,9 @@ let state = {
   pdfPreviewOpen: false,
   pdfPreviewFilename: '',
   socialShareOpen: false,
+  teamsPanelOpen: false,
+  categoriesPanelOpen: false,
+  cardDesignPanelOpen: false,
 };
 let pdfPreviewDoc = null;
 let map, markersLayer, routeLine, cpMarkers = {};
