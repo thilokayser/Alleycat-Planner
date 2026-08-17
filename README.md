@@ -45,9 +45,11 @@ Beide Varianten prüfen zusätzlich zuerst, ob `window.storage` verfügbar ist (
 - Fehlerbildschirm statt weißem Bildschirm bei einem unerwarteten Programmfehler, mit Hinweis dass die Daten sicher gespeichert sind
 - Generisches Undo/Aktions-Log für die letzten Aktionen (z. B. Fahrer gelöscht, Kategorie geändert) — zusätzlich zum bestehenden Ziel-Check-in-Undo
 - Leaderboard mit kombinierbaren Filtern (Status, Team, Kategorien) und Export als CSV (Excel-DE-kompatibel, semikolon-getrennt, optional aufgeteilt nach Team/Kategorie)
-- Manifest- sowie Startnummern-/Spokecards-PDF-Export
+- Manifest- sowie Startnummern-/Spokecards-PDF-Export, Manifest und Personal-Briefing öffnen dabei eine In-App-Vorschau statt direkt herunterzuladen
 - Routen-Export als GPX
-- 4 Themes (Feldpost, Hell, Dunkel, Dracula) und 3 Icon-Packs (Emoji, Font Awesome, Material Symbols) über die Einstellungen
+- 5 Themes (Feldpost, Hell, Dunkel, Dracula, Sonnenlicht — Hochkontrast-Modus für Einsatz im Freien) und 3 Icon-Packs (Emoji, Font Awesome, Material Symbols) über die Einstellungen
+- Command Palette (Cmd/Ctrl+K) mit Fuzzy-Suche über Navigation, Fahrer, Checkpoints und Schnellaktionen; globale Zahlen-Tastenkürzel (1–6) zur Navigation und Esc zum Abbrechen aktiver Modi/Overlays
+- Karten-Editor: einklappbare Sidebar für mehr Kartenfläche, Hover-Synchronisation zwischen Checkpoint-Liste und Kartenmarkern, Shift-Klick-Mehrfachauswahl von Checkpoints mit Sammelaktionen (Typ zuweisen, als Pflicht markieren, sperren, löschen)
 
 ## Weitere Dateien
 

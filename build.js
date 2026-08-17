@@ -37,6 +37,7 @@ const CORE_FILES = [
   'beamer-modes.js',
   'offline-tiles.js',
   'data-safety.js',
+  'command-palette.js',
   'ui-headquarter.js'
 ];
 

@@ -33,7 +33,11 @@
    Storage-Roundtrip, sowie QoL-Features (CSV-Bulk-Import inkl.
    Spalten-Zuordnung/Validierung/Fehlerliste, globale Error-Boundary,
    generisches Undo-/Aktions-Log für Fahrer-Löschung und
-   Kategorie-Änderungen).
+   Kategorie-Änderungen), sowie Paket 1 der neu geordneten Roadmap (Phase 19:
+   Sidebar-Collapse, globale Tab-Shortcuts inkl. Eingabefeld-Ausnahme und
+   Esc-Abbruch, Command Palette mit Fuzzy-Suche, Outdoor-High-Contrast-Theme,
+   Hover-Sync zwischen Checkpoint-Sidebar und Karten-Marker, Bulk-Actions
+   für Checkpoint-Zeilen inkl. Sperr-Guard, In-Page-PDF-Vorschau-Modal).
 
    Läuft UNVERÄNDERT gegen beide gebauten Varianten (erst `node build.js`):
      - dist/alleycat-dispatch-local.html   (SQLite via sql.js/IndexedDB, oder window.storage)
@@ -609,6 +613,7 @@ async function runAlleycatTestSuite(){
       appendPdfBlocks(new jsPDF({unit: 'mm', format: 'a4'}), evt, 'spokecards');
     });
     await checkNoThrowAsync('exportManifestPDF mit aktivem Baukasten läuft ohne Fehler', exportManifestPDF);
+    closePdfPreview();
     await checkNoThrowAsync('buildSpokeCardsDoc mit aktivem Baukasten läuft ohne Fehler', () => buildSpokeCardsDoc(evt));
 
     const countBeforeImport = evt.pdfBlocks.length;
@@ -1043,6 +1048,135 @@ async function runAlleycatTestSuite(){
     await wait(20);
   }
 
+  /* 3m) Paket 1 (Phase 19): Command Palette, Shortcuts, Sidebar-Collapse,
+     Outdoor-Theme, Hover-Sync, Bulk-Actions, In-Page-PDF-Vorschau.
+     Ruft bewusst NICHT openEditor() erneut auf — das würde state.currentEvent
+     per Storage-Reload durch ein neues Objekt ersetzen und die lokale `evt`-
+     Variable (dieselbe Referenz seit Abschnitt 1) vom weiteren Suite-Verlauf
+     entkoppeln. Stattdessen wird direkt gerendert (state.view/render()) bzw.
+     initMap()/redrawMarkers() manuell aufgerufen. */
+  {
+    /* Sidebar-Collapse: reiner Zustands-Roundtrip, unabhängig von der
+       Fensterbreite (die tatsächliche Sichtbarkeit hängt zusätzlich vom
+       SIDEBAR_BREAKPOINT ab, siehe map.js) */
+    const collapsedBefore = isEditorSidebarCollapsed();
+    toggleEditorSidebarCollapsed();
+    checkEqual('Sidebar-Collapse-Zustand wird umgeschaltet', isEditorSidebarCollapsed(), !collapsedBefore);
+    toggleEditorSidebarCollapsed();
+    checkEqual('Sidebar-Collapse-Zustand zurückgeschaltet', isEditorSidebarCollapsed(), collapsedBefore);
+
+    /* Globale Tab-Shortcuts: Zahlen navigieren, aber nicht innerhalb von Eingabefeldern */
+    document.body.dispatchEvent(new KeyboardEvent('keydown', {key: '3', bubbles: true}));
+    checkEqual('Taste "3" navigiert zu Fahrerliste', state.view, 'riders');
+    document.body.dispatchEvent(new KeyboardEvent('keydown', {key: '5', bubbles: true}));
+    checkEqual('Taste "5" navigiert zu Leaderboard', state.view, 'leaderboard');
+    const shortcutProbeInput = document.createElement('input');
+    shortcutProbeInput.type = 'text';
+    document.body.appendChild(shortcutProbeInput);
+    shortcutProbeInput.dispatchEvent(new KeyboardEvent('keydown', {key: '2', bubbles: true}));
+    checkEqual('Zahlen-Shortcut wird in Eingabefeldern ignoriert', state.view, 'leaderboard');
+    shortcutProbeInput.remove();
+
+    /* Esc bricht den aktiven Checkpoint-Setzen-Modus ab */
+    state.addMode = true;
+    document.body.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+    checkEqual('Esc bricht aktiven Checkpoint-Setzen-Modus ab', state.addMode, false);
+
+    /* Command Palette: öffnen, Fuzzy-Suche, Esc schließt */
+    openCommandPalette();
+    check('Command Palette öffnet sich', state.commandPaletteOpen);
+    check('Command-Palette-Eingabefeld ist im DOM', !!document.getElementById('command-palette-input'));
+    onCommandPaletteInput(t('ui.navCheckin'));
+    const paletteItems = filteredCommandPaletteItems();
+    check('Fuzzy-Suche findet Navigationseintrag "Ziel-Check-in"', paletteItems.some(i => i.label === t('ui.navCheckin')));
+    check('commandPaletteFuzzyScore: Substring-Treffer liefert positiven Score', commandPaletteFuzzyScore('Hell', 'hell') > 0);
+    checkEqual('commandPaletteFuzzyScore: kein Treffer liefert -1', commandPaletteFuzzyScore('Hell', 'xyz'), -1);
+    document.body.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+    check('Esc schließt offene Command Palette', !state.commandPaletteOpen);
+    checkEqual('Command-Palette-Root ist nach Schließen leer', document.getElementById('command-palette-root').innerHTML, '');
+
+    /* Outdoor-Theme: 5. Theme, max. Kontrast, korrekt in THEMES registriert */
+    const themeBefore = state.appSettings.theme;
+    check('THEMES enthält Outdoor-Eintrag mit 4-teiligem Swatch', !!THEMES.outdoor && THEMES.outdoor.swatch.length === 4);
+    setTheme('outdoor');
+    checkEqual('Outdoor-Theme setzt data-theme auf der Wurzel', document.documentElement.getAttribute('data-theme'), 'outdoor');
+    setTheme(themeBefore);
+    checkEqual('Theme nach Test zurückgesetzt', document.documentElement.getAttribute('data-theme'), themeBefore);
+
+    /* Hover-Sync: Sidebar-Zeile <-> Karten-Marker, in beide Richtungen */
+    state.view = 'editor';
+    render();
+    initMap();
+    redrawMarkers();
+    await wait(30);
+    checkEqual('cpMarkers enthält einen Marker je Checkpoint', Object.keys(cpMarkers).length, evt.checkpoints.length);
+    const hoverCp = evt.checkpoints[0];
+    setCpMarkerHoverSync(hoverCp.id, true);
+    const hoverMarkerEl = cpMarkers[hoverCp.id].getElement();
+    check('Sidebar-Hover pulsiert den zugehörigen Marker', hoverMarkerEl.querySelector('.cp-marker').classList.contains('cp-marker-hover-sync'));
+    setCpMarkerHoverSync(hoverCp.id, false);
+    check('Hover-Pulse-Klasse wird beim Verlassen wieder entfernt', !hoverMarkerEl.querySelector('.cp-marker').classList.contains('cp-marker-hover-sync'));
+    setCpRowHoverSync(hoverCp.id, true);
+    const hoverRowEl = document.querySelector(`.cp-row[data-cp-id="${hoverCp.id}"]`);
+    check('Marker-Hover hebt die zugehörige Sidebar-Zeile hervor', hoverRowEl && hoverRowEl.classList.contains('cp-row-hover-sync'));
+    setCpRowHoverSync(hoverCp.id, false);
+
+    /* Bulk-Actions: Shift-Klick-Mehrfachauswahl + Sammelaktionen */
+    const shiftClickRowEl = document.querySelector(`.cp-row[data-cp-id="${hoverCp.id}"]`);
+    shiftClickRowEl.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, shiftKey: true}));
+    check('Shift-Klick wählt Checkpoint-Zeile für Sammelaktionen aus', state.cpBulkSelectedIds.includes(hoverCp.id));
+    check('Bulk-Aktionsleiste erscheint bei aktiver Auswahl', !!document.querySelector('.cp-bulk-bar'));
+    shiftClickRowEl.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, shiftKey: true}));
+    check('Erneuter Shift-Klick wählt die Zeile wieder ab', !state.cpBulkSelectedIds.includes(hoverCp.id));
+
+    const bulkTypeBefore = hoverCp.type, bulkMandatoryBefore = hoverCp.mandatory;
+    state.cpBulkSelectedIds = [hoverCp.id];
+    bulkAssignType('photo');
+    checkEqual('Bulk "Typ zuweisen" ändert den Checkpoint-Typ', hoverCp.type, 'photo');
+    hoverCp.mandatory = false;
+    bulkMarkMandatory();
+    checkEqual('Bulk "Als Pflicht markieren" setzt mandatory=true', hoverCp.mandatory, true);
+    hoverCp.type = bulkTypeBefore;
+    hoverCp.mandatory = bulkMandatoryBefore;
+    clearCpBulkSelection();
+    checkEqual('clearCpBulkSelection leert die Auswahl', state.cpBulkSelectedIds.length, 0);
+
+    const bulkCpCountBefore = evt.checkpoints.length;
+    const bulkExistingIds = new Set(evt.checkpoints.map(c => c.id));
+    duplicateCheckpoint(evt.checkpoints[0].id);
+    duplicateCheckpoint(evt.checkpoints[1].id);
+    const bulkTempIds = evt.checkpoints.filter(c => !bulkExistingIds.has(c.id)).map(c => c.id);
+    checkEqual('Zwei temporäre Checkpoints für den Bulk-Test dupliziert', bulkTempIds.length, 2);
+    state.cpBulkSelectedIds = bulkTempIds.slice();
+    bulkLockCheckpoints();
+    check('Bulk "Sperren" setzt cp.locked für alle Ausgewählten', bulkTempIds.every(id => evt.checkpoints.find(c => c.id === id).locked));
+    state.cpBulkSelectedIds = bulkTempIds.slice();
+    bulkDeleteCheckpoints();
+    checkEqual('Bulk-Löschen ignoriert gesperrte Checkpoints (kein Confirm-Dialog nötig)', evt.checkpoints.length, bulkCpCountBefore + 2);
+    bulkTempIds.forEach(id => toggleCpLocked(id));
+    state.cpBulkSelectedIds = bulkTempIds.slice();
+    const origConfirmBulk = window.confirm;
+    window.confirm = () => true;
+    bulkDeleteCheckpoints();
+    window.confirm = origConfirmBulk;
+    checkEqual('Bulk-Löschen entfernt entsperrte, ausgewählte Checkpoints', evt.checkpoints.length, bulkCpCountBefore);
+    checkEqual('Checkpoint-Reihenfolge nach Bulk-Löschen lückenlos neu vergeben', evt.checkpoints.map(c => c.order).join(','), evt.checkpoints.map((c, i) => i + 1).join(','));
+    state.cpBulkSelectedIds = [];
+
+    /* In-Page-PDF-Vorschau: Personal-Briefing öffnet Modal statt Direkt-Download */
+    await checkNoThrowAsync('exportStaffBriefingPDF öffnet die In-Page-Vorschau', exportStaffBriefingPDF);
+    check('PDF-Vorschau ist nach dem Export geöffnet', state.pdfPreviewOpen);
+    check('PDF-Vorschau zeigt den erwarteten Dateinamen', state.pdfPreviewFilename.includes('personal-briefing'));
+    check('PDF-Vorschau-Modal ist im DOM vorhanden', !!document.querySelector('.pdfprev-box'));
+    check('PDF-Vorschau-Iframe verweist auf eine Blob-URL', (document.querySelector('.pdfprev-frame') || {}).src.startsWith('blob:'));
+    document.body.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+    check('Esc schließt die PDF-Vorschau', !state.pdfPreviewOpen);
+    checkEqual('PDF-Vorschau-Root ist nach Schließen leer', document.getElementById('pdf-preview-root').innerHTML, '');
+
+    openRiders();
+    await wait(20);
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -1134,6 +1268,7 @@ async function runAlleycatTestSuite(){
   await wait(20);
   check('Manifest rendert ohne Fehler', document.getElementById('view-manifest').innerHTML.length > 100);
   await checkNoThrowAsync('Manifest-PDF-Export läuft ohne Fehler', exportManifestPDF);
+  closePdfPreview();
 
   /* 12) Fahrer-Ansicht: Startnummern- & Spokecards-PDF-Generatoren */
   openRiders();

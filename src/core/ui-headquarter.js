@@ -43,8 +43,15 @@ let state = {
   bulkImportValidRows: [],
   actionUndoHandlers: {},
   gameModesSectionOpen: false,
+  commandPaletteOpen: false,
+  commandPaletteQuery: '',
+  commandPaletteActiveIndex: 0,
+  cpBulkSelectedIds: [],
+  pdfPreviewOpen: false,
+  pdfPreviewFilename: '',
 };
-let map, markersLayer, routeLine;
+let pdfPreviewDoc = null;
+let map, markersLayer, routeLine, cpMarkers = {};
 let qrScanStream = null;
 let qrScanRAF = null;
 let liveCountdownInterval = null;
@@ -199,6 +206,7 @@ async function init(){
   startAutoBackup();
   armPersistentStorageRequest();
   startRulesEngineTick();
+  initGlobalShortcuts();
   window.addEventListener('hashchange', () => { if(isBeamerRoute()) location.reload(); });
 }
 
@@ -217,10 +225,11 @@ async function openEditor(id){
   const evt = await loadEvent(id);
   state.currentEvent = withEventDefaults(evt || {id, name:t('common.unnamedEvent'), date:'', checkpoints:[]});
   state.actionUndoHandlers = {};
+  state.cpBulkSelectedIds = [];
   registerEventSounds(state.currentEvent);
   state.loading = false;
   render();
-  setTimeout(() => { initMap(); initSidebarResize(); applySidebarWidth(); }, 30);
+  setTimeout(() => { initMap(); initSidebarResize(); applySidebarWidth(); applyEditorSidebarCollapsed(); }, 30);
 }
 function openOverview(){
   state.view = 'overview';
@@ -248,6 +257,45 @@ function openLeaderboard(){
   state.view = 'leaderboard';
   state.leaderboardSearch = '';
   render();
+}
+
+/* ---------------- global keyboard shortcuts ---------------- */
+const NAV_SHORTCUT_KEYS = {
+  '1': () => openOverview(),
+  '2': () => openEditor(state.currentEvent.id),
+  '3': () => openRiders(),
+  '4': () => openCheckin(),
+  '5': () => openLeaderboard(),
+  '6': () => openManifest()
+};
+function isTypingTarget(el){
+  if(!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+function handleGlobalEscape(){
+  if(state.pdfPreviewOpen){ closePdfPreview(); return true; }
+  if(state.commandPaletteOpen){ closeCommandPalette(); return true; }
+  if(state.addMode){ toggleAddMode(); return true; }
+  return false;
+}
+function initGlobalShortcuts(){
+  document.addEventListener('keydown', (e) => {
+    if((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k'){
+      e.preventDefault();
+      toggleCommandPalette();
+      return;
+    }
+    if(e.key === 'Escape'){
+      if(handleGlobalEscape()) e.preventDefault();
+      return;
+    }
+    if(isTypingTarget(e.target)) return;
+    if(e.metaKey || e.ctrlKey || e.altKey) return;
+    if(!state.currentEvent || state.view === 'dashboard' || state.view === 'settings') return;
+    const fn = NAV_SHORTCUT_KEYS[e.key];
+    if(fn){ e.preventDefault(); fn(); }
+  });
 }
 
 /* ---------------- app settings: theme + icon pack ---------------- */
@@ -398,7 +446,8 @@ const THEMES = {
   feldpost: {label: t('settings.themeFeldpostLabel'), desc: t('settings.themeFeldpostDesc'), swatch: ['#17191a', '#eee5cd', '#ff5f1f', '#b23a2e']},
   hell: {label: t('settings.themeHellLabel'), desc: t('settings.themeHellDesc'), swatch: ['#f4f1ea', '#fffdf7', '#e0551c', '#b23a2e']},
   dunkel: {label: t('settings.themeDunkelLabel'), desc: t('settings.themeDunkelDesc'), swatch: ['#121212', '#1e1e1e', '#5b8cff', '#e05a4e']},
-  dracula: {label: t('settings.themeDraculaLabel'), desc: t('settings.themeDraculaDesc'), swatch: ['#282a36', '#2b2d3a', '#ff79c6', '#bd93f9']}
+  dracula: {label: t('settings.themeDraculaLabel'), desc: t('settings.themeDraculaDesc'), swatch: ['#282a36', '#2b2d3a', '#ff79c6', '#bd93f9']},
+  outdoor: {label: t('settings.themeOutdoorLabel'), desc: t('settings.themeOutdoorDesc'), swatch: ['#ffffff', '#000000', '#ffcc00', '#b30000']}
 };
 function renderSettings(){
   Object.entries(ICON_PACKS).forEach(([key, p]) => {

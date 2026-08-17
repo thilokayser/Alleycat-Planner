@@ -101,6 +101,81 @@ function selectCp(id){
   const cp = findCp(id);
   if(cp && map) map.flyTo([cp.lat, cp.lng], Math.max(map.getZoom(), 15), {duration: 0.6});
 }
+function onCpRowClick(e, id){
+  if(e.shiftKey){
+    e.preventDefault();
+    toggleCpBulkSelect(id);
+    return;
+  }
+  selectCp(id);
+}
+function toggleCpBulkSelect(id){
+  const idx = state.cpBulkSelectedIds.indexOf(id);
+  if(idx === -1) state.cpBulkSelectedIds.push(id); else state.cpBulkSelectedIds.splice(idx, 1);
+  renderSidebar();
+}
+function clearCpBulkSelection(){
+  state.cpBulkSelectedIds = [];
+  renderSidebar();
+}
+function selectedBulkCheckpoints(){
+  const evt = state.currentEvent;
+  const locked = isCpLocked(evt);
+  return evt.checkpoints.filter(cp => state.cpBulkSelectedIds.includes(cp.id) && !cp.locked && !locked);
+}
+function bulkAssignType(typeKey){
+  const cps = selectedBulkCheckpoints();
+  if(!cps.length || !typeKey) return;
+  cps.forEach(cp => cp.type = typeKey);
+  debouncedSave();
+  renderSidebar();
+  redrawMarkers();
+}
+function bulkMarkMandatory(){
+  const cps = selectedBulkCheckpoints();
+  if(!cps.length) return;
+  cps.forEach(cp => cp.mandatory = true);
+  debouncedSave();
+  renderSidebar();
+  redrawMarkers();
+}
+function bulkLockCheckpoints(){
+  const cps = selectedBulkCheckpoints();
+  if(!cps.length) return;
+  cps.forEach(cp => cp.locked = true);
+  debouncedSave();
+  renderSidebar();
+}
+function bulkDeleteCheckpoints(){
+  const cps = selectedBulkCheckpoints();
+  if(!cps.length) return;
+  if(!confirm(t('checkpoint.bulkDeleteConfirm', {count: cps.length}))) return;
+  const ids = cps.map(cp => cp.id);
+  if(ids.includes(state.editingId)) state.editingId = null;
+  state.currentEvent.checkpoints = state.currentEvent.checkpoints.filter(c => !ids.includes(c.id));
+  state.currentEvent.checkpoints.forEach((c, i) => c.order = i + 1);
+  state.cpBulkSelectedIds = [];
+  debouncedSave();
+  renderSidebar();
+  redrawMarkers();
+}
+function renderCpBulkActionsBar(){
+  if(!state.cpBulkSelectedIds.length) return '';
+  const typeOptions = CHECKPOINT_TYPES.map(ct => `<option value="${ct.key}">${ct.dropdownLabel}</option>`).join('');
+  return `
+    <div class="cp-bulk-bar">
+      <span class="cp-bulk-count">${t('checkpoint.bulkSelectedCount', {count: state.cpBulkSelectedIds.length})}</span>
+      <select onchange="if(this.value){ bulkAssignType(this.value); this.value=''; }">
+        <option value="">${t('checkpoint.bulkAssignType')}</option>
+        ${typeOptions}
+      </select>
+      <button type="button" class="btn btn-sm" onclick="bulkMarkMandatory()">${t('checkpoint.bulkMarkMandatory')}</button>
+      <button type="button" class="btn btn-sm" onclick="bulkLockCheckpoints()">${t('checkpoint.bulkLock')}</button>
+      <button type="button" class="btn btn-sm btn-danger" onclick="bulkDeleteCheckpoints()">${t('checkpoint.bulkDelete')}</button>
+      <button type="button" class="btn btn-sm btn-ghost" onclick="clearCpBulkSelection()">${t('common.cancel')}</button>
+    </div>
+  `;
+}
 function onCpDragStart(e, id){
   e.stopPropagation();
   if(e.button) return;
@@ -507,7 +582,7 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
           }
         }
         return `
-          <div class="cp-row ${editing ? 'editing' : ''} ${cp.mandatory ? '' : 'optional'} ${itemLocked ? 'locked' : ''}" data-cp-id="${cp.id}" onclick="selectCp('${cp.id}')">
+          <div class="cp-row ${editing ? 'editing' : ''} ${cp.mandatory ? '' : 'optional'} ${itemLocked ? 'locked' : ''} ${state.cpBulkSelectedIds.includes(cp.id) ? 'bulk-selected' : ''}" data-cp-id="${cp.id}" onclick="onCpRowClick(event, '${cp.id}')" onmouseenter="setCpMarkerHoverSync('${cp.id}', true)" onmouseleave="setCpMarkerHoverSync('${cp.id}', false)">
             <div class="cp-row-top">
               <span class="cp-drag-handle" title="${t('checkpoint.dragToReorder')}" ${(itemLocked || groupView) ? '' : `onpointerdown="onCpDragStart(event, '${cp.id}')"`} onclick="event.stopPropagation()">
                 <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.4"/><circle cx="7.5" cy="2.5" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13.5" r="1.4"/><circle cx="7.5" cy="13.5" r="1.4"/></svg>
@@ -642,6 +717,7 @@ function renderSidebar(){
         <option value="type" ${state.cpListGroupBy === 'type' ? 'selected' : ''}>${t('checkpoint.groupByType')}</option>
       </select>
     </div>
+    ${state.cpBulkSelectedIds.length ? renderCpBulkActionsBar() : `<div class="cp-bulk-hint">${t('checkpoint.bulkSelectHint')}</div>`}
     <div class="cp-list">${rows}</div>
     <div class="sidebar-foot">
       <button class="btn" onclick="exportRouteGPX()">${t('checkpoint.exportGpx')}</button>

@@ -41,3 +41,11 @@
     --warn:#d9a406;
     --tile-underway-bg:#554e72; --tile-finished-bg:#3d6456; --tile-alert-bg:#68404e;
   }
+  :root[data-theme="outdoor"]{
+    --asphalt:#ffffff; --asphalt-2:#ffffff; --asphalt-3:#e6e6e6;
+    --paper:#ffffff; --paper-2:#f2f2f2; --paper-line:#000000;
+    --ink:#000000; --hivis:#ffcc00; --hivis-2:#e0ac00; --stamp:#b30000;
+    --steel:#4d4d4d; --chalk:#000000; --ok:#006600;
+    --warn:#7a5c00;
+    --tile-underway-bg:#ffe0b3; --tile-finished-bg:#c8f0c8; --tile-alert-bg:#ffd0d0;
+  }

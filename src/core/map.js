@@ -19,6 +19,18 @@ function initMap(){
   redrawMarkers();
   fitToCheckpoints();
 }
+/* ---------------- hover sync: sidebar row <-> map marker ---------------- */
+function setCpRowHoverSync(cpId, on){
+  const row = document.querySelector(`.cp-row[data-cp-id="${cpId}"]`);
+  if(row) row.classList.toggle('cp-row-hover-sync', on);
+}
+function setCpMarkerHoverSync(cpId, on){
+  const marker = cpMarkers[cpId];
+  if(!marker) return;
+  const el = marker.getElement();
+  const markerDiv = el && el.querySelector('.cp-marker');
+  if(markerDiv) markerDiv.classList.toggle('cp-marker-hover-sync', on);
+}
 function fitToCheckpoints(){
   if(!map || !state.currentEvent || !state.currentEvent.checkpoints.length) return;
   const bounds = L.latLngBounds(state.currentEvent.checkpoints.map(c => [c.lat, c.lng]));
@@ -45,6 +57,31 @@ function setSidebarWidth(px){
   sidebar.style.width = clamped + 'px';
   try{ localStorage.setItem('alleycat:sidebarWidth', String(clamped)); }catch(e){}
   if(map) map.invalidateSize();
+}
+function isEditorSidebarCollapsed(){
+  try{ return localStorage.getItem('alleycat:sidebarCollapsed') === '1'; }catch(e){ return false; }
+}
+function applyEditorSidebarCollapsed(){
+  const sidebar = document.getElementById('sidebar');
+  const handle = document.getElementById('sidebar-resize-handle');
+  const toggle = document.getElementById('sidebar-collapse-toggle');
+  if(!sidebar || !toggle) return;
+  const collapsed = window.innerWidth > SIDEBAR_BREAKPOINT && isEditorSidebarCollapsed();
+  sidebar.style.display = collapsed ? 'none' : '';
+  if(handle) handle.style.display = collapsed ? 'none' : '';
+  toggle.textContent = collapsed ? '‹' : '›';
+  toggle.title = collapsed ? t('map.expandSidebar') : t('map.collapseSidebar');
+  /* Synchron statt setTimeout: die Sichtbarkeits-/Breitenänderung oben ist zu
+     diesem Zeitpunkt bereits im CSSOM angewendet, ein verzögerter Aufruf lief
+     Gefahr, erst nach einem zwischenzeitlichen View-Wechsel zu feuern und dann
+     eine 0x0-Größe in Leaflet zu cachen (bricht spätere flyTo()-Aufrufe mit
+     "Invalid LatLng (NaN, NaN)"). Nur aufrufen, während die Karte sichtbar ist. */
+  if(map && state.view === 'editor') map.invalidateSize();
+}
+function toggleEditorSidebarCollapsed(){
+  const next = !isEditorSidebarCollapsed();
+  try{ localStorage.setItem('alleycat:sidebarCollapsed', next ? '1' : '0'); }catch(e){}
+  applyEditorSidebarCollapsed();
 }
 function initSidebarResize(){
   const handle = document.getElementById('sidebar-resize-handle');
@@ -76,6 +113,7 @@ function initSidebarResize(){
   window.addEventListener('resize', () => {
     if(state.view === 'editor'){
       applySidebarWidth();
+      applyEditorSidebarCollapsed();
       if(map) map.invalidateSize();
     }
   });
@@ -108,6 +146,7 @@ function onMapClick(e){
 function redrawMarkers(){
   if(!markersLayer || !state.currentEvent) return;
   markersLayer.clearLayers();
+  cpMarkers = {};
   // Leaflet 1.9.x leaves permanent-tooltip DOM nodes behind when their marker
   // is removed via a LayerGroup — clean them up explicitly to avoid duplicates.
   document.querySelectorAll('.leaflet-tooltip.cp-time-tooltip').forEach(el => el.remove());
@@ -119,7 +158,10 @@ function redrawMarkers(){
       iconSize:[32,32], iconAnchor:[16,16]
     });
     const marker = L.marker([cp.lat, cp.lng], {icon, draggable:true});
+    cpMarkers[cp.id] = marker;
     marker.on('click', () => { state.editingId = cp.id; renderSidebar(); });
+    marker.on('mouseover', () => setCpRowHoverSync(cp.id, true));
+    marker.on('mouseout', () => setCpRowHoverSync(cp.id, false));
     marker.on('dragend', (ev) => {
       const pos = ev.target.getLatLng();
       cp.lat = pos.lat; cp.lng = pos.lng;

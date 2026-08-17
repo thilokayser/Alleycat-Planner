@@ -260,12 +260,23 @@
     display:flex; align-items:center; justify-content:center;
     font-size:10px; line-height:1;
   }
+  .cp-marker.cp-marker-hover-sync{animation:cp-marker-hover-pulse 0.8s ease-in-out infinite; z-index:1000 !important;}
+  @keyframes cp-marker-hover-pulse{0%,100%{transform:scale(1); opacity:1;} 50%{transform:scale(1.25); opacity:0.75;}}
+  .cp-row.cp-row-hover-sync{background:var(--paper-2); border-left:3px solid var(--hivis);}
+
   .leaflet-tooltip.cp-time-tooltip{
     background:var(--asphalt-2); color:var(--hivis-2); border:1px solid var(--hivis);
     font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; padding:3px 7px; border-radius:3px;
     box-shadow:0 2px 8px rgba(0,0,0,.4);
   }
   .leaflet-tooltip.cp-time-tooltip::before{border-top-color:var(--hivis);}
+
+  .sidebar-collapse-toggle{
+    width:18px; flex-shrink:0; border:none; cursor:pointer;
+    background:var(--asphalt-3); color:var(--hivis-2); font-size:14px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .sidebar-collapse-toggle:hover{background:var(--hivis); color:var(--asphalt);}
 
   .sidebar-resize-handle{
     width:7px; flex-shrink:0; cursor:col-resize; background:var(--asphalt-3);
@@ -348,6 +359,14 @@
   }
   .cp-row:hover{background:rgba(0,0,0,0.04);}
   .cp-row.editing{background:rgba(255,95,31,0.14);}
+  .cp-row.bulk-selected{background:rgba(255,95,31,0.1); box-shadow:inset 3px 0 0 var(--hivis);}
+  .cp-bulk-hint{padding:6px 18px 10px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#6b6248; line-height:1.4;}
+  .cp-bulk-bar{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    padding:10px 18px; border-bottom:1px solid var(--paper-line); background:var(--paper-2);
+  }
+  .cp-bulk-count{font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--ink); margin-right:2px;}
+  .cp-bulk-bar select{font-family:'Inter',sans-serif; font-size:12px; border:1px solid var(--paper-line); background:#faf6ea; color:var(--ink); border-radius:2px; padding:5px 6px;}
   .cp-row.dragging{opacity:0.55; background:rgba(255,95,31,0.1);}
   .cp-row-top{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
   .cp-drag-handle{
@@ -1004,6 +1023,55 @@
   }
   .overview-todo-list li::before{content:'○'; position:absolute; left:0; color:var(--hivis);}
 
+  /* ---------- in-page PDF preview ---------- */
+  .pdfprev-overlay{
+    position:fixed; inset:0; background:rgba(10,10,10,0.75); z-index:7000;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .pdfprev-box{
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:3px solid var(--hivis);
+    border-radius:6px; width:min(900px, 100%); height:100%; display:flex; flex-direction:column;
+    box-shadow:0 12px 40px rgba(0,0,0,0.5); overflow:hidden;
+  }
+  .pdfprev-head{
+    display:flex; align-items:center; gap:10px; padding:10px 14px;
+    border-bottom:1px solid var(--asphalt-3); flex-shrink:0;
+  }
+  .pdfprev-filename{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--steel); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .pdfprev-spacer{flex:1;}
+  .pdfprev-frame{flex:1; width:100%; border:none; background:#525659;}
+
+  /* ---------- command palette ---------- */
+  .cmdp-overlay{
+    position:fixed; inset:0; background:rgba(10,10,10,0.6); z-index:8000;
+    display:flex; align-items:flex-start; justify-content:center; padding-top:12vh;
+  }
+  .cmdp-box{
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:3px solid var(--hivis);
+    border-radius:6px; width:min(560px, 92vw); max-height:70vh; display:flex; flex-direction:column;
+    box-shadow:0 12px 40px rgba(0,0,0,0.5); overflow:hidden;
+  }
+  .cmdp-input{
+    width:100%; padding:16px 18px; font-size:15px; background:transparent; color:var(--chalk);
+    border:none; border-bottom:1px solid var(--asphalt-3); outline:none;
+  }
+  .cmdp-input::placeholder{color:var(--steel);}
+  .cmdp-list{overflow-y:auto; padding:6px 0;}
+  .cmdp-category{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em;
+    color:var(--steel); padding:10px 18px 4px;
+  }
+  .cmdp-item{
+    width:100%; display:flex; align-items:center; gap:12px; padding:9px 18px; background:none; border:none;
+    color:var(--chalk); text-align:left; cursor:pointer; font-size:13.5px;
+  }
+  .cmdp-item.active, .cmdp-item:hover{background:var(--asphalt-3);}
+  .cmdp-item-icon{width:20px; flex-shrink:0; text-align:center; font-size:14px;}
+  .cmdp-item-text{display:flex; flex-direction:column; gap:1px; min-width:0;}
+  .cmdp-item-label{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .cmdp-item-sublabel{font-size:11px; color:var(--steel); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .cmdp-empty{padding:20px 18px; color:var(--steel); font-size:13px; text-align:center;}
+
   /* ---------- start-time dialog ---------- */
   .start-dialog-overlay{
     position:fixed; inset:0; background:rgba(10,10,10,0.92); z-index:3000;
@@ -1165,8 +1233,9 @@
 
   @media (max-width: 820px){
     #view-editor{flex-direction:column;}
-    .sidebar{width:100% !important; max-width:none; height:46%; border-top:1px solid var(--asphalt-3);}
+    .sidebar{width:100% !important; max-width:none; height:46%; border-top:1px solid var(--asphalt-3); display:block !important;}
     .sidebar-resize-handle{display:none;}
+    .sidebar-collapse-toggle{display:none;}
     #map{height:54%;}
     #view-checkin{flex-direction:column;}
     .checkin-side{width:100%; max-height:38vh; border-left:none; border-top:1px solid var(--asphalt-3);}
@@ -1204,3 +1273,23 @@
     .leaderboard-toolbar{flex-direction:column; align-items:stretch;}
     .leaderboard-search{max-width:none;}
   }
+
+  /* ---------- outdoor theme: enlarged controls + heavier borders ----------
+     Color contrast comes entirely from the theme's CSS variables (themes.css)
+     and cascades everywhere for free. Font sizes are hardcoded per-element
+     throughout this file rather than rem-based, so a blanket root font-size
+     bump wouldn't reach most labels/buttons — instead this block enlarges the
+     controls a user actually taps/reads most (buttons, form fields, touch
+     targets, key dividers), matching the spec's "größere Bedienelemente"
+     intent without rewriting every rule in the file. */
+  :root[data-theme="outdoor"] body{font-size:15px;}
+  :root[data-theme="outdoor"] .btn{font-size:14.5px; padding:13px 20px; min-height:48px; border-width:2px;}
+  :root[data-theme="outdoor"] .topbar{border-bottom-width:5px;}
+  :root[data-theme="outdoor"] input[type=text], :root[data-theme="outdoor"] input[type=number],
+  :root[data-theme="outdoor"] input[type=date], :root[data-theme="outdoor"] input[type=datetime-local],
+  :root[data-theme="outdoor"] input[type=tel], :root[data-theme="outdoor"] select,
+  :root[data-theme="outdoor"] textarea{font-size:14.5px; min-height:44px; border-width:2px;}
+  :root[data-theme="outdoor"] .cp-icon-btn, :root[data-theme="outdoor"] .cp-order-btns button,
+  :root[data-theme="outdoor"] .bottom-nav-item{min-width:44px; min-height:44px;}
+  :root[data-theme="outdoor"] .cp-row{border-width:2px;}
+  :root[data-theme="outdoor"] .sidebar-resize-handle, :root[data-theme="outdoor"] .sidebar-collapse-toggle{width:26px;}

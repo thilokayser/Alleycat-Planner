@@ -110,7 +110,9 @@ const translations = {
       searching: 'Suche …',
       searchPlaceholder: 'Adresse oder Ort suchen…',
       sidebarResizeTitle: 'Ziehen, um die Sidebar zu vergrößern',
-      routeLegend: 'Route (Reihenfolge)'
+      routeLegend: 'Route (Reihenfolge)',
+      collapseSidebar: 'Sidebar einklappen',
+      expandSidebar: 'Sidebar wieder anzeigen'
     },
     exportCsv: {
       colRank: 'Rang', colBib: 'Bib', colName: 'Name', colTeam: 'Team',
@@ -121,6 +123,10 @@ const translations = {
     exportGpx: {
       noCheckpoints: 'Keine Checkpoints zum Exportieren.',
       routeSuffix: 'Route'
+    },
+    pdfPreview: {
+      download: 'Herunterladen',
+      close: 'Schließen'
     },
     exportPdf: {
       defaultEventNameCaps: 'ALLEYCAT',
@@ -190,6 +196,13 @@ const translations = {
       noCheckpointsYet: 'Noch keine Checkpoints.',
       activateHint: 'Aktiviere "Checkpoint setzen" und klick auf die Karte.',
       deleteCpConfirm: 'Checkpoint wirklich löschen?',
+      bulkSelectedCount: '{count} ausgewählt',
+      bulkAssignType: 'Typ zuweisen…',
+      bulkMarkMandatory: 'Als Pflicht markieren',
+      bulkLock: 'Sperren',
+      bulkDelete: 'Löschen',
+      bulkDeleteConfirm: '{count} Checkpoints wirklich löschen?',
+      bulkSelectHint: 'Umschalt+Klick auf Checkpoints wählt mehrere für Sammelaktionen aus.',
       nameLabel: 'Name',
       checkpointTypeLabel: 'Checkpoint-Typ',
       clueLabel: 'Clue / Hinweis für Fahrer',
@@ -320,6 +333,17 @@ const translations = {
       iconPackFaLabel: 'Font Awesome', iconPackFaDesc: 'Lädt Font Awesome 6 von cdnjs nach',
       iconPackMaterialLabel: 'Material Symbols', iconPackMaterialDesc: 'Lädt Material Symbols von Google Fonts nach'
     },
+    commandPalette: {
+      placeholder: 'Suche Navigation, Fahrer, Checkpoints, Aktionen… (Esc zum Schließen)',
+      noResults: 'Keine Treffer.',
+      catNav: 'Navigation',
+      catRiders: 'Fahrer',
+      catCheckpoints: 'Checkpoints',
+      catActions: 'Schnellaktionen',
+      actionStartRace: 'Rennen jetzt starten',
+      actionBackupNow: 'Backup jetzt herunterladen',
+      actionSwitchTheme: 'Theme wechseln zu {name}'
+    },
     settings: {
       title: 'Einstellungen',
       back: '&larr; Zurück',
@@ -347,7 +371,8 @@ const translations = {
       themeFeldpostLabel: 'Feldpost', themeFeldpostDesc: 'Rally-Stempel-Look — dunkles Chrome, warmes Papier (Standard)',
       themeHellLabel: 'Hell', themeHellDesc: 'Helles Chrome, klassisches Papier',
       themeDunkelLabel: 'Dunkel', themeDunkelDesc: 'Durchgehend dunkel, ruhiger blauer Akzent',
-      themeDraculaLabel: 'Dracula', themeDraculaDesc: 'Pink/Lila-Akzente auf klassischem Dracula-Dunkel'
+      themeDraculaLabel: 'Dracula', themeDraculaDesc: 'Pink/Lila-Akzente auf klassischem Dracula-Dunkel',
+      themeOutdoorLabel: 'Sonnenlicht', themeOutdoorDesc: 'Maximaler Kontrast, größere Bedienelemente — für Einsatz im Freien bei direkter Sonne'
     },
     category: {
       presetDrivetrainName: 'Antrieb',

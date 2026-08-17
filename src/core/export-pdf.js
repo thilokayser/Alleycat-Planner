@@ -4,6 +4,50 @@
    the caller's jsPDF instance uses 'pt' units (manifest) or 'mm' units
    (spokecards) — only font sizes stay in fixed pt, since jsPDF's
    setFontSize() is always in points regardless of the document unit. */
+/* ---------------- in-page PDF preview ----------------
+   Manifest/Personal-Briefing generation opens this modal instead of an
+   immediate download, so layout tweaks (PDF-Baukasten, manifest column
+   toggles) can be checked without piling up downloaded files each time.
+   Rendered into #pdf-preview-root, a template sibling of #app (same
+   pattern as #command-palette-root) so it overlays regardless of view. */
+let pdfPreviewBlobUrl = null;
+function showPdfPreview(doc, filename){
+  if(pdfPreviewBlobUrl){ URL.revokeObjectURL(pdfPreviewBlobUrl); pdfPreviewBlobUrl = null; }
+  pdfPreviewDoc = doc;
+  pdfPreviewBlobUrl = doc.output('bloburl');
+  state.pdfPreviewFilename = filename;
+  state.pdfPreviewOpen = true;
+  renderPdfPreview();
+}
+function closePdfPreview(){
+  state.pdfPreviewOpen = false;
+  pdfPreviewDoc = null;
+  if(pdfPreviewBlobUrl){ URL.revokeObjectURL(pdfPreviewBlobUrl); pdfPreviewBlobUrl = null; }
+  const root = document.getElementById('pdf-preview-root');
+  if(root) root.innerHTML = '';
+}
+function downloadPdfPreview(){
+  if(!pdfPreviewDoc) return;
+  pdfPreviewDoc.save(state.pdfPreviewFilename);
+}
+function renderPdfPreview(){
+  const root = document.getElementById('pdf-preview-root');
+  if(!root) return;
+  if(!state.pdfPreviewOpen || !pdfPreviewBlobUrl){ root.innerHTML = ''; return; }
+  root.innerHTML = `
+    <div class="pdfprev-overlay">
+      <div class="pdfprev-box">
+        <div class="pdfprev-head">
+          <span class="pdfprev-filename">${escapeHtml(state.pdfPreviewFilename)}</span>
+          <span class="pdfprev-spacer"></span>
+          <button type="button" class="btn btn-sm btn-primary" onclick="downloadPdfPreview()">${t('pdfPreview.download')}</button>
+          <button type="button" class="btn btn-sm btn-ghost" onclick="closePdfPreview()">${t('pdfPreview.close')}</button>
+        </div>
+        <iframe class="pdfprev-frame" src="${pdfPreviewBlobUrl}" title="${escapeHtml(state.pdfPreviewFilename)}"></iframe>
+      </div>
+    </div>
+  `;
+}
 function appendPdfBlocks(doc, evt, targetDocType){
   const blocks = ((evt.pdfBlocks || [])).filter(b => b.enabled && (b.targetDocuments || []).includes(targetDocType)).sort((a, b) => a.sortOrder - b.sortOrder);
   if(!blocks.length) return;
@@ -391,7 +435,7 @@ async function exportStaffBriefingPDF(){
   const evt = state.currentEvent;
   if(!evt || !window.jspdf || !evt.checkpoints || !evt.checkpoints.length) return;
   const doc = await buildStaffBriefingDoc(evt);
-  doc.save((evt.name || 'personal-briefing').replace(/\s+/g, '_').toLowerCase() + '-personal-briefing.pdf');
+  showPdfPreview(doc, (evt.name || 'personal-briefing').replace(/\s+/g, '_').toLowerCase() + '-personal-briefing.pdf');
 }
 
 /* ---------------- manifest export ---------------- */
@@ -512,7 +556,7 @@ async function exportManifestPDF(){
   const visibleCols = columnDefs.filter(c => ms[showKey[c.key]]);
   if(!visibleCols.length){
     appendPdfBlocks(doc, evt, 'manifest');
-    doc.save((evt.name || 'manifest').replace(/\s+/g, '_').toLowerCase() + '-manifest.pdf');
+    showPdfPreview(doc, (evt.name || 'manifest').replace(/\s+/g, '_').toLowerCase() + '-manifest.pdf');
     evt.manifestGenerated = true;
     debouncedSave();
     return;
@@ -612,7 +656,7 @@ async function exportManifestPDF(){
   doc.text(t('exportPdf.autoGenFooter'), pageRight, 806, {align: 'right'});
 
   appendPdfBlocks(doc, evt, 'manifest');
-  doc.save((evt.name || 'manifest').replace(/\s+/g,'_').toLowerCase() + '-manifest.pdf');
+  showPdfPreview(doc, (evt.name || 'manifest').replace(/\s+/g,'_').toLowerCase() + '-manifest.pdf');
   evt.manifestGenerated = true;
   debouncedSave();
 }
