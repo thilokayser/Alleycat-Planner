@@ -502,6 +502,39 @@
   .pdf-block-sponsor-logo img{width:90px; height:45px; object-fit:contain; background:var(--chalk); border-radius:3px;}
   .pdf-block-add-row{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
   .pdf-block-template-row{display:flex; gap:8px; flex-wrap:wrap; padding-top:12px; border-top:1px dashed var(--asphalt-3);}
+
+  /* ---------- game modes (Spielmodi-Engine) ---------- */
+  .game-mode-scoring-banner{
+    background:rgba(255,95,31,0.14); border:1px solid var(--hivis); color:var(--hivis-2);
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; padding:8px 12px; border-radius:4px; margin-bottom:14px;
+  }
+  .game-mode-list{display:flex; flex-direction:column; gap:10px;}
+  .game-mode-row{background:var(--asphalt); border:1px solid var(--asphalt-3); border-radius:4px; padding:10px 12px;}
+  .game-mode-toggle{display:flex; align-items:center; gap:8px; margin-bottom:0;}
+  .game-mode-name{font-family:'JetBrains Mono',monospace; font-size:12.5px; text-transform:uppercase; letter-spacing:0.03em; color:var(--chalk); font-weight:600;}
+  .game-mode-desc{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--steel); margin:4px 0 0 26px; line-height:1.4;}
+  .game-mode-config{margin:10px 0 0 26px; display:flex; flex-direction:column; gap:8px;}
+  .game-mode-config-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--chalk);}
+  .game-mode-config-row input, .game-mode-config-row select{
+    padding:6px 8px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt-2); color:var(--chalk); font-family:'JetBrains Mono',monospace;
+  }
+  .game-mode-zone-stages{display:flex; flex-direction:column; gap:6px;}
+  .game-mode-zone-stage-row{display:flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--chalk);}
+  .game-mode-zone-stage-row input{width:64px; padding:5px 7px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt-2); color:var(--chalk);}
+  .game-mode-zone-status{display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--hivis-2);}
+  .game-mode-zone-closed{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--stamp);}
+
+  .cp-hidden-badge{
+    font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.04em;
+    border-radius:10px; padding:2px 7px; background:rgba(124,131,136,0.16); color:#6b6248;
+  }
+  .cp-hidden-badge.cp-closed-badge{background:rgba(178,58,46,0.14); color:var(--stamp);}
+
+  .checkin-joker-row{display:flex; align-items:center; gap:8px; margin-bottom:10px; font-family:'JetBrains Mono',monospace; font-size:11.5px;}
+  .checkin-joker-row select{padding:6px 8px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk);}
+  .checkin-joker-satisfied{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--hivis-2);}
+  .tag-bonus.danger{background:var(--stamp);}
+
   .waybill{
     width:100%; min-width:0; max-width:760px;
     background:var(--paper);

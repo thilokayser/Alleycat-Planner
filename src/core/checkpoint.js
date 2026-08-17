@@ -10,7 +10,9 @@ function withCheckpointDefaults(cp){
     timeWindowStart: '',
     timeWindowEnd: '',
     locked: false,
-    staff: []
+    staff: [],
+    gameHidden: false,
+    gameRevealPrerequisiteCpId: ''
   }, cp);
 }
 function withCpStaffDefaults(s){
@@ -242,6 +244,17 @@ function onEditTimeWindowEnd(id, value){
   debouncedSave();
   redrawMarkers();
 }
+function onEditGameHidden(id, checked){
+  const cp = findCp(id); if(!cp) return;
+  cp.gameHidden = checked;
+  debouncedSave();
+  renderSidebar();
+}
+function onEditGameRevealPrerequisite(id, value){
+  const cp = findCp(id); if(!cp) return;
+  cp.gameRevealPrerequisiteCpId = value;
+  debouncedSave();
+}
 function onEditLat(id, value){
   const cp = findCp(id); if(!cp) return;
   const n = parseFloat(value);
@@ -454,6 +467,21 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
                   </div>
                 </div>
                 ` : ''}
+                ${isGameModeEnabled(evt, 'prerequisite') ? `
+                <label class="checkbox-row">
+                  <input type="checkbox" ${cp.gameHidden ? 'checked' : ''} onchange="onEditGameHidden('${cp.id}', this.checked)">
+                  ${t('gameModes.hiddenCheckboxLabel')}
+                </label>
+                ${cp.gameHidden ? `
+                <div>
+                  <label>${t('gameModes.revealPrerequisiteLabel')}</label>
+                  <select onchange="onEditGameRevealPrerequisite('${cp.id}', this.value)">
+                    <option value="">${t('gameModes.revealPrerequisiteNone')}</option>
+                    ${evt.checkpoints.filter(other => other.id !== cp.id).map(other => `<option value="${other.id}" ${cp.gameRevealPrerequisiteCpId === other.id ? 'selected' : ''}>${escapeHtml(other.name || t('checkpoint.noName'))}</option>`).join('')}
+                  </select>
+                </div>
+                ` : ''}
+                ` : ''}
                 <div class="cp-staff-section">
                   <label>${t('checkpoint.staffHeading')}</label>
                   ${(cp.staff || []).map(s => `
@@ -501,6 +529,8 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
             <div class="cp-row-meta" onclick="event.stopPropagation()">
               <span class="cp-load-badge" title="${t('checkpoint.loadBadgeTitle')}">${t('checkpoint.loadBadgeIcon')} ${loadCount}</span>
               ${twStatus ? `<span class="cp-tw-badge cp-tw-${twStatus}">${t('checkpoint.timeWindowStatus.' + twStatus)}</span>` : ''}
+              ${cp.gameHidden && isGameModeEnabled(evt, 'prerequisite') ? `<span class="cp-hidden-badge" title="${t('gameModes.hiddenBadgeTitle')}">${isCpRevealed(evt, cp) ? t('gameModes.revealedBadge') : t('gameModes.hiddenBadge')}</span>` : ''}
+              ${isGameModeEnabled(evt, 'zone_active') && isCpClosedByZone(evt, cp) ? `<span class="cp-hidden-badge cp-closed-badge" title="${t('gameModes.zoneClosedBadgeTitle')}">${t('gameModes.zoneClosedBadge')}</span>` : ''}
               ${staffCount ? `<span class="cp-staff-badge" title="${t('checkpoint.staffHeading')}">${t('checkpoint.staffBadgeIcon')} ${staffCount}</span>` : ''}
               <span class="cp-row-icon-actions">
                 <button type="button" class="cp-icon-btn" onclick="duplicateCheckpoint('${cp.id}')" title="${t('checkpoint.duplicate')}" ${itemLocked ? 'disabled' : ''}>⧉</button>

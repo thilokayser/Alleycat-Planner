@@ -27,9 +27,14 @@ function withEventDefaults(evt){
     soundHooks: {},
     lastBackupAt: '',
     tileCacheUpdatedAt: '',
-    pdfBlocks: []
+    pdfBlocks: [],
+    scoringMode: 'time',
+    gameModes: [],
+    ruleRuntimeState: {},
+    pointsLedger: []
   }, evt);
   merged.pdfBlocks = (merged.pdfBlocks || []).map(withPdfBlockDefaults);
+  merged.gameModes = (merged.gameModes || []).map(withGameModeDefaults);
   merged.checkpoints = (merged.checkpoints || []).map(withCheckpointDefaults);
   merged.riders = (merged.riders || []).map(withRiderDefaults);
   merged.manifestSettings = withManifestSettingsDefaults(merged.manifestSettings);
@@ -155,8 +160,9 @@ const DASHBOARD_WIDGET_KEYS = ['statusTiles', 'cpLoad', 'recentActivity', 'categ
 
 function computeRiderStatusTiles(evt){
   const riders = evt.riders || [];
-  const tiles = {registered: 0, underway: 0, finished: 0, dnf: 0, dns: 0};
+  const tiles = {registered: 0, underway: 0, finished: 0, dnf: 0, dns: 0, eliminated: 0};
   riders.forEach(r => {
+    if(r.raceStatus === 'eliminated'){ tiles.eliminated++; return; }
     if(r.raceStatus === 'dnf'){ tiles.dnf++; return; }
     if(r.raceStatus === 'dns'){ tiles.dns++; return; }
     if(r.finishTime){ tiles.finished++; return; }
@@ -195,7 +201,7 @@ function computeCategoryDistribution(evt){
   }));
 }
 function computeMiniLeaderboard(evt, limit){
-  const finished = (evt.riders || []).filter(r => r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns');
+  const finished = (evt.riders || []).filter(r => r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns' && r.raceStatus !== 'eliminated');
   return finished.slice().sort((a, b) => new Date(a.finishTime) - new Date(b.finishTime)).slice(0, limit || 5);
 }
 function computeStartCountdown(evt){
@@ -264,6 +270,7 @@ function renderStatusTilesWidget(evt){
     {key: 'dnf', label: t('overview.tileDnf'), cls: 'dnf'},
     {key: 'dns', label: t('overview.tileDns'), cls: 'dns'}
   ];
+  if(tiles.eliminated > 0) items.push({key: 'eliminated', label: t('gameModes.tileEliminated'), cls: 'dnf'});
   return overviewWidgetWrap('statusTiles', `
     <div class="overview-status-tiles">
       ${items.map(it => `<div class="overview-status-tile ${it.cls}"><span class="overview-status-tile-count">${tiles[it.key]}</span><span class="overview-status-tile-label">${it.label}</span></div>`).join('')}
@@ -442,6 +449,7 @@ function renderOverview(){
     </div>
     ${renderBackupStatusLine(evt)}
     ${renderBeamerOverviewSection(evt)}
+    ${renderGameModesSection(evt)}
     ${settingsPanel}
     ${widgetsHtml}
   `;

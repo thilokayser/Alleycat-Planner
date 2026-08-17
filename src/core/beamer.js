@@ -153,11 +153,11 @@ function computeBeamerRegistered(evt){
 }
 function sortBeamerRiders(evt){
   const named = (evt.riders || []).filter(r => (r.name || '').trim());
-  const finished = named.filter(r => r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns')
+  const finished = named.filter(r => r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns' && r.raceStatus !== 'eliminated')
     .sort((a, b) => new Date(a.finishTime) - new Date(b.finishTime));
-  const underway = named.filter(r => !r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns')
+  const underway = named.filter(r => !r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns' && r.raceStatus !== 'eliminated')
     .sort((a, b) => (b.completed || []).length - (a.completed || []).length || a.bib - b.bib);
-  const dnfDns = named.filter(r => r.raceStatus === 'dnf' || r.raceStatus === 'dns');
+  const dnfDns = named.filter(r => r.raceStatus === 'dnf' || r.raceStatus === 'dns' || r.raceStatus === 'eliminated');
   return {finished, underway, dnfDns};
 }
 

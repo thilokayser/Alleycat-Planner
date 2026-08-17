@@ -162,6 +162,7 @@ async function init(){
   setInterval(checkStartDialog, 1000);
   startAutoBackup();
   armPersistentStorageRequest();
+  startRulesEngineTick();
   window.addEventListener('hashchange', () => { if(isBeamerRoute()) location.reload(); });
 }
 

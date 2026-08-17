@@ -63,7 +63,7 @@ function postponeStart(evt){
   checkStartDialog();
 }
 function completeRace(evt){
-  const unfinished = (evt.riders || []).filter(r => !r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns').length;
+  const unfinished = (evt.riders || []).filter(r => !r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns' && r.raceStatus !== 'eliminated').length;
   const msg = unfinished > 0 ? t('raceState.completeConfirm', {count: unfinished}) : t('raceState.completeConfirmZero');
   if(!confirm(msg)){
     render();

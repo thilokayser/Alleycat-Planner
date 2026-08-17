@@ -26,6 +26,8 @@ const CORE_FILES = [
   'pdf-blocks.js',
   'export-pdf.js',
   'race-state.js',
+  'rules-engine.js',
+  'game-modes.js',
   'dashboard.js',
   'sound-hook.js',
   'beamer.js',

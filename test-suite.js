@@ -21,7 +21,10 @@
    inkl. Bounding-Box/Tile-Index-Mathematik und Staleness-Warnung),
    PDF-Baukasten (Block-CRUD/Reihenfolge/Ziel-Dokumente, JSON-Vorlagen-
    Export/Import, Anhängen an Manifest- und Spokecards-PDF unabhängig
-   von deren jsPDF-Einheiten), Renn-Zustandsmaschine
+   von deren jsPDF-Einheiten), Spielmodi-Engine (generischer Trigger/
+   Bedingung/Effekt-Evaluator, alle 7 Presets: Zeitfenster-CPs/Bonus-CPs/
+   Geheime CPs/Battle Royale/Wildcard-Joker/Kettenreaktion/Sudden Death,
+   Punkte-Ledger, Scoring-Mode-Wechsel), Renn-Zustandsmaschine
    (Planung/Bereit/Läuft/Abgeschlossen inkl. CP-Struktur-Sperre und
    Override), kompletter Ziel-Check-in-Flow
    (bestätigen/zurücksetzen/Undo-Toast/Speichern & schließen/Übersicht),
@@ -249,9 +252,12 @@ async function runAlleycatTestSuite(){
     check('"Frei"-Modus fragt nicht nach Reihenfolge', orderConfirmMsg === null);
     window.confirm = origConfirm4;
 
-    /* Aufräumen, damit die nachfolgenden Check-in-Abschnitte (5+) unverändert bleiben */
+    /* Aufräumen, damit die nachfolgenden Check-in-Abschnitte (5+) unverändert bleiben.
+       checkpointTimes wird seit Phase 11 bei JEDEM Check-in miterfasst (nicht mehr nur
+       bei timeWindowEnabled, siehe sudden_death), daher hier ebenfalls zurücksetzen. */
     evt.riders[2].completed = [];
     evt.riders[2].checkpointOrderOverrides = [];
+    evt.riders[2].checkpointTimes = {};
   }
 
   /* 3e) Dashboard-Übersicht + Widgets */
@@ -586,7 +592,7 @@ async function runAlleycatTestSuite(){
     const sponsorsBlock = evt.pdfBlocks.find(b => b.type === 'sponsors');
     sponsorsBlock.config.logos = [];
     onPdfBlockSponsorLogoUpload(sponsorsBlock.id, {files: [new File(['x'], 'logo.png', {type: 'image/png'})], value: ''});
-    await wait(20);
+    await wait(60);
     check('onPdfBlockSponsorLogoUpload fügt Logo hinzu', sponsorsBlock.config.logos.length === 1);
     removePdfBlockSponsorLogo(sponsorsBlock.id, 0);
     checkEqual('removePdfBlockSponsorLogo entfernt Logo', sponsorsBlock.config.logos.length, 0);
@@ -624,6 +630,173 @@ async function runAlleycatTestSuite(){
     checkEqual('deletePdfBlock entfernt Block', evt.pdfBlocks.length, countBeforeDelete - 1);
   }
 
+  /* 3j) Spielmodi-Engine */
+  {
+    checkEqual('Event hat scoringMode "time" per Default', evt.scoringMode, 'time');
+    checkEqual('Event hat leere gameModes per Default', evt.gameModes.length, 0);
+    checkEqual('Event hat leere pointsLedger per Default', evt.pointsLedger.length, 0);
+    checkEqual('Checkpoint hat gameHidden=false per Default', evt.checkpoints[0].gameHidden, false);
+
+    const noopResult = evaluateRules(evt, 'on_checkin', {rider: evt.riders[0], checkpoint: evt.checkpoints[0], timestamp: toLocalDateTimeInputValue(new Date())});
+    checkEqual('evaluateRules ohne aktive Modi liefert unblocked', noopResult.blocked, false);
+
+    /* Eigenständiges Synth-Event, damit die Modi-Logik isoliert von den
+       späteren Check-in-Abschnitten (5+) getestet werden kann. */
+    const gEvt = {
+      id: 'synth-game', name: 'Synth Game', status: 'planning', startMode: 'manual', startConfirmedAt: '',
+      checkpointOrderMode: 'frei', scoringMode: 'time', gameModes: [], ruleRuntimeState: {}, pointsLedger: [],
+      checkpoints: [
+        withCheckpointDefaults({id: 'g-cp1', order: 1, lat: 50.10, lng: 8.68, name: 'Mandatory', mandatory: true}),
+        withCheckpointDefaults({id: 'g-cp2', order: 2, lat: 50.11, lng: 8.69, name: 'Bonus', mandatory: false}),
+        withCheckpointDefaults({id: 'g-cp3', order: 3, lat: 50.30, lng: 8.90, name: 'Far', mandatory: false})
+      ],
+      riders: [
+        withRiderDefaults({bib: 1, name: 'Rider1'}),
+        withRiderDefaults({bib: 2, name: 'Rider2'}),
+        withRiderDefaults({bib: 3, name: 'Rider3'})
+      ]
+    };
+    function enableMode(type, config){
+      const mode = withGameModeDefaults({type, enabled: true, config: config || {}});
+      gEvt.gameModes.push(mode);
+      return mode;
+    }
+
+    /* time_window: Check-in außerhalb des Fensters wird blockiert */
+    {
+      const cp = gEvt.checkpoints[0];
+      cp.timeWindowEnabled = true;
+      cp.timeWindowStart = toLocalDateTimeInputValue(new Date(Date.now() + 3600000));
+      cp.timeWindowEnd = toLocalDateTimeInputValue(new Date(Date.now() + 7200000));
+      enableMode('time_window');
+      const r = evaluateRules(gEvt, 'on_checkin', {rider: gEvt.riders[0], checkpoint: cp, timestamp: toLocalDateTimeInputValue(new Date())});
+      check('time_window blockiert Check-in außerhalb des Fensters', r.blocked && r.message);
+      cp.timeWindowEnabled = false;
+      gEvt.gameModes = gEvt.gameModes.filter(m => m.type !== 'time_window');
+    }
+
+    /* first_n: Bonus-Checkpoint vergibt Punkte nach Ankunftsrang */
+    {
+      enableMode('first_n', {pointsByRank: [5, 3, 1]});
+      const bonusCp = gEvt.checkpoints[1];
+      [gEvt.riders[0], gEvt.riders[1], gEvt.riders[2]].forEach(r => {
+        evaluateRules(gEvt, 'on_checkin', {rider: r, checkpoint: bonusCp, timestamp: toLocalDateTimeInputValue(new Date())});
+        r.completed.push(bonusCp.id);
+      });
+      checkEqual('first_n: 1. Fahrer erhält 5 Punkte', pointsForRider(gEvt, 1), 5);
+      checkEqual('first_n: 2. Fahrer erhält 3 Punkte', pointsForRider(gEvt, 2), 3);
+      checkEqual('first_n: 3. Fahrer erhält 1 Punkt', pointsForRider(gEvt, 3), 1);
+      checkEqual('first_n: Ledger-Einträge korrekt gezählt', gEvt.pointsLedger.filter(p => p.source === 'first_n').length, 3);
+      removeLedgerEntries(gEvt, p => p.source === 'first_n');
+      checkEqual('removeLedgerEntries räumt gezielt auf', gEvt.pointsLedger.length, 0);
+      gEvt.riders.forEach(r => { r.completed = []; });
+      gEvt.gameModes = gEvt.gameModes.filter(m => m.type !== 'first_n');
+    }
+
+    /* prerequisite: geheimer Checkpoint wird erst nach Vorbedingung sichtbar */
+    {
+      const secretCp = gEvt.checkpoints[2];
+      secretCp.gameHidden = true;
+      secretCp.gameRevealPrerequisiteCpId = gEvt.checkpoints[0].id;
+      enableMode('prerequisite');
+      checkEqual('isCpRevealed: versteckt bis Vorbedingung erfüllt', isCpRevealed(gEvt, secretCp), false);
+      evaluateRules(gEvt, 'on_checkin', {rider: gEvt.riders[0], checkpoint: gEvt.checkpoints[0], timestamp: toLocalDateTimeInputValue(new Date())});
+      checkEqual('isCpRevealed: sichtbar nach Vorbedingung', isCpRevealed(gEvt, secretCp), true);
+      checkEqual('rule_runtime_state führt enthüllte Checkpoints', gEvt.ruleRuntimeState.revealedCheckpoints.includes(secretCp.id), true);
+      secretCp.gameHidden = false;
+      gEvt.gameModes = gEvt.gameModes.filter(m => m.type !== 'prerequisite');
+    }
+
+    /* zone_active: Battle Royale — Zonen-Stufen + gesperrte Checkpoints */
+    {
+      const zoneMode = enableMode('zone_active', {triggerMode: 'manual', stages: [{radius: 100, atMinute: 0}]});
+      const farCp = gEvt.checkpoints[2];
+      checkEqual('isCpClosedByZone: ohne aktive Stufe nichts gesperrt', isCpClosedByZone(gEvt, farCp), false);
+      evaluateRules(gEvt, 'manual', {action: 'advance_zone_stage', modeId: zoneMode.id});
+      checkEqual('manuelles advance_zone_stage erhöht ruleRuntimeState.zoneStage', gEvt.ruleRuntimeState.zoneStage, 0);
+      checkEqual('isCpClosedByZone: entfernter Checkpoint jetzt gesperrt', isCpClosedByZone(gEvt, farCp), true);
+      const blockResult = evaluateRules(gEvt, 'on_checkin', {rider: gEvt.riders[0], checkpoint: farCp, timestamp: toLocalDateTimeInputValue(new Date())});
+      check('zone_active blockiert Check-in an gesperrtem Checkpoint', blockResult.blocked);
+
+      /* Zeitplan-Modus: automatischer Stufenaufstieg on_tick */
+      gEvt.ruleRuntimeState.zoneStage = -1;
+      zoneMode.config.triggerMode = 'scheduled';
+      zoneMode.config.stages = [{radius: 9999999, atMinute: 0}];
+      gEvt.status = 'running';
+      gEvt.startConfirmedAt = toLocalDateTimeInputValue(new Date(Date.now() - 60000));
+      evaluateRules(gEvt, 'on_tick', {now: Date.now()});
+      checkEqual('Zeitplan-Modus advanced automatisch bei Erreichen von at_minute', gEvt.ruleRuntimeState.zoneStage, 0);
+      gEvt.status = 'planning';
+      gEvt.gameModes = gEvt.gameModes.filter(m => m.type !== 'zone_active');
+    }
+
+    /* rider_flag: Wildcard/Joker */
+    {
+      enableMode('rider_flag');
+      const cp = gEvt.checkpoints[0];
+      const rider = gEvt.riders[1];
+      checkEqual('Fahrer ohne Joker: Checkpoint nicht automatisch erfüllt', isCpSatisfiedForRider(rider, cp), false);
+      evaluateRules(gEvt, 'manual', {action: 'assign_joker', rider, checkpointId: cp.id});
+      checkEqual('Joker-Zuweisung gesetzt', rider.gameFlags.jokerCpId, cp.id);
+      checkEqual('isCpSatisfiedForRider erkennt Joker-Ausnahme', isCpSatisfiedForRider(rider, cp), true);
+      evaluateRules(gEvt, 'manual', {action: 'assign_joker', rider, checkpointId: ''});
+      checkEqual('Joker-Zuweisung kann wieder entfernt werden', !rider.gameFlags.jokerCpId, true);
+      gEvt.gameModes = gEvt.gameModes.filter(m => m.type !== 'rider_flag');
+    }
+
+    /* sequence_match: Kettenreaktion-Bonus bei perfekter Reihenfolge */
+    {
+      enableMode('sequence_match', {multiplier: 3});
+      gEvt.checkpointOrderMode = 'fest';
+      const rider = gEvt.riders[0];
+      rider.completed = gEvt.checkpoints.map(c => c.id);
+      rider.checkpointOrderOverrides = [];
+      awardPoints(gEvt, rider.bib, null, 10, 'Testpunkte', 'test_source');
+      evaluateRules(gEvt, 'on_finish', {rider});
+      checkEqual('sequence_match: Bonus = Basis * (Multiplikator - 1)', pointsForRider(gEvt, rider.bib), 10 + 20);
+      evaluateRules(gEvt, 'on_finish', {rider});
+      checkEqual('sequence_match: erneuter Finish ersetzt statt verdoppelt den Bonus', pointsForRider(gEvt, rider.bib), 10 + 20);
+      removeLedgerEntries(gEvt, () => true);
+      gEvt.checkpointOrderMode = 'frei';
+      gEvt.gameModes = gEvt.gameModes.filter(m => m.type !== 'sequence_match');
+    }
+
+    /* sudden_death: Elimination nach Inaktivität — inkl. Regressionstest für
+       explizite 0-Werte (0 || fallback würde 0 fälschlich ignorieren) */
+    {
+      const mode = enableMode('sudden_death', {cutoffMinutes: 0, inactivityMinutes: 0});
+      gEvt.status = 'running';
+      gEvt.startConfirmedAt = toLocalDateTimeInputValue(new Date(Date.now() - 3600000));
+      gEvt.riders.forEach(r => { r.raceStatus = ''; r.finishTime = ''; r.checkpointTimes = {}; });
+      evaluateRules(gEvt, 'on_tick', {now: Date.now()});
+      check('sudden_death eliminiert inaktive Fahrer bei cutoffMinutes=0', gEvt.riders.every(r => r.raceStatus === 'eliminated'));
+      checkEqual('riderStatusBadgeHtml zeigt Ausgeschieden-Badge', riderStatusBadgeHtml(gEvt, gEvt.riders[0]).includes(t('gameModes.eliminatedStatus')), true);
+      gEvt.status = 'planning';
+      gEvt.gameModes = gEvt.gameModes.filter(m => m.type !== 'sudden_death');
+    }
+
+    /* Leaderboard-Sortierung nach Punkten */
+    {
+      awardPoints(gEvt, 1, null, 2, 'x', 'x'); awardPoints(gEvt, 2, null, 9, 'x', 'x'); awardPoints(gEvt, 3, null, 5, 'x', 'x');
+      const sorted = sortRidersByPoints(gEvt.riders, gEvt);
+      checkEqual('sortRidersByPoints sortiert absteigend nach Punkten', sorted.map(r => r.bib).join(','), '2,3,1');
+      removeLedgerEntries(gEvt, () => true);
+    }
+
+    /* Scoring-Mode-Wechsel: Aktivieren eines Punkte-Modus fragt nach Bestätigung */
+    {
+      const origConfirmGm = window.confirm;
+      let confirmMsg = null;
+      window.confirm = (msg) => { confirmMsg = msg; return true; };
+      toggleGameMode('first_n', true);
+      window.confirm = origConfirmGm;
+      check('Aktivieren eines Punkte-Modus fragt nach Bestätigung', !!confirmMsg);
+      checkEqual('Bestätigung schaltet scoringMode auf "points"', evt.scoringMode, 'points');
+      checkEqual('toggleGameMode legt Moduseintrag an', !!getGameMode(evt, 'first_n'), true);
+      check('isGameModeEnabled erkennt aktiven Modus', isGameModeEnabled(evt, 'first_n'));
+    }
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -645,6 +818,9 @@ async function runAlleycatTestSuite(){
   checkEqual('soundHooks persistiert', reloaded && reloaded.soundHooks && reloaded.soundHooks.race_start && reloaded.soundHooks.race_start.name, 'go.mp3');
   checkEqual('lastBackupAt persistiert', !!(reloaded && reloaded.lastBackupAt), !!evt.lastBackupAt);
   checkEqual('pdfBlocks persistiert', reloaded && reloaded.pdfBlocks.length, evt.pdfBlocks.length);
+  checkEqual('scoringMode persistiert', reloaded && reloaded.scoringMode, evt.scoringMode);
+  checkEqual('gameModes persistiert', reloaded && reloaded.gameModes.length, evt.gameModes.length);
+  checkEqual('gameModes-Aktivierung persistiert', reloaded && reloaded.gameModes.find(m => m.type === 'first_n') && reloaded.gameModes.find(m => m.type === 'first_n').enabled, true);
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();

@@ -9,7 +9,8 @@ function withRiderDefaults(rider){
     checkpointTimes: {},
     raceStatus: '',
     categories: {},
-    checkpointOrderOverrides: []
+    checkpointOrderOverrides: [],
+    gameFlags: {}
   }, rider);
 }
 

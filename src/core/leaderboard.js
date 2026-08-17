@@ -6,6 +6,22 @@ function sortRidersForOverview(riders){
     return a.bib - b.bib;
   });
 }
+function sortRidersByPoints(riders, evt){
+  return riders.slice().sort((a, b) => {
+    const pa = pointsForRider(evt, a.bib), pb = pointsForRider(evt, b.bib);
+    if(pa !== pb) return pb - pa;
+    if(!!a.finishTime !== !!b.finishTime) return a.finishTime ? -1 : 1;
+    if(a.finishTime && b.finishTime) return new Date(a.finishTime) - new Date(b.finishTime);
+    return a.bib - b.bib;
+  });
+}
+function showPointsLedger(bib){
+  const evt = state.currentEvent;
+  const entries = ledgerEntriesForRider(evt, bib);
+  if(!entries.length){ alert(t('gameModes.ledgerEmpty')); return; }
+  const lines = entries.map(e => `${e.amount > 0 ? '+' : ''}${e.amount} — ${e.reason} (${formatDateTime(e.createdAt)})`);
+  alert(t('gameModes.ledgerTitle', {bib}) + '\n\n' + lines.join('\n'));
+}
 
 function onLeaderboardSearchInput(value){
   state.leaderboardSearch = value;
@@ -42,8 +58,9 @@ function riderMatchesStatusFilter(r, filter){
   if(!filter) return true;
   if(filter === 'dnf') return r.raceStatus === 'dnf';
   if(filter === 'dns') return r.raceStatus === 'dns';
-  if(filter === 'arrived') return !!r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns';
-  if(filter === 'underway') return !r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns';
+  if(filter === 'eliminated') return r.raceStatus === 'eliminated';
+  if(filter === 'arrived') return !!r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns' && r.raceStatus !== 'eliminated';
+  if(filter === 'underway') return !r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns' && r.raceStatus !== 'eliminated';
   return true;
 }
 function setLeaderboardTab(tab){
@@ -65,14 +82,13 @@ function renderLeaderboard(){
   const mandatoryCps = cps.filter(c => c.mandatory);
 
   const q = state.leaderboardSearch.trim().toLowerCase();
-  const riders = sortRidersForOverview(
-    allRiders.filter(r =>
-      (!q || String(r.bib).includes(q) || (r.name || '').toLowerCase().includes(q)) &&
-      (!state.leaderboardTeamFilter || r.teamId === state.leaderboardTeamFilter) &&
-      riderMatchesStatusFilter(r, state.leaderboardStatusFilter) &&
-      groups.every(g => !catFilters[g.id] || (r.categories && r.categories[g.id] === catFilters[g.id]))
-    )
+  const filteredRiders = allRiders.filter(r =>
+    (!q || String(r.bib).includes(q) || (r.name || '').toLowerCase().includes(q)) &&
+    (!state.leaderboardTeamFilter || r.teamId === state.leaderboardTeamFilter) &&
+    riderMatchesStatusFilter(r, state.leaderboardStatusFilter) &&
+    groups.every(g => !catFilters[g.id] || (r.categories && r.categories[g.id] === catFilters[g.id]))
   );
+  const riders = evt.scoringMode === 'points' ? sortRidersByPoints(filteredRiders, evt) : sortRidersForOverview(filteredRiders);
 
   const activeFilters = [];
   if(state.leaderboardTeamFilter){
@@ -159,8 +175,15 @@ function renderLeaderboard(){
     return;
   }
 
-  const arrivedSorted = allRiders.filter(r => r.finishTime).sort((a, b) => new Date(a.finishTime) - new Date(b.finishTime));
-  const rankMap = new Map(arrivedSorted.map((r, i) => [r.bib, i + 1]));
+  const pointsScoring = evt.scoringMode === 'points';
+  let rankMap;
+  if(pointsScoring){
+    const rankedRiders = sortRidersByPoints(allRiders.filter(r => (r.name || '').trim()), evt);
+    rankMap = new Map(rankedRiders.map((r, i) => [r.bib, i + 1]));
+  } else {
+    const arrivedSorted = allRiders.filter(r => r.finishTime).sort((a, b) => new Date(a.finishTime) - new Date(b.finishTime));
+    rankMap = new Map(arrivedSorted.map((r, i) => [r.bib, i + 1]));
+  }
 
   const hasScoredCheckpoints = cps.some(cp => getCheckpointType(cp.type).isScored);
   const headCps = cps.map(cp => `<th class="lb-cp ${cp.mandatory ? '' : 'optional'}" title="${escapeHtml(cp.name || '')}">${t('leaderboard.cpPrefix')}${String(cp.order).padStart(2,'0')}</th>`).join('');
@@ -202,6 +225,7 @@ function renderLeaderboard(){
         <td>${statusHtml}</td>
         <td><span class="lb-progress-tag">${t('leaderboard.progressCell', {done: doneMandatory, total: mandatoryCps.length, doneAll: completed.length, totalAll: cps.length})}</span></td>
         ${hasScoredCheckpoints ? `<td><span class="lb-progress-tag points${totalScore === 0 ? ' zero' : ''}">${totalScore} Pkt.</span></td>` : ''}
+        ${pointsScoring ? `<td><span class="lb-progress-tag points${pointsForRider(evt, r.bib) === 0 ? ' zero' : ''}" onclick="showPointsLedger(${r.bib})" title="${t('gameModes.ledgerClickHint')}" style="cursor:pointer;">${pointsForRider(evt, r.bib)} Pkt.</span></td><td>${r.finishTime ? formatDateTime(r.finishTime) : '—'}</td>` : ''}
       </tr>`;
   }).join('');
 
@@ -222,6 +246,7 @@ function renderLeaderboard(){
         <option value="arrived" ${state.leaderboardStatusFilter === 'arrived' ? 'selected' : ''}>${t('checkin.statusArrived')}</option>
         <option value="dnf" ${state.leaderboardStatusFilter === 'dnf' ? 'selected' : ''}>${t('checkin.statusDnf')}</option>
         <option value="dns" ${state.leaderboardStatusFilter === 'dns' ? 'selected' : ''}>${t('checkin.statusDns')}</option>
+        ${(evt.riders || []).some(r => r.raceStatus === 'eliminated') ? `<option value="eliminated" ${state.leaderboardStatusFilter === 'eliminated' ? 'selected' : ''}>${t('gameModes.eliminatedStatus')}</option>` : ''}
       </select>
       ${teams.length ? `
         <select class="leaderboard-team-filter" onchange="onLeaderboardTeamFilterChange(this.value)">
@@ -258,9 +283,10 @@ function renderLeaderboard(){
             <th>${t('leaderboard.colStatus')}</th>
             <th>${t('leaderboard.colProgress')}</th>
             ${hasScoredCheckpoints ? `<th>${t('leaderboard.colPoints')}</th>` : ''}
+            ${pointsScoring ? `<th>${t('gameModes.colGameModePoints')}</th><th>${t('gameModes.colFinishTime')}</th>` : ''}
           </tr>
         </thead>
-        <tbody>${rows || `<tr><td colspan="${cps.length + (hasScoredCheckpoints ? 4 : 3)}" class="leaderboard-empty">${t('leaderboard.noRidersFound')}</td></tr>`}</tbody>
+        <tbody>${rows || `<tr><td colspan="${cps.length + (hasScoredCheckpoints ? 4 : 3) + (pointsScoring ? 2 : 0)}" class="leaderboard-empty">${t('leaderboard.noRidersFound')}</td></tr>`}</tbody>
       </table>
     </div>
   `;

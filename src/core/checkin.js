@@ -34,9 +34,16 @@ function confirmRiderAtFinish(){
   const rider = getActiveCheckinRider(); if(!rider) return;
   rider.finishTime = toLocalDateTimeInputValue(new Date());
   rider.raceStatus = '';
+  evaluateRules(state.currentEvent, 'on_finish', {rider});
   debouncedSave();
   renderCheckin();
   playConfirmFeedback();
+}
+function assignJokerCheckpoint(cpId){
+  const rider = getActiveCheckinRider(); if(!rider) return;
+  evaluateRules(state.currentEvent, 'manual', {action: 'assign_joker', rider, checkpointId: cpId || ''});
+  debouncedSave();
+  renderCheckin();
 }
 function setRiderRaceStatus(status){
   const rider = getActiveCheckinRider(); if(!rider) return;
@@ -50,6 +57,7 @@ function unconfirmRiderAtFinish(){
   const bib = rider.bib;
   const previousFinishTime = rider.finishTime;
   rider.finishTime = '';
+  removeLedgerEntries(state.currentEvent, p => p.riderBib === bib && p.source === 'sequence_match');
   debouncedSave();
   renderCheckin();
   showToast({
@@ -59,6 +67,7 @@ function unconfirmRiderAtFinish(){
       const r = (state.currentEvent.riders || []).find(x => x.bib === bib);
       if(!r) return;
       r.finishTime = previousFinishTime;
+      evaluateRules(state.currentEvent, 'on_finish', {rider: r});
       debouncedSave();
       renderCheckin();
     }
@@ -229,39 +238,45 @@ function checkOrderBeforeComplete(cpId){
 }
 function onCheckinToggleCheckpoint(cpId, checked){
   const rider = getActiveCheckinRider(); if(!rider) return;
+  const evt = state.currentEvent;
   rider.completed = rider.completed || [];
   if(checked){
     if(!rider.completed.includes(cpId)){
       if(!checkOrderBeforeComplete(cpId)){ renderCheckin(); return; }
+      const cp = findCp(cpId);
+      const timestamp = toLocalDateTimeInputValue(new Date());
+      const ruleResult = evaluateRules(evt, 'on_checkin', {rider, checkpoint: cp, timestamp});
+      if(ruleResult.blocked){ alert(ruleResult.message); renderCheckin(); return; }
       rider.completed.push(cpId);
-    }
-    const cp = findCp(cpId);
-    if(cp && cp.timeWindowEnabled){
       rider.checkpointTimes = rider.checkpointTimes || {};
-      if(!rider.checkpointTimes[cpId]) rider.checkpointTimes[cpId] = toLocalDateTimeInputValue(new Date());
+      if(!rider.checkpointTimes[cpId]) rider.checkpointTimes[cpId] = timestamp;
     }
   } else {
     rider.completed = rider.completed.filter(id => id !== cpId);
+    removeLedgerEntries(evt, p => p.riderBib === rider.bib && p.checkpointId === cpId && p.source === 'first_n');
   }
   debouncedSave();
   renderCheckin();
 }
 function onCheckinSetScore(cpId, score){
   const rider = getActiveCheckinRider(); if(!rider) return;
+  const evt = state.currentEvent;
   rider.completed = rider.completed || [];
   rider.scores = rider.scores || {};
   if(rider.scores[cpId] === score){
     delete rider.scores[cpId];
     rider.completed = rider.completed.filter(id => id !== cpId);
+    removeLedgerEntries(evt, p => p.riderBib === rider.bib && p.checkpointId === cpId && p.source === 'first_n');
   } else {
     if(!checkOrderBeforeComplete(cpId)){ renderCheckin(); return; }
+    const cp = findCp(cpId);
+    const timestamp = toLocalDateTimeInputValue(new Date());
+    const ruleResult = evaluateRules(evt, 'on_checkin', {rider, checkpoint: cp, timestamp});
+    if(ruleResult.blocked){ alert(ruleResult.message); renderCheckin(); return; }
     rider.scores[cpId] = score;
     if(!rider.completed.includes(cpId)) rider.completed.push(cpId);
-    const cp = findCp(cpId);
-    if(cp && cp.timeWindowEnabled){
-      rider.checkpointTimes = rider.checkpointTimes || {};
-      if(!rider.checkpointTimes[cpId]) rider.checkpointTimes[cpId] = toLocalDateTimeInputValue(new Date());
-    }
+    rider.checkpointTimes = rider.checkpointTimes || {};
+    if(!rider.checkpointTimes[cpId]) rider.checkpointTimes[cpId] = timestamp;
   }
   debouncedSave();
   renderCheckin();
@@ -284,6 +299,7 @@ function computeCurfewResult(evt, finishTimeValue){
   return {onTime: false, diffMin, penalty: null};
 }
 function riderStatusBadgeHtml(evt, rider){
+  if(rider.raceStatus === 'eliminated') return `<span class="lb-status danger">${t('gameModes.eliminatedStatus')}</span>`;
   if(rider.raceStatus === 'dnf') return `<span class="lb-status danger">${t('checkin.statusDnf')}</span>`;
   if(rider.raceStatus === 'dns') return `<span class="lb-status missing">${t('checkin.statusDns')}</span>`;
   if(!rider.finishTime) return `<span class="lb-status missing">${t('checkin.statusMissing')}</span>`;
@@ -325,10 +341,16 @@ function renderCheckin(){
     const completed = rider.completed || [];
     const scores = rider.scores || {};
     const cpTimes = rider.checkpointTimes || {};
-    const cpRows = evt.checkpoints.map(cp => {
+    const visibleCps = evt.checkpoints.filter(cp => isCpRevealed(evt, cp));
+    const jokerCpId = rider.gameFlags && rider.gameFlags.jokerCpId;
+    const cpRows = visibleCps.map(cp => {
       const done = completed.includes(cp.id);
+      const isJoker = !done && jokerCpId === cp.id;
+      const closedByZone = isGameModeEnabled(evt, 'zone_active') && isCpClosedByZone(evt, cp);
       const cpType = getCheckpointType(cp.type);
-      const controlsHtml = cpType.isScored
+      const controlsHtml = isJoker
+        ? `<div class="checkin-joker-satisfied">${t('gameModes.jokerSatisfiesCp')}</div>`
+        : cpType.isScored
         ? `<div class="checkin-score-row">${Array.from({length: cpType.scoreMax + 1}, (_, s) => s).map(s => `<button type="button" class="score-btn ${scores[cp.id] === s ? 'active' : ''}" onclick="onCheckinSetScore('${cp.id}', ${s})">${s}</button>`).join('')}</div>`
         : `<label class="checkin-cp-check">
              <input type="checkbox" ${done ? 'checked' : ''} onchange="onCheckinToggleCheckpoint('${cp.id}', this.checked)">
@@ -355,13 +377,14 @@ function renderCheckin(){
             <span class="cp-no">${cp.order}</span>
             <span class="cp-name">${escapeHtml(cp.name || t('checkpoint.noName'))}</span>
             ${cp.mandatory ? '' : `<span class="tag-bonus">${t('exportPdf.bonusBadge')}</span>`}
+            ${closedByZone ? `<span class="tag-bonus danger">${t('gameModes.zoneClosedBadge')}</span>` : ''}
           </div>
           ${controlsHtml}
           ${timeWindowHtml}
         </div>`;
     }).join('');
-    const mandatoryCps = evt.checkpoints.filter(c => c.mandatory);
-    const missingMandatory = mandatoryCps.filter(cp => !completed.includes(cp.id));
+    const mandatoryCps = visibleCps.filter(c => c.mandatory);
+    const missingMandatory = mandatoryCps.filter(cp => !isCpSatisfiedForRider(rider, cp));
     const curfew = computeCurfewResult(evt, rider.finishTime);
     let curfewBlock = '';
     if(curfew){
@@ -390,7 +413,21 @@ function renderCheckin(){
           </div>
           <button class="btn btn-primary btn-sm" onclick="finishCheckin()" title="${t('checkin.saveAndCloseTitle')}">${t('checkin.saveAndClose')}</button>
         </div>
-        ${rider.raceStatus === 'dnf' || rider.raceStatus === 'dns' ? `
+        ${isGameModeEnabled(evt, 'rider_flag') ? `
+          <div class="checkin-joker-row">
+            <label>${t('gameModes.assignJokerLabel')}</label>
+            <select onchange="assignJokerCheckpoint(this.value)">
+              <option value="">${t('gameModes.jokerNone')}</option>
+              ${evt.checkpoints.map(cp => `<option value="${cp.id}" ${jokerCpId === cp.id ? 'selected' : ''}>${escapeHtml(cp.name || t('checkpoint.noName'))}</option>`).join('')}
+            </select>
+          </div>
+        ` : ''}
+        ${rider.raceStatus === 'eliminated' ? `
+          <div class="checkin-status danger">
+            <span>${t('gameModes.eliminatedStatus')}</span>
+            <button class="btn btn-ghost btn-sm" onclick="setRiderRaceStatus('eliminated')">${t('common.cancel')}</button>
+          </div>
+        ` : rider.raceStatus === 'dnf' || rider.raceStatus === 'dns' ? `
           <div class="checkin-status danger">
             <span>${rider.raceStatus === 'dnf' ? t('checkin.dnfSet') : t('checkin.dnsSet')}</span>
             <button class="btn btn-ghost btn-sm" onclick="setRiderRaceStatus('${rider.raceStatus}')">${t('common.cancel')}</button>
