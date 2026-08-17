@@ -382,6 +382,7 @@
     flex-shrink:0;
   }
   .cp-row.optional .cp-no{background:var(--steel);}
+  .cp-row-chevron{font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a8065; flex-shrink:0; width:10px; text-align:center;}
   .cp-name{font-family:'Oswald',sans-serif; font-weight:600; font-size:14px; text-transform:uppercase; flex:1; min-width:0;}
   .tag-type{
     font-family:'JetBrains Mono',monospace; font-size:8.5px; text-transform:uppercase; letter-spacing:0.04em;

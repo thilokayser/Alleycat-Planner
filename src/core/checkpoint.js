@@ -588,6 +588,7 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
                 <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.4"/><circle cx="7.5" cy="2.5" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13.5" r="1.4"/><circle cx="7.5" cy="13.5" r="1.4"/></svg>
               </span>
               <div class="cp-no">${cp.order}</div>
+              <span class="cp-row-chevron">${editing ? '▾' : '▸'}</span>
               <div class="cp-name" id="row-name-${cp.id}">${escapeHtml(cp.name || t('checkpoint.noName'))}</div>
               <span class="tag-type">${typeLabel(cp.type)}</span>
               <label class="cp-quick-toggle" title="${t('checkpoint.mandatoryCheckpointTitle')}" onclick="event.stopPropagation()">
