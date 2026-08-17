@@ -23,7 +23,7 @@ Die beiden Übergabedokumente wurden nacheinander geschrieben und nummerieren di
 |---|---|---|---|---|
 | **1** | **Schnelle Effizienz-Gewinne** | Phase 19 komplett | M | ✅ abgeschlossen (17.08.2026) |
 | 2 | Ordnung vor mehr Features | Phase 16 komplett | M–L | ✅ abgeschlossen (17.08.2026) |
-| **3** | **Backend-Fundament** ⭐ jetzt als nächstes | Phase 14 komplett | M | ⚠️ Teilbausteine vorhanden (Prepared Statements, API-Key, `.htaccess`) — Kernstück (Pre-Flight-Check) offen |
+| 3 | Backend-Fundament | Phase 14 komplett | M | ⚠️ fast abgeschlossen (17.08.2026) — nur der reale Testlauf auf `hasencore.de` fehlt noch (braucht deinen Zugriff) |
 | 4 | Großes Karten-Programm | Phase 15 + Phase 18 zusammengelegt | XL | ⚠️ Battle Royale existiert in alter Form (Phase 11), Rest offen |
 | 5 | Export & Lokalisierung | Phase 17 + Phase 20 zusammengelegt | L | ❌ vollständig offen |
 | 6 | Spezielle Rennformate | Phase 21 komplett | M–L | ❌ vollständig offen |
@@ -48,24 +48,26 @@ Aufwand-Skala: S = klein (wenige, isolierte Änderungen), M = mittel (ein neues 
 
 Checkboxen markieren, was laut Code-Abgleich bereits existiert. Alles ohne `[x]` ist noch zu bauen.
 
-### Paket 3 — Backend-Fundament (Phase 14)
+### Paket 3 — Backend-Fundament (Phase 14) ⚠️ fast abgeschlossen (17.08.2026) — ein Punkt braucht dich
 
 - [x] Prepared Statements durchgängig (`api.php`)
 - [x] API-Key ≥32 Byte, zufällig
 - [x] `.htaccess`-Schutz für `config.php`
 - [x] `utf8mb4` als Charset gesetzt
-- [ ] Pre-Flight-Check-Modul (PHP-Version, Extensions, `utf8mb4`-Fallback, MySQL-Version, Schreibrechte, `max_execution_time`, `memory_limit`) + Einhängen in `install.php` vor jedem DB-Schreibvorgang
-- [ ] `utf8mb4`→`utf8`-Fallback-Logik (aktuell hart verdrahtet ohne Fallback)
-- [ ] `display_errors` in Produktion deaktivieren + serverseitiges Fehler-Logging statt Fehlerausgabe im Response-Body
-- [ ] API-Key-Hashing in der DB (aktuell Klartext in `config.php`)
-- [ ] `install.php`-Selbstsperre/Löschhinweis nach Erstnutzung
-- [ ] Server-seitiger Backup-Export-Endpoint (DB als JSON/SQL-Dump)
-- [ ] Migrations-Verifikation gegen frische + befüllte Test-DB
-- [ ] Race-Condition-Testfälle (Doppel-Check-in, gleichzeitiges Bearbeiten)
-- [ ] Mini-Lasttest (~100 Fahrer, 10 CPs, parallele Requests)
-- [ ] `COMPATIBILITY.md` anlegen
-- [ ] Realer Testlauf auf `hasencore.de`, Ergebnis in `COMPATIBILITY.md` eintragen
-- [ ] `INSTALL.md`/README um Mindestanforderungen + "bei Rot → lokale Variante empfehlen" ergänzen
+- [x] Pre-Flight-Check-Modul (PHP-Version, Extensions, `utf8mb4`-Fallback, MySQL-Version, Schreibrechte, `max_execution_time`, `memory_limit`) + Einhängen in `install.php` vor jedem DB-Schreibvorgang
+- [x] `utf8mb4`→`utf8`-Fallback-Logik (Feature-Detection statt Versionsvergleich)
+- [x] `display_errors` in Produktion deaktivieren + serverseitiges Fehler-Logging statt Fehlerausgabe im Response-Body
+- [x] API-Key-Hashing in der DB (`password_hash`/`password_verify`, Klartext-Key nur einmalig auf der Erfolgsseite sichtbar)
+- [x] `install.php`-Selbstsperre (Selbstlöschung nach Erfolg) + Löschhinweis als Fallback
+- [x] Server-seitiger Backup-Export-Endpoint (`backup.php`, JSON-Dump)
+- [x] Migrations-Verifikation gegen frische + befüllte Test-DB (`migrations.php`, real gegen lokale MariaDB getestet — siehe `COMPATIBILITY.md`)
+- [x] Race-Condition-Testfälle (real gegen lokale MariaDB getestet, Ergebnis + Einordnung in `COMPATIBILITY.md`)
+- [x] Mini-Lasttest (100 parallele Keys, real gegen lokale MariaDB getestet)
+- [x] `COMPATIBILITY.md` angelegt
+- [ ] **Realer Testlauf auf `hasencore.de`** — braucht Zugriff auf deinen dortigen Webspace, kann ich nicht selbst durchführen. Sobald du `php-backend/` dort hochgeladen und `install.php` aufgerufen hast: Ergebnis (insbesondere die Pre-Flight-Check-Ausgabe) in `php-backend/COMPATIBILITY.md` nachtragen
+- [x] `INSTALL.md`/README um Mindestanforderungen + "bei Rot → lokale Variante empfehlen" ergänzt
+
+Details siehe [CLAUDE.md](CLAUDE.md), Abschnitt "Paket 3 (Phase 14): Backend-Härtung", und [php-backend/COMPATIBILITY.md](php-backend/COMPATIBILITY.md) für die konkreten Testergebnisse (inkl. einer bewusst dokumentierten, nicht in dieser Phase behobenen Grenze: Nebenläufigkeit auf Anwendungsebene bei gleichzeitiger Bearbeitung desselben Events).
 
 ### Paket 1 — Schnelle Effizienz-Gewinne (Phase 19) ✅ abgeschlossen (17.08.2026)
 
