@@ -797,6 +797,128 @@ async function runAlleycatTestSuite(){
     }
   }
 
+  /* 3k) Live-Beamer für Spielmodi (Phase 12) */
+  {
+    /* Eigenständiges Synth-Event, unabhängig vom in 3j aufgeräumten gEvt. */
+    const bEvt = {
+      id: 'synth-beamer', name: 'Synth Beamer', status: 'running', startMode: 'manual',
+      startConfirmedAt: toLocalDateTimeInputValue(new Date(Date.now() - 60000)),
+      checkpointOrderMode: 'frei', scoringMode: 'time', gameModes: [], ruleRuntimeState: {}, pointsLedger: [],
+      checkpoints: [
+        withCheckpointDefaults({id: 'b-cp1', order: 1, lat: 50.10, lng: 8.68, name: 'Start', mandatory: true}),
+        withCheckpointDefaults({id: 'b-cp2', order: 2, lat: 50.11, lng: 8.69, name: 'Bonus', mandatory: false}),
+        withCheckpointDefaults({id: 'b-cp3', order: 3, lat: 50.30, lng: 8.90, name: 'Secret', mandatory: false})
+      ],
+      riders: [
+        withRiderDefaults({bib: 1, name: 'BRider1'}),
+        withRiderDefaults({bib: 2, name: 'BRider2'})
+      ]
+    };
+    function enableBMode(type, config){
+      const mode = withGameModeDefaults({type, enabled: true, config: config || {}});
+      bEvt.gameModes.push(mode);
+      return mode;
+    }
+
+    /* pushEventLog: keine Modi aktiv -> kein Log-Eintrag */
+    checkEqual('pushEventLog ohne aktive Modi liefert null', pushEventLog(bEvt, 'bonus_secured', 'x', 1), null);
+    checkEqual('eventLog bleibt bei keinen aktiven Modi leer', (bEvt.ruleRuntimeState.eventLog || []).length, 0);
+
+    /* getBeamerLayout: reflektiert Modi-Konfiguration */
+    let layout = getBeamerLayout(bEvt);
+    checkEqual('getBeamerLayout: ohne Modi alles aus', layout.showZoneMap || layout.showPointsBoard || layout.showEventTicker, false);
+
+    const zoneMode = enableBMode('zone_active', {triggerMode: 'scheduled', stages: [{radius: 2000, atMinute: 5}]});
+    bEvt.scoringMode = 'points';
+    layout = getBeamerLayout(bEvt);
+    checkEqual('getBeamerLayout: showZoneMap bei aktivem zone_active', layout.showZoneMap, true);
+    checkEqual('getBeamerLayout: showPointsBoard bei scoringMode points', layout.showPointsBoard, true);
+    checkEqual('getBeamerLayout: showEventTicker bei mind. einem aktiven Modus', layout.showEventTicker, true);
+    checkEqual('getBeamerLayout: showZoneCountdown bei triggerMode!=manual', layout.showZoneCountdown, true);
+    zoneMode.config.triggerMode = 'manual';
+    checkEqual('getBeamerLayout: showZoneCountdown=false bei triggerMode manual', getBeamerLayout(bEvt).showZoneCountdown, false);
+
+    /* zone_shrink: manuelles Advance pusht Ticker-Eintrag + spielt Sound */
+    evaluateRules(bEvt, 'manual', {action: 'advance_zone_stage', modeId: zoneMode.id});
+    checkEqual('zone_shrink erzeugt eventLog-Eintrag', bEvt.ruleRuntimeState.eventLog.some(e => e.type === 'zone_shrink'), true);
+    bEvt.gameModes = bEvt.gameModes.filter(m => m.type !== 'zone_active');
+    bEvt.ruleRuntimeState.eventLog = [];
+
+    /* bonus_secured: first_n pusht Ticker-Eintrag mit escapetem Fahrernamen */
+    {
+      enableBMode('first_n', {pointsByRank: [5]});
+      const rider = bEvt.riders[0];
+      rider.name = 'Max <b>Mustermann</b>';
+      evaluateRules(bEvt, 'on_checkin', {rider, checkpoint: bEvt.checkpoints[1], timestamp: toLocalDateTimeInputValue(new Date())});
+      const entry = bEvt.ruleRuntimeState.eventLog.find(e => e.type === 'bonus_secured');
+      check('bonus_secured erzeugt eventLog-Eintrag', !!entry);
+      check('bonus_secured-Nachricht escaped den Fahrernamen', entry && entry.message.includes('&lt;b&gt;') && !entry.message.includes('<b>'));
+      rider.name = 'BRider1';
+      bEvt.gameModes = bEvt.gameModes.filter(m => m.type !== 'first_n');
+      bEvt.ruleRuntimeState.eventLog = [];
+      removeLedgerEntries(bEvt, () => true);
+    }
+
+    /* checkpoint_revealed: prerequisite pusht Ticker-Eintrag */
+    {
+      enableBMode('prerequisite');
+      const secretCp = bEvt.checkpoints[2];
+      secretCp.gameHidden = true;
+      secretCp.gameRevealPrerequisiteCpId = bEvt.checkpoints[0].id;
+      evaluateRules(bEvt, 'on_checkin', {rider: bEvt.riders[0], checkpoint: bEvt.checkpoints[0], timestamp: toLocalDateTimeInputValue(new Date())});
+      checkEqual('checkpoint_revealed erzeugt eventLog-Eintrag', bEvt.ruleRuntimeState.eventLog.some(e => e.type === 'checkpoint_revealed'), true);
+      secretCp.gameHidden = false;
+      bEvt.gameModes = bEvt.gameModes.filter(m => m.type !== 'prerequisite');
+      bEvt.ruleRuntimeState.eventLog = [];
+    }
+
+    /* rider_eliminated: sudden_death pusht Ticker-Eintrag */
+    {
+      enableBMode('sudden_death', {cutoffMinutes: 0, inactivityMinutes: 0});
+      bEvt.riders.forEach(r => { r.raceStatus = ''; r.finishTime = ''; r.checkpointTimes = {}; r.name = r.name || 'X'; });
+      evaluateRules(bEvt, 'on_tick', {now: Date.now()});
+      checkEqual('rider_eliminated erzeugt eventLog-Eintrag', bEvt.ruleRuntimeState.eventLog.some(e => e.type === 'rider_eliminated'), true);
+      bEvt.riders.forEach(r => { r.raceStatus = ''; });
+      bEvt.gameModes = bEvt.gameModes.filter(m => m.type !== 'sudden_death');
+    }
+
+    /* eventLog wird auf max. 30 Einträge gekappt */
+    {
+      enableBMode('first_n', {pointsByRank: [1]});
+      bEvt.ruleRuntimeState.eventLog = [];
+      for(let i = 0; i < 35; i++) pushEventLog(bEvt, 'bonus_secured', 'entry ' + i, 1);
+      checkEqual('eventLog wird auf 30 Einträge gekappt', bEvt.ruleRuntimeState.eventLog.length, 30);
+      checkEqual('eventLog behält die neuesten Einträge', bEvt.ruleRuntimeState.eventLog[29].message, 'entry 34');
+      bEvt.gameModes = bEvt.gameModes.filter(m => m.type !== 'first_n');
+    }
+
+    /* Renderer: Ticker + Punkte-Board */
+    {
+      bEvt.scoringMode = 'points';
+      bEvt.ruleRuntimeState.eventLog = [{id: 'log1', type: 'bonus_secured', message: '🎯 Testfahrer sichert sich einen Bonus', bib: 1, at: toLocalDateTimeInputValue(new Date())}];
+      const tickerHtml = renderBeamerTicker(bEvt);
+      check('renderBeamerTicker zeigt Log-Eintrag', tickerHtml.includes('Testfahrer sichert sich einen Bonus'));
+      checkEqual('renderBeamerTicker liefert leeren String ohne Einträge', renderBeamerTicker({ruleRuntimeState: {eventLog: []}}), '');
+      awardPoints(bEvt, 1, null, 7, 'Test', 'test_source');
+      const pointsHtml = renderBeamerPointsBoard(bEvt);
+      check('renderBeamerPointsBoard zeigt Fahrername + Punkte', pointsHtml.includes('BRider1') && pointsHtml.includes('7'));
+      removeLedgerEntries(bEvt, () => true);
+    }
+
+    /* Elimination-Overlay: reine Render-Funktion (kein beamerState, um die
+       Beamer-Route nicht anzufassen — siehe Hinweis zu location.hash oben) */
+    checkEqual('renderBeamerEliminationOverlay escaped den Namen', renderBeamerEliminationOverlay('<script>x</script>').includes('<script>x</script>'), false);
+    check('renderBeamerEliminationOverlay enthält Skull-Icon', renderBeamerEliminationOverlay('Test').includes('💀'));
+
+    /* live-sync: broadcastLiveEvent/getLiveSyncChannel wirft nie */
+    {
+      let threw = false;
+      try{ broadcastLiveEvent('synth-beamer', {id: 'x', type: 'zone_shrink'}); }
+      catch(e){ threw = true; }
+      check('broadcastLiveEvent wirft nicht (auch ohne Empfänger)', !threw);
+    }
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -827,6 +949,7 @@ async function runAlleycatTestSuite(){
   selectCheckinRiderByBib(evt.riders[0].bib);
   confirmRiderAtFinish();
   check('Fahrer #1 nach Bestätigen im Ziel', !!getActiveCheckinRider().finishTime);
+  check('rider_finished landet im eventLog (first_n bereits aktiv seit 3j)', (evt.ruleRuntimeState.eventLog || []).some(e => e.type === 'rider_finished'));
 
   /* 6) Checkpoints im Check-in abhaken (normal + gewertet) */
   evt.checkpoints.forEach(cp => {

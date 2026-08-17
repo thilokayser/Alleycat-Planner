@@ -180,6 +180,7 @@ async function openEditor(id){
   state.loading = true; state.view = 'editor'; render();
   const evt = await loadEvent(id);
   state.currentEvent = withEventDefaults(evt || {id, name:t('common.unnamedEvent'), date:'', checkpoints:[]});
+  registerEventSounds(state.currentEvent);
   state.loading = false;
   render();
   setTimeout(() => { initMap(); initSidebarResize(); applySidebarWidth(); }, 30);

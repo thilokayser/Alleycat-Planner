@@ -15,7 +15,7 @@
   :focus-visible{outline:2px solid var(--hivis); outline-offset:2px;}
 
   h1,h2,h3,.display{
-    font-family:'Oswald',sans-serif;
+    font-family:'Inter', 'Oswald', sans-serif;
     text-transform:uppercase;
     letter-spacing:0.03em;
     margin:0;
@@ -1052,6 +1052,28 @@
   .beamer-lb-table td.beamer-lb-bib{color:var(--steel);}
   .beamer-lb-table tr.beamer-lb-underway td{color:var(--steel); font-style:italic;}
   .beamer-lb-footer{font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--steel); align-self:flex-start;}
+
+  /* ---------- beamer: game-mode-aware widgets (Phase 12) ---------- */
+  .beamer-live-body{display:flex; flex-direction:row; flex-wrap:wrap; width:100%; gap:20px; align-items:flex-start;}
+  .beamer-live-main{flex:2 1 480px; min-width:0; display:flex; flex-direction:column; gap:14px;}
+  .beamer-live-side{flex:1 1 280px; max-width:340px; display:flex; flex-direction:column; gap:8px;}
+  .beamer-zone-map{width:100%; height:300px; border-radius:8px; overflow:hidden; border:1px solid var(--asphalt-3);}
+  .beamer-zone-countdown{font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--steel); text-align:center;}
+  .beamer-lb-table td.beamer-lb-points{color:var(--hivis-2); font-weight:700;}
+  .beamer-lb-table tr.beamer-lb-eliminated td{color:var(--steel); text-decoration:line-through; opacity:0.7;}
+  .beamer-ticker{display:flex; flex-direction:column; gap:6px; width:100%; max-height:220px; overflow:hidden;}
+  .beamer-ticker-item{
+    font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--chalk);
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:6px;
+    padding:8px 12px; animation:beamer-ticker-in 0.35s ease-out;
+  }
+  @keyframes beamer-ticker-in{from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:translateY(0);}}
+  .beamer-elimination-overlay{
+    position:fixed; inset:0; z-index:6000; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:20px;
+    background:var(--asphalt); animation:beamer-go-fade 3.5s ease-in-out forwards;
+  }
+  .beamer-elimination-icon{font-size:min(24vw, 200px); line-height:1; animation:beamer-go-pulse 0.9s ease-in-out infinite;}
+  .beamer-elimination-text{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:0.04em; font-weight:700; font-size:min(6vw, 40px); color:var(--chalk); text-align:center;}
 
   /* ---------- data safety: running-hint, backup line, todo severity ---------- */
   .running-hint{

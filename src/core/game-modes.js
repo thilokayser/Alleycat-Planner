@@ -63,7 +63,11 @@ const GAME_MODE_DEFS = {
         const cp = ctx.checkpoint;
         const priorCount = (evt.riders || []).filter(r => r.bib !== ctx.rider.bib && (r.completed || []).includes(cp.id)).length;
         const points = (mode.config.pointsByRank || [])[priorCount];
-        if(points) awardPoints(evt, ctx.rider.bib, cp.id, points, t('gameModes.firstNReason', {rank: priorCount + 1, name: cp.name || t('overview.checkpointFallbackLabel')}), 'first_n');
+        if(points){
+          awardPoints(evt, ctx.rider.bib, cp.id, points, t('gameModes.firstNReason', {rank: priorCount + 1, name: cp.name || t('overview.checkpointFallbackLabel')}), 'first_n');
+          pushEventLog(evt, 'bonus_secured', t('gameModes.tickerBonusSecured', {name: escapeHtml(ctx.rider.name || ('#' + ctx.rider.bib))}), ctx.rider.bib);
+          AlleycatSounds.play('bonus_secured');
+        }
       }
     }]
   },
@@ -79,6 +83,8 @@ const GAME_MODE_DEFS = {
         (evt.checkpoints || []).forEach(cp => {
           if(cp.gameHidden && cp.gameRevealPrerequisiteCpId === ctx.checkpoint.id && !evt.ruleRuntimeState.revealedCheckpoints.includes(cp.id)){
             evt.ruleRuntimeState.revealedCheckpoints.push(cp.id);
+            pushEventLog(evt, 'checkpoint_revealed', t('gameModes.tickerRevealed', {name: escapeHtml(cp.name || t('overview.checkpointFallbackLabel'))}), null);
+            AlleycatSounds.play('checkpoint_revealed');
           }
         });
       }
@@ -149,7 +155,11 @@ const GAME_MODE_DEFS = {
           if(r.raceStatus || r.finishTime || !(r.name || '').trim()) return;
           const lastCp = lastCheckpointTimeForRider(r);
           const lastMs = lastCp ? new Date(lastCp).getTime() : startMs;
-          if((nowMs - lastMs) / 60000 > numOr(mode.config.inactivityMinutes, 20)) r.raceStatus = 'eliminated';
+          if((nowMs - lastMs) / 60000 > numOr(mode.config.inactivityMinutes, 20)){
+            r.raceStatus = 'eliminated';
+            pushEventLog(evt, 'rider_eliminated', t('gameModes.tickerEliminated', {name: escapeHtml(r.name || ('#' + r.bib))}), r.bib);
+            AlleycatSounds.play('rider_eliminated');
+          }
         });
       }
     }]

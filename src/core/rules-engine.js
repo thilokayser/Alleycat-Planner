@@ -49,6 +49,27 @@ function runRulesEngineTick(){
   }
 }
 
+/* ---------------- event log (feeds the beamer's live ticker, Phase 12) ----------------
+   Only recorded while at least one game mode is enabled (the ticker is
+   itself only shown then, see getBeamerLayout() in beamer-modes.js) so
+   events without any active mode don't accumulate unused log entries in
+   storage. Also nudges any open beamer tab via live-sync.js's
+   BroadcastChannel for an instant reaction, independent of its normal
+   ~7s event-data poll (same pattern as broadcastRaceStart() for GO). */
+function anyGameModeEnabled(evt){
+  return (evt.gameModes || []).some(m => m.enabled);
+}
+function pushEventLog(evt, type, message, bib){
+  if(!anyGameModeEnabled(evt)) return null;
+  evt.ruleRuntimeState = evt.ruleRuntimeState || {};
+  evt.ruleRuntimeState.eventLog = evt.ruleRuntimeState.eventLog || [];
+  const entry = {id: uid('log'), type, message, bib: bib || null, at: toLocalDateTimeInputValue(new Date())};
+  evt.ruleRuntimeState.eventLog.push(entry);
+  if(evt.ruleRuntimeState.eventLog.length > 30) evt.ruleRuntimeState.eventLog = evt.ruleRuntimeState.eventLog.slice(-30);
+  broadcastLiveEvent(evt.id, entry);
+  return entry;
+}
+
 /* ---------------- points ledger ---------------- */
 function awardPoints(evt, riderBib, checkpointId, amount, reason, source){
   if(!amount) return;
@@ -112,6 +133,8 @@ function advanceZoneStage(evt, mode){
   const current = Number.isInteger(evt.ruleRuntimeState.zoneStage) ? evt.ruleRuntimeState.zoneStage : -1;
   if(current + 1 >= stages.length) return false;
   evt.ruleRuntimeState.zoneStage = current + 1;
+  pushEventLog(evt, 'zone_shrink', t('gameModes.tickerZoneShrink', {n: current + 2}), null);
+  AlleycatSounds.play('zone_shrink');
   return true;
 }
 function lastCheckpointTimeForRider(rider){

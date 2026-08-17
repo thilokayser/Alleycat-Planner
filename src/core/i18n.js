@@ -461,6 +461,10 @@ const translations = {
       openButton: '🖥️ Beamer-Ansicht öffnen',
       hintNewTab: 'Läuft im selben Browser wie HQ (neuer Tab) — für einen externen Beamer-Rechner die Server-Variante nutzen.',
       soundRaceStartLabel: 'Start-Signal (GO!)',
+      soundZoneShrinkLabel: 'Zone schrumpft',
+      soundRiderEliminatedLabel: 'Fahrer ausgeschieden',
+      soundBonusSecuredLabel: 'Bonus-Checkpoint gesichert',
+      soundCheckpointRevealedLabel: 'Geheimer Checkpoint enthüllt',
       soundUploadButton: 'Datei wählen',
       soundTestButton: 'Testen',
       soundNoneSet: 'Kein Sound hinterlegt',
@@ -610,7 +614,14 @@ const translations = {
       colFinishTime: 'Zeit',
       ledgerClickHint: 'Klicken für Punkte-Herkunft',
       ledgerEmpty: 'Noch keine Punkte-Einträge für diesen Fahrer.',
-      ledgerTitle: 'Punkte-Herkunft #{bib}'
+      ledgerTitle: 'Punkte-Herkunft #{bib}',
+      tickerBonusSecured: '🎯 {name} sichert sich einen Bonus',
+      tickerRevealed: '🔓 Geheimer Checkpoint „{name}" wurde enthüllt',
+      tickerEliminated: '💀 {name} ist ausgeschieden',
+      tickerZoneShrink: '🔻 Zone schrumpft auf Stufe {n}',
+      tickerFinished: '🏁 {name} im Ziel',
+      zoneNextShrinkIn: 'Nächste Verkleinerung in {time}',
+      eliminationOverlayText: '{name} ist ausgeschieden'
     }
   }
 };

@@ -35,6 +35,7 @@ function confirmRiderAtFinish(){
   rider.finishTime = toLocalDateTimeInputValue(new Date());
   rider.raceStatus = '';
   evaluateRules(state.currentEvent, 'on_finish', {rider});
+  pushEventLog(state.currentEvent, 'rider_finished', t('gameModes.tickerFinished', {name: escapeHtml(rider.name || ('#' + rider.bib))}), rider.bib);
   debouncedSave();
   renderCheckin();
   playConfirmFeedback();

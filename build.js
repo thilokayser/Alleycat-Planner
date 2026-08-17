@@ -30,7 +30,9 @@ const CORE_FILES = [
   'game-modes.js',
   'dashboard.js',
   'sound-hook.js',
+  'live-sync.js',
   'beamer.js',
+  'beamer-modes.js',
   'offline-tiles.js',
   'data-safety.js',
   'ui-headquarter.js'

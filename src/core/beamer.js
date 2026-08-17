@@ -107,6 +107,10 @@ function renderBeamerOverviewSection(evt){
         <span class="overview-beamer-hint">${t('beamer.hintNewTab')}</span>
       </div>
       ${renderBeamerSoundRow(evt, 'race_start', t('beamer.soundRaceStartLabel'))}
+      ${isGameModeEnabled(evt, 'zone_active') ? renderBeamerSoundRow(evt, 'zone_shrink', t('beamer.soundZoneShrinkLabel')) : ''}
+      ${isGameModeEnabled(evt, 'sudden_death') ? renderBeamerSoundRow(evt, 'rider_eliminated', t('beamer.soundRiderEliminatedLabel')) : ''}
+      ${isGameModeEnabled(evt, 'first_n') ? renderBeamerSoundRow(evt, 'bonus_secured', t('beamer.soundBonusSecuredLabel')) : ''}
+      ${isGameModeEnabled(evt, 'prerequisite') ? renderBeamerSoundRow(evt, 'checkpoint_revealed', t('beamer.soundCheckpointRevealedLabel')) : ''}
     </div>
   `;
 }
@@ -140,13 +144,28 @@ async function initBeamer(){
       else loadBeamerEvent().then(renderBeamer);
     };
   }
+  const liveCh = getLiveSyncChannel();
+  if(liveCh){
+    liveCh.onmessage = (e) => {
+      const data = e.data;
+      if(!data || data.eventId !== eventId) return;
+      handleLiveEvent(data.entry);
+    };
+  }
   window.addEventListener('hashchange', () => location.reload());
 }
 async function loadBeamerEvent(){
+  const prevEliminated = (beamerState.evt && beamerState.phase === 'live')
+    ? new Set((beamerState.evt.riders || []).filter(r => r.raceStatus === 'eliminated').map(r => r.bib))
+    : null;
   const raw = await loadEvent(beamerState.eventId);
   if(!raw) return;
   beamerState.evt = withEventDefaults(raw);
   registerEventSounds(beamerState.evt);
+  if(prevEliminated){
+    const newlyEliminated = (beamerState.evt.riders || []).find(r => r.raceStatus === 'eliminated' && !prevEliminated.has(r.bib));
+    if(newlyEliminated) triggerBeamerEliminationOverlay(newlyEliminated.name || ('#' + newlyEliminated.bib));
+  }
 }
 function computeBeamerRegistered(evt){
   return (evt.riders || []).filter(r => (r.name || '').trim()).length;
@@ -169,8 +188,13 @@ function renderBeamer(){
     root.innerHTML = `<div class="beamer-message">${t('beamer.eventNotFound')}</div>`;
     return;
   }
+  if(beamerState.overlay){ root.innerHTML = renderBeamerEliminationOverlay(beamerState.overlay.name); return; }
   if(beamerState.phase === 'go'){ root.innerHTML = renderBeamerGoOverlay(); return; }
-  if(beamerState.phase === 'live') { root.innerHTML = renderBeamerLivePhase(beamerState.evt); return; }
+  if(beamerState.phase === 'live'){
+    root.innerHTML = renderBeamerLivePhase(beamerState.evt);
+    if(getBeamerLayout(beamerState.evt).showZoneMap) updateBeamerZoneMap(beamerState.evt);
+    return;
+  }
   root.innerHTML = renderBeamerCountdownPhase(beamerState.evt);
 }
 function renderBeamerCountdownPhase(evt){
@@ -201,11 +225,8 @@ function beamerElapsedFinish(evt, r){
   const ms = new Date(r.finishTime) - new Date(evt.startConfirmedAt);
   return isNaN(ms) ? '—' : formatCountdown(ms);
 }
-function renderBeamerLivePhase(evt){
+function renderBeamerTimeLeaderboard(evt){
   const {finished, underway, dnfDns} = sortBeamerRiders(evt);
-  const info = computeStartCountdown(evt);
-  const clockLabel = evt.status === 'completed' ? t('beamer.raceDurationLabel') : t('beamer.raceClockLabel');
-  const clockText = (info.mode === 'since' || info.mode === 'duration') ? formatCountdown(info.ms) : '—';
   const rows = [
     ...finished.map((r, i) => `
       <tr>
@@ -227,19 +248,34 @@ function renderBeamerLivePhase(evt){
     `)
   ].join('');
   return `
+    ${rows ? `
+      <table class="beamer-lb-table">
+        <thead><tr><th>${t('beamer.tableRank')}</th><th>${t('beamer.tableName')}</th><th>${t('beamer.tableBib')}</th><th>${t('beamer.tableProgress')}</th><th>${t('beamer.tableTime')}</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    ` : `<div class="beamer-message">${t('beamer.noFinishersYet')}</div>`}
+    ${dnfDns.length ? `<div class="beamer-lb-footer">${t('beamer.dnsDnfFooter', {count: dnfDns.length})}</div>` : ''}
+  `;
+}
+function renderBeamerLivePhase(evt){
+  const info = computeStartCountdown(evt);
+  const clockLabel = evt.status === 'completed' ? t('beamer.raceDurationLabel') : t('beamer.raceClockLabel');
+  const clockText = (info.mode === 'since' || info.mode === 'duration') ? formatCountdown(info.ms) : '—';
+  const layout = getBeamerLayout(evt);
+  return `
     <div class="beamer-phase beamer-live-phase">
       <div class="beamer-live-head">
         <div class="beamer-event-name">${escapeHtml(evt.name || t('common.unnamedEvent'))}</div>
         <div class="beamer-race-clock"><span>${clockLabel}</span> <span id="beamer-race-clock">${clockText}</span></div>
       </div>
       ${evt.status === 'completed' ? `<div class="beamer-completed-banner">🏁 ${t('beamer.raceCompletedBanner')}</div>` : ''}
-      ${rows ? `
-        <table class="beamer-lb-table">
-          <thead><tr><th>${t('beamer.tableRank')}</th><th>${t('beamer.tableName')}</th><th>${t('beamer.tableBib')}</th><th>${t('beamer.tableProgress')}</th><th>${t('beamer.tableTime')}</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      ` : `<div class="beamer-message">${t('beamer.noFinishersYet')}</div>`}
-      ${dnfDns.length ? `<div class="beamer-lb-footer">${t('beamer.dnsDnfFooter', {count: dnfDns.length})}</div>` : ''}
+      <div class="beamer-live-body ${layout.showZoneMap ? 'has-zone-map' : ''}">
+        <div class="beamer-live-main">
+          ${layout.showPointsBoard ? renderBeamerPointsBoard(evt) : renderBeamerTimeLeaderboard(evt)}
+        </div>
+        ${layout.showZoneMap ? renderBeamerZoneSide(evt) : ''}
+      </div>
+      ${layout.showEventTicker ? renderBeamerTicker(evt) : ''}
     </div>
   `;
 }
