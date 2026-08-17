@@ -298,7 +298,6 @@
     background:var(--paper);
     color:var(--ink);
     display:flex; flex-direction:column;
-    background-image:repeating-linear-gradient(var(--paper) 0px, var(--paper) 27px, var(--paper-line) 28px);
     overflow:hidden;
   }
   .sidebar-head{
