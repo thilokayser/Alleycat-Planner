@@ -109,9 +109,10 @@ function setZoneActive(evt, zoneId, active){
   const zone = getZone(evt, zoneId);
   if(!zone) return null;
   zone.active = !!active;
+  const zoneNameEscaped = escapeHtml(zone.name || t('zones.unnamed'));
   pushEventLog(evt, 'district_toggled', active
-    ? t('gameModes.tickerDistrictActivated', {name: zone.name || t('zones.unnamed')})
-    : t('gameModes.tickerDistrictDeactivated', {name: zone.name || t('zones.unnamed')}), null);
+    ? t('gameModes.tickerDistrictActivated', {name: zoneNameEscaped})
+    : t('gameModes.tickerDistrictDeactivated', {name: zoneNameEscaped}), null);
   return zone;
 }
 function zoneCenterOf(evt){

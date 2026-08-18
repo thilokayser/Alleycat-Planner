@@ -8,7 +8,7 @@
    unübersetzte Organizer-Freitext-Eingabe wie Checkpoint-/Kategorie-Namen —
    einzige Ausnahme ist der optionale customTitle bei custom_text, der
    ebenfalls Rohtext ist. */
-const PDF_BLOCK_TYPES = ['waiver', 'rules', 'sponsors', 'checkpoint_list', 'notes', 'custom_text', 'emergency_info'];
+const PDF_BLOCK_TYPES = ['waiver', 'rules', 'sponsors', 'checkpoint_list', 'notes', 'custom_text', 'emergency_info', 'event_locations'];
 function pdfBlockTypeLabel(type){
   return t('pdfBlocks.type.' + type) || type;
 }
@@ -188,6 +188,8 @@ function renderPdfBlockEditor(b){
     }
     case 'checkpoint_list':
       return `<div class="settings-section-desc">${t('pdfBlocks.checkpointListAuto')}</div>`;
+    case 'event_locations':
+      return `<div class="settings-section-desc">${t('pdfBlocks.eventLocationsAuto')}</div>`;
     default:
       return '';
   }

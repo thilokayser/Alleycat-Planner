@@ -455,10 +455,23 @@ function renderOverview(){
       </div>
     </div>
     ${renderBackupStatusLine(evt)}
+    ${renderAfterpartyStatusLine(evt)}
     ${settingsPanel}
     ${widgetsHtml}
     ${renderBeamerOverviewSection(evt)}
     ${isFeatureEnabled('game_modes', evt) ? renderGameModesSection(evt) : ''}
+  `;
+}
+function renderAfterpartyStatusLine(evt){
+  const afterparty = getEventLocation(evt, 'afterparty');
+  if(!eventLocationHasPosition(afterparty)) return '';
+  const details = [afterparty.name || t('eventLocations.afterpartyLabel'), afterparty.address].filter(Boolean).map(escapeHtml).join(', ');
+  const origin = afterpartyRouteOrigin(evt);
+  return `
+    <div class="overview-backup-line">
+      <span>🎉 ${t('overview.afterpartyLine', {details})}</span>
+      ${origin ? `<a class="event-loc-maps-link" href="${mapsDirectionsLink(origin, afterparty)}" target="_blank" rel="noopener">${t('overview.afterpartyRouteLink')}</a>` : ''}
+    </div>
   `;
 }
 function renderBackupStatusLine(evt){

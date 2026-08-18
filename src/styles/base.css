@@ -1193,6 +1193,9 @@
   .beamer-race-clock{font-family:'JetBrains Mono',monospace; font-size:24px; color:var(--hivis-2);}
   .beamer-race-clock span:first-child{color:var(--steel); font-size:13px; text-transform:uppercase; letter-spacing:0.06em; margin-right:8px;}
   .beamer-completed-banner{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:0.04em; font-size:18px; color:var(--ok);}
+  .beamer-afterparty-banner{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:0.03em; font-size:14px; color:var(--hivis-2); margin-top:4px;}
+  .beamer-afterparty-banner a{color:inherit; text-decoration:none;}
+  .beamer-afterparty-banner a:hover{text-decoration:underline;}
   .beamer-lb-table{width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace;}
   .beamer-lb-table th{
     text-align:left; text-transform:uppercase; letter-spacing:0.05em; font-size:12px; color:var(--steel);

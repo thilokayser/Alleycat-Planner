@@ -129,6 +129,34 @@ function renderPdfBlockContentToDoc(doc, b, evt, marginX, pageRight, y, bottomLi
     return y;
   }
 
+  if(b.type === 'event_locations'){
+    const rows = [
+      {label: t('eventLocations.hqLabel'), loc: getEventLocation(evt, 'headquarters')},
+      {label: t('eventLocations.afterpartyLabel'), loc: getEventLocation(evt, 'afterparty')}
+    ].filter(r => eventLocationHasPosition(r.loc));
+    if(!rows.length){
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor('#5b5340');
+      doc.text(t('pdfBlocks.eventLocationsEmpty'), marginX, y);
+      return y + lineH;
+    }
+    rows.forEach(r => {
+      if(y > bottomLimit){ doc.addPage(); y = topY; }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor('#241f18');
+      doc.text(`${r.label}: ${r.loc.name || '—'}`, marginX, y);
+      y += lineH;
+      [r.loc.address, r.loc.notes].filter(Boolean).forEach(text => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor('#5b5340');
+        doc.splitTextToSize(text, pageRight - marginX).forEach(line => {
+          if(y > bottomLimit){ doc.addPage(); y = topY; }
+          doc.text(line, marginX, y);
+          y += lineH * 0.85;
+        });
+      });
+      y += lineH * 0.6;
+    });
+    return y;
+  }
+
   const content = b.content || '';
   if(!content.trim()){
     doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor('#5b5340');

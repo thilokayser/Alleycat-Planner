@@ -612,6 +612,27 @@ async function runAlleycatTestSuite(){
     removePdfBlockSponsorLogo(sponsorsBlock.id, 0);
     checkEqual('removePdfBlockSponsorLogo entfernt Logo', sponsorsBlock.config.logos.length, 0);
 
+    /* event_locations-Block (Paket 4, Schritt 8) — Auto-Block wie checkpoint_list,
+       kein manueller Inhalt. evt.eventLocations ist an dieser Stelle der Suite
+       noch leer (erst in 3p befüllt), deckt also zunächst den Leer-Zustand ab. */
+    check('PDF_BLOCK_TYPES enthält "event_locations"', PDF_BLOCK_TYPES.includes('event_locations'));
+    addPdfBlock('event_locations');
+    const eventLocBlock = evt.pdfBlocks.find(b => b.type === 'event_locations');
+    checkEqual('pdfBlockTitle nutzt das Typ-Label für event_locations', pdfBlockTitle(eventLocBlock), t('pdfBlocks.type.event_locations'));
+    await checkNoThrowAsync('appendPdfBlocks rendert event_locations ohne gesetzte Orte (Leer-Hinweis) ohne Fehler', async () => {
+      const { jsPDF } = window.jspdf;
+      appendPdfBlocks(new jsPDF({unit: 'pt', format: 'a4'}), evt, 'manifest');
+    });
+    setCheckpointAsHq(evt, evt.checkpoints[0].id, true);
+    placeEventLocationAt(evt, 'afterparty', 50.95, 6.96);
+    await checkNoThrowAsync('appendPdfBlocks rendert event_locations mit HQ+Afterparty ohne Fehler', async () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({unit: 'pt', format: 'a4'});
+      appendPdfBlocks(doc, evt, 'manifest');
+      check('event_locations-Block hängt eine zusätzliche Seite an', doc.internal.getNumberOfPages() >= 2);
+    });
+    evt.eventLocations = [];
+
     await checkNoThrowAsync('appendPdfBlocks (Manifest, pt-Einheiten) läuft ohne Fehler', async () => {
       const { jsPDF } = window.jspdf;
       appendPdfBlocks(new jsPDF({unit: 'pt', format: 'a4'}), evt, 'manifest');
@@ -1433,6 +1454,38 @@ async function runAlleycatTestSuite(){
     check('Afterparty ist freistehend (kein Checkpoint-Link)', afterparty && !afterparty.linkedCheckpointId);
     check('eventLocationHasPosition erkennt gesetzte Koordinaten', eventLocationHasPosition(afterparty));
     check('mapsDeepLink liefert eine Google-Maps-URL', mapsDeepLink(50.95, 6.96).includes('maps'));
+
+    /* Paket 4, Schritt 8: Dashboard-Zeile, Beamer-Einblendung, Routen-Deeplink.
+       HQ (freistehend, s.o.) + Afterparty sind an dieser Stelle beide gesetzt. */
+    check('mapsDirectionsLink enthält Origin und Destination', mapsDirectionsLink({lat: 1, lng: 2}, {lat: 3, lng: 4}).includes('origin=1,2') && mapsDirectionsLink({lat: 1, lng: 2}, {lat: 3, lng: 4}).includes('destination=3,4'));
+    const hqLoc = getEventLocation(evt, 'headquarters');
+    const origin = afterpartyRouteOrigin(evt);
+    checkEqual('afterpartyRouteOrigin bevorzugt die HQ-Position', origin && origin.lat, hqLoc.lat);
+
+    const overviewHtml = renderAfterpartyStatusLine(evt);
+    check('renderAfterpartyStatusLine zeigt Name und Route-Link bei gesetzter Afterparty', overviewHtml.includes(escapeHtml(afterparty.name)) && overviewHtml.includes(t('overview.afterpartyRouteLink')));
+
+    const beamerBannerHtml = renderBeamerAfterpartyBanner(evt);
+    check('renderBeamerAfterpartyBanner zeigt den Afterparty-Namen verlinkt', beamerBannerHtml.includes(escapeHtml(afterparty.name)) && beamerBannerHtml.includes('maps/dir'));
+
+    removeEventLocation(evt, 'afterparty');
+    check('renderAfterpartyStatusLine liefert leeren String ohne Afterparty', renderAfterpartyStatusLine(evt) === '');
+    check('renderBeamerAfterpartyBanner liefert leeren String ohne Afterparty', renderBeamerAfterpartyBanner(evt) === '');
+
+    /* Escaping-Regression: ein Checkpoint-Name mit HTML-Sonderzeichen darf im
+       "Verknüpft mit Checkpoint"-Hinweis nicht als rohes Markup landen. HQ ist
+       an dieser Stelle freistehend (s.o.) — für diesen Check erneut verlinken. */
+    const origConfirmEsc = window.confirm;
+    window.confirm = () => true; // überschreibt die bestehende freistehende HQ-Location
+    setCheckpointAsHq(evt, hqCp.id, true);
+    window.confirm = origConfirmEsc;
+    check('HQ ist für den Escaping-Check mit dem Checkpoint verknüpft', isCheckpointHq(evt, hqCp.id));
+    const originalHqCpName = hqCp.name;
+    hqCp.name = '<img src=x onerror=alert(1)>';
+    const hqRowHtml = renderEventLocationRow(evt, 'headquarters');
+    check('renderEventLocationRow escaped den verknüpften Checkpoint-Namen', hqRowHtml.includes('&lt;img') && !hqRowHtml.includes('<img src=x'));
+    hqCp.name = originalHqCpName;
+    unlinkHqIfCheckpointDeleted(evt, hqCp.id); // HQ zurück in den freistehenden Zustand, für den Persistenz-Check in Abschnitt 4
 
     removeEventLocation(evt, 'afterparty');
     checkEqual('removeEventLocation entfernt die Location wieder', evt.eventLocations.length, 1);

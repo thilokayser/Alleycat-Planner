@@ -37,6 +37,20 @@ function eventLocationHasPosition(loc){
 function mapsDeepLink(lat, lng){
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
+function mapsDirectionsLink(origin, dest){
+  return `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${dest.lat},${dest.lng}`;
+}
+/* "HQ oder letzter Checkpoint → Afterparty" per Spec 15.1 — HQ ist der
+   bevorzugte Startpunkt (falls gesetzt), sonst der letzte Checkpoint nach
+   Reihenfolge als sinnvoller Fallback-Ausgangspunkt für die Anfahrt. */
+function afterpartyRouteOrigin(evt){
+  const hq = getEventLocation(evt, 'headquarters');
+  if(eventLocationHasPosition(hq)) return {lat: hq.lat, lng: hq.lng};
+  const ordered = (evt.checkpoints || []).slice().sort((a, b) => b.order - a.order);
+  const last = ordered[0];
+  if(last && Number.isFinite(last.lat) && Number.isFinite(last.lng)) return {lat: last.lat, lng: last.lng};
+  return null;
+}
 
 /* ---------------- HQ <-> checkpoint link ---------------- */
 function isCheckpointHq(evt, cpId){
@@ -152,7 +166,7 @@ function renderEventLocationRow(evt, type){
         <input type="text" class="zone-name-input" value="${escapeHtml(loc.name)}" placeholder="${label}" oninput="onEventLocationFieldChange('${type}', 'name', this.value)">
       </div>
       ${linkedCp
-        ? `<div class="settings-hint">${t('eventLocations.linkedToCheckpoint', {name: linkedCp.name || t('checkpoint.noName')})}</div>`
+        ? `<div class="settings-hint">${t('eventLocations.linkedToCheckpoint', {name: escapeHtml(linkedCp.name || t('checkpoint.noName'))})}</div>`
         : `<input type="text" class="zone-name-input" placeholder="${t('eventLocations.addressPlaceholder')}" value="${escapeHtml(loc.address || '')}" oninput="onEventLocationFieldChange('${type}', 'address', this.value)">`}
       <textarea class="event-loc-notes" placeholder="${t('eventLocations.notesPlaceholder')}" oninput="onEventLocationFieldChange('${type}', 'notes', this.value)">${escapeHtml(loc.notes || '')}</textarea>
       <div class="zone-row-meta">

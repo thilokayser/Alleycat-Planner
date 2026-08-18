@@ -219,6 +219,18 @@ function renderBeamerGoOverlay(){
     </div>
   `;
 }
+/* Spec 15.1: optionale Einblendung nach Rennende — bewusst kein eigener
+   Vollbild-Podium-Screen (15.6 führt den als separate, zurückgestellte
+   Ergänzung), nur eine zweite Banner-Zeile neben der bestehenden
+   "Rennen abgeschlossen"-Anzeige, verlinkt auf die Anfahrtsroute. */
+function renderBeamerAfterpartyBanner(evt){
+  const afterparty = getEventLocation(evt, 'afterparty');
+  if(!eventLocationHasPosition(afterparty)) return '';
+  const name = escapeHtml(afterparty.name || t('eventLocations.afterpartyLabel'));
+  const origin = afterpartyRouteOrigin(evt);
+  const text = t('beamer.afterpartyBanner', {name});
+  return `<div class="beamer-afterparty-banner">🎉 ${origin ? `<a href="${mapsDirectionsLink(origin, afterparty)}" target="_blank" rel="noopener">${text}</a>` : text}</div>`;
+}
 function beamerProgressLabel(evt, r){
   const total = (evt.checkpoints || []).length;
   return `${(r.completed || []).length}/${total}`;
@@ -271,7 +283,10 @@ function renderBeamerLivePhase(evt){
         <div class="beamer-event-name">${escapeHtml(evt.name || t('common.unnamedEvent'))}</div>
         <div class="beamer-race-clock"><span>${clockLabel}</span> <span id="beamer-race-clock">${clockText}</span></div>
       </div>
-      ${evt.status === 'completed' ? `<div class="beamer-completed-banner">🏁 ${t('beamer.raceCompletedBanner')}</div>` : ''}
+      ${evt.status === 'completed' ? `
+        <div class="beamer-completed-banner">🏁 ${t('beamer.raceCompletedBanner')}</div>
+        ${renderBeamerAfterpartyBanner(evt)}
+      ` : ''}
       <div class="beamer-live-body ${layout.showZoneMap ? 'has-zone-map' : ''}">
         <div class="beamer-live-main">
           ${layout.showPointsBoard ? renderBeamerPointsBoard(evt) : renderBeamerTimeLeaderboard(evt)}

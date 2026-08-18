@@ -475,6 +475,8 @@ const translations = {
       moveDownLabel: '{name} nach unten verschieben',
       emptyTitle: 'Keine Widgets sichtbar',
       emptyHint: 'Über „Widgets anpassen" mindestens ein Widget einblenden.',
+      afterpartyLine: 'Afterparty: {details}',
+      afterpartyRouteLink: 'Route zur Afterparty',
       widgetTitleStatusTiles: 'Status-Kacheln',
       widgetTitleCpLoad: 'Checkpoint-Auslastung',
       widgetTitleRecentActivity: 'Letzte Aktivität',
@@ -562,6 +564,7 @@ const translations = {
       tableTime: 'Zeit',
       noFinishersYet: 'Noch keine Ankünfte im Ziel.',
       raceCompletedBanner: 'Rennen abgeschlossen',
+      afterpartyBanner: 'Weiter geht’s bei: {name}',
       underwayLabel: 'unterwegs',
       dnsDnfFooter: '{count} ausgeschieden / nicht gestartet'
     },
@@ -611,7 +614,8 @@ const translations = {
         checkpoint_list: 'Checkpoint-Übersicht',
         notes: 'Notizen',
         custom_text: 'Eigener Text',
-        emergency_info: 'Notfall-Infos'
+        emergency_info: 'Notfall-Infos',
+        event_locations: 'Sonderorte (HQ/Afterparty)'
       },
       toggleButton: 'PDF-Baukasten',
       hint: 'Zusätzliche Seiten, die an Manifest und/oder Spokecards-PDF angehängt werden — Reihenfolge per Pfeil-Buttons, pro Block wählbar für welche Dokumente er gilt.',
@@ -623,6 +627,8 @@ const translations = {
       waiverShowSignature: 'Unterschriftszeile anzeigen',
       waiverShowDate: 'Datum-Feld anzeigen',
       checkpointListAuto: 'Wird automatisch aus den Checkpoints erzeugt — kein Text nötig.',
+      eventLocationsAuto: 'Wird automatisch aus Headquarter/Afterparty (Karte) erzeugt — kein Text nötig.',
+      eventLocationsEmpty: 'Kein Headquarter und keine Afterparty gesetzt.',
       sponsorsEmpty: 'Keine Logos hinterlegt.',
       emptyContent: 'Kein Inhalt hinterlegt.',
       dateFieldLabel: 'Datum',
