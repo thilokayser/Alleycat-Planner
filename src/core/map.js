@@ -10,14 +10,164 @@ function initMap(){
       maxZoom: 20
     }).addTo(map);
     markersLayer = L.layerGroup().addTo(map);
+    zonesLayer = L.featureGroup().addTo(map);
     map.on('click', onMapClick);
+    initZoneDrawControl();
   } else {
     map.invalidateSize();
   }
   const legendTypes = document.getElementById('map-legend-types');
   if(legendTypes) legendTypes.innerHTML = CHECKPOINT_TYPES.map(t => `${typeIconHtml(t.key)} ${t.shortLabel}`).join(' &middot; ');
   redrawMarkers();
+  redrawZones();
   fitToCheckpoints();
+}
+
+/* ---------------- zones: Leaflet.draw control + layer ----------------
+   Kept separate from zones.js on purpose — zones.js is the pure data
+   model/geometry module, this is the Leaflet-specific rendering and
+   interaction layer, mirroring how checkpoint markers are handled here
+   (redrawMarkers()) while checkpoint.js owns the data/sidebar side. */
+function initZoneDrawControl(){
+  if(typeof L.Control === 'undefined' || !L.Control.Draw) return; // CDN unavailable — degrade gracefully, sidebar list still works
+  const drawControl = new L.Control.Draw({
+    position: 'topright',
+    draw: {
+      circle: {shapeOptions: {color: '#ff5f1f', weight: 2}, showRadius: true, metric: true},
+      polygon: {shapeOptions: {color: '#ff5f1f', weight: 2}, allowIntersection: false, showArea: false},
+      marker: false, rectangle: false, polyline: false, circlemarker: false
+    },
+    edit: {featureGroup: zonesLayer, remove: true}
+  });
+  map.addControl(drawControl);
+  map.on(L.Draw.Event.CREATED, onZoneDrawCreated);
+  map.on(L.Draw.Event.EDITED, onZoneDrawEdited);
+  map.on(L.Draw.Event.DELETED, onZoneDrawDeleted);
+}
+function onZoneDrawCreated(e){
+  const evt = state.currentEvent;
+  if(!evt) return;
+  if(e.layerType === 'circle'){
+    const c = e.layer.getLatLng();
+    addZone(evt, {type: 'circle', name: t('zones.defaultName', {n: evt.zones.length + 1}), center: {lat: c.lat, lng: c.lng}, radiusMeters: Math.round(e.layer.getRadius())});
+  } else if(e.layerType === 'polygon'){
+    const points = e.layer.getLatLngs()[0].map(ll => ({lat: ll.lat, lng: ll.lng}));
+    addZone(evt, {type: 'polygon', name: t('zones.defaultName', {n: evt.zones.length + 1}), points});
+  } else {
+    return;
+  }
+  debouncedSave();
+  redrawZones();
+  renderSidebar();
+}
+function onZoneDrawEdited(e){
+  const evt = state.currentEvent;
+  if(!evt) return;
+  e.layers.eachLayer(layer => {
+    const zone = getZone(evt, layer._zoneId);
+    if(!zone) return;
+    if(zone.type === 'circle'){
+      const c = layer.getLatLng();
+      updateZone(evt, zone.id, {center: {lat: c.lat, lng: c.lng}, radiusMeters: Math.round(layer.getRadius())});
+    } else if(zone.type === 'polygon'){
+      updateZone(evt, zone.id, {points: layer.getLatLngs()[0].map(ll => ({lat: ll.lat, lng: ll.lng}))});
+    }
+  });
+  debouncedSave();
+  renderSidebar();
+}
+function onZoneDrawDeleted(e){
+  const evt = state.currentEvent;
+  if(!evt) return;
+  e.layers.eachLayer(layer => { if(layer._zoneId) removeZone(evt, layer._zoneId); });
+  debouncedSave();
+  renderSidebar();
+}
+function redrawZones(){
+  if(!zonesLayer || !state.currentEvent) return;
+  zonesLayer.clearLayers();
+  (state.currentEvent.zones || []).forEach(zone => {
+    let layer = null;
+    if(zone.type === 'circle' && zone.center){
+      layer = L.circle([zone.center.lat, zone.center.lng], {radius: zone.radiusMeters, color: zone.color, weight: 2, fillOpacity: 0.12});
+    } else if(zone.type === 'polygon' && zone.points && zone.points.length >= 3){
+      layer = L.polygon(zone.points.map(p => [p.lat, p.lng]), {color: zone.color, weight: 2, fillOpacity: 0.12});
+    }
+    if(!layer) return;
+    layer._zoneId = zone.id;
+    layer.bindTooltip(zone.name || t('zones.unnamed'), {direction: 'center', className: 'zone-tooltip'});
+    layer.addTo(zonesLayer);
+  });
+}
+function toggleZonesPanel(){
+  state.zonesPanelOpen = !state.zonesPanelOpen;
+  renderSidebar();
+}
+function onZoneNameChange(id, value){
+  const evt = state.currentEvent;
+  updateZone(evt, id, {name: value});
+  debouncedSave();
+  redrawZones();
+}
+function onZoneColorChange(id, value){
+  const evt = state.currentEvent;
+  updateZone(evt, id, {color: value});
+  debouncedSave();
+  redrawZones();
+}
+function onZoneRadiusChange(id, value){
+  const radius = Math.max(10, parseInt(value, 10) || 10);
+  updateZone(state.currentEvent, id, {radiusMeters: radius});
+  debouncedSave();
+  redrawZones();
+}
+function deleteZoneFromSidebar(id){
+  if(!confirm(t('zones.deleteConfirm'))) return;
+  removeZone(state.currentEvent, id);
+  debouncedSave();
+  redrawZones();
+  renderSidebar();
+}
+function flyToZone(id){
+  const zone = getZone(state.currentEvent, id);
+  if(!zone || !map) return;
+  const center = zone.type === 'circle' ? zone.center : polygonCentroid(zone.points);
+  if(!center) return;
+  map.flyTo([center.lat, center.lng], Math.max(map.getZoom(), 15), {duration: 0.6});
+}
+function renderZoneRow(z){
+  return `
+    <div class="zone-row">
+      <div class="zone-row-top">
+        <input type="color" class="zone-color-input" value="${escapeHtml(z.color)}" onchange="onZoneColorChange('${z.id}', this.value)" title="${t('zones.colorTitle')}">
+        <input type="text" class="zone-name-input" value="${escapeHtml(z.name)}" placeholder="${t('zones.namePlaceholder')}" oninput="onZoneNameChange('${z.id}', this.value)">
+        <span class="zone-type-badge">${z.type === 'circle' ? t('zones.typeCircle') : t('zones.typePolygon')}</span>
+      </div>
+      <div class="zone-row-meta">
+        ${z.type === 'circle'
+          ? `<label class="zone-radius-field">${t('zones.radiusLabel')} <input type="number" min="10" step="10" value="${z.radiusMeters}" onchange="onZoneRadiusChange('${z.id}', this.value)"> m</label>`
+          : `<span class="zone-row-meta-text">${t('zones.pointCount', {count: z.points.length})}</span>`}
+        <span class="cp-row-icon-actions">
+          <button type="button" class="cp-icon-btn" onclick="flyToZone('${z.id}')" title="${t('zones.flyToTitle')}">🎯</button>
+          <button type="button" class="cp-icon-btn" onclick="deleteZoneFromSidebar('${z.id}')" title="${t('common.delete')}">🗑</button>
+        </span>
+      </div>
+    </div>
+  `;
+}
+function renderZonesPanel(evt){
+  const zones = evt.zones || [];
+  return `
+    <div class="settings-section">
+      <button class="settings-toggle" onclick="toggleZonesPanel()">${state.zonesPanelOpen ? '▾' : '▸'} ${t('zones.heading')}</button>
+      ${state.zonesPanelOpen ? `
+        <div class="settings-body">
+          <div class="settings-hint">${t('zones.hint')}</div>
+          <div class="zone-list">${zones.length ? zones.map(renderZoneRow).join('') : `<div class="riders-hint" style="padding:0;">${t('zones.noneYet')}</div>`}</div>
+        </div>
+      ` : ''}
+    </div>
+  `;
 }
 /* ---------------- hover sync: sidebar row <-> map marker ---------------- */
 function setCpRowHoverSync(cpId, on){

@@ -687,6 +687,7 @@ function renderSidebar(){
         </div>
       ` : ''}
     </div>
+    ${renderZonesPanel(evt)}
     ${evt.status === 'running' ? `
       <div class="cp-lock-banner ${evt.cpLockOverride ? 'unlocked' : ''}">
         <span>${evt.cpLockOverride ? t('raceState.cpUnlockedBanner') : t('raceState.cpLockedBanner')}</span>

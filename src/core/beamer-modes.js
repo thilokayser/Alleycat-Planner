@@ -66,8 +66,9 @@ function updateBeamerZoneMap(evt){
   if(!container) return;
   if(beamerZoneMap){ beamerZoneMap.remove(); beamerZoneMap = null; }
   const mode = getGameMode(evt, 'zone_active');
-  const center = zoneCenterOf(evt);
-  if(!mode || !center) return;
+  if(!mode) return;
+  const center = zoneActiveCenterOf(evt, mode);
+  if(!center) return;
   beamerZoneMap = L.map(container, {zoomControl: false, attributionControl: false, scrollWheelZoom: false}).setView([center.lat, center.lng], 14);
   createOfflineTileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
     subdomains: 'abcd', maxZoom: 20

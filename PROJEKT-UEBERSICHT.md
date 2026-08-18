@@ -163,7 +163,7 @@ Nicht als Vorgabe gedacht, sondern als Ausgangspunkte, falls hilfreich:
 
 Damit ein neuer Phasenplan realistisch bleibt, ein paar Rahmenbedingungen, die sich in der bisherigen Entwicklung als wichtig erwiesen haben:
 
-- **Kein Fremd-Framework einführen** — die App ist bewusst dependency-arm gehalten (nur Leaflet, jsPDF, QRCode-Lib, sql.js — alle über CDN, kein `npm install` für den Betrieb).
+- **Kein Fremd-Framework einführen** — die App ist bewusst dependency-arm gehalten (Leaflet, jsPDF, QRCode-Lib, jsQR, sql.js — alle über CDN, kein `npm install` für den Betrieb). Einzige bewusste Ausnahme seit Paket 4 (18.08.2026): **Leaflet.draw** (`leaflet.draw@1.0.4`, ebenfalls CDN) für den Zonen-Editor auf der Karte — kein allgemeines Framework, sondern ein eng begrenztes Leaflet-Plugin für genau eine Aufgabe (Kreis/Polygon zeichnen+editieren), degradiert ohne Fehler falls die CDN-Datei mal nicht lädt (`initZoneDrawControl()` in `map.js` prüft `L.Control.Draw` vor der Nutzung).
 - **`src/core/` muss zwischen beiden Varianten byte-identisch bleiben.** Neue Variante-spezifische Logik muss sauber über die Storage-Seams laufen, nicht als Verzweigung mitten im gemeinsamen Code.
 - **Alles muss weiterhin ohne Server funktionieren können** (zumindest die lokale Variante) — Features, die zwingend einen Server voraussetzen, sollten das für die lokale Variante nicht kaputt machen (im Zweifel: Feature nur in der Server-Variante sichtbar).
 - **Die Test-Suite (`test-suite.js`) sollte mit jeder neuen Phase mitwachsen** — bisher hat sich das bewährt, um Regressionen über 13 Phasen hinweg zu vermeiden.

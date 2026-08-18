@@ -105,6 +105,15 @@ function isCpSatisfiedForRider(rider, cp){
   if((rider.completed || []).includes(cp.id)) return true;
   return !!(rider.gameFlags && rider.gameFlags.jokerCpId === cp.id);
 }
+function setZoneActive(evt, zoneId, active){
+  const zone = getZone(evt, zoneId);
+  if(!zone) return null;
+  zone.active = !!active;
+  pushEventLog(evt, 'district_toggled', active
+    ? t('gameModes.tickerDistrictActivated', {name: zone.name || t('zones.unnamed')})
+    : t('gameModes.tickerDistrictDeactivated', {name: zone.name || t('zones.unnamed')}), null);
+  return zone;
+}
 function zoneCenterOf(evt){
   const withPos = (evt.checkpoints || []).filter(c => Number.isFinite(c.lat) && Number.isFinite(c.lng));
   if(!withPos.length) return null;
@@ -117,12 +126,24 @@ function currentZoneStage(evt, mode){
   const idx = evt.ruleRuntimeState && Number.isInteger(evt.ruleRuntimeState.zoneStage) ? evt.ruleRuntimeState.zoneStage : -1;
   return idx >= 0 && idx < stages.length ? stages[idx] : null;
 }
+/* Paket 4 migration: zone_active can now anchor on a real, organizer-drawn
+   circle from evt.zones (mode.config.zoneId) instead of always the implicit
+   checkpoint centroid. Falls back to the original zoneCenterOf() whenever no
+   zone is picked (or the picked one was deleted/isn't a circle) — this is
+   the compatibility seam that keeps every pre-Paket-4 event and every
+   existing zone_active test passing unchanged, since none of them set
+   config.zoneId. */
+function zoneActiveCenterOf(evt, mode){
+  const zone = mode && mode.config && mode.config.zoneId ? getZone(evt, mode.config.zoneId) : null;
+  if(zone && zone.type === 'circle' && zone.center) return zone.center;
+  return zoneCenterOf(evt);
+}
 function isCpClosedByZone(evt, cp){
   const mode = getGameMode(evt, 'zone_active');
   if(!mode || !mode.enabled) return false;
   const stage = currentZoneStage(evt, mode);
   if(!stage) return false;
-  const center = zoneCenterOf(evt);
+  const center = zoneActiveCenterOf(evt, mode);
   if(!center || !Number.isFinite(cp.lat) || !Number.isFinite(cp.lng)) return false;
   const distMeters = haversineDistanceKm(center.lat, center.lng, cp.lat, cp.lng) * 1000;
   return distMeters > stage.radius;
@@ -133,6 +154,9 @@ function advanceZoneStage(evt, mode){
   const current = Number.isInteger(evt.ruleRuntimeState.zoneStage) ? evt.ruleRuntimeState.zoneStage : -1;
   if(current + 1 >= stages.length) return false;
   evt.ruleRuntimeState.zoneStage = current + 1;
+  const newStage = stages[evt.ruleRuntimeState.zoneStage];
+  const zone = mode.config.zoneId ? getZone(evt, mode.config.zoneId) : null;
+  if(zone && zone.type === 'circle' && newStage) zone.radiusMeters = newStage.radius;
   pushEventLog(evt, 'zone_shrink', t('gameModes.tickerZoneShrink', {n: current + 2}), null);
   AlleycatSounds.play('zone_shrink');
   return true;

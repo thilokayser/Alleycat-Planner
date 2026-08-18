@@ -33,13 +33,15 @@ function withEventDefaults(evt){
     ruleRuntimeState: {},
     pointsLedger: [],
     actionLog: [],
-    featureFlags: {categories: true, gameModes: true}
+    featureFlags: {categories: true, gameModes: true},
+    zones: []
   }, evt);
   merged.pdfBlocks = (merged.pdfBlocks || []).map(withPdfBlockDefaults);
   merged.gameModes = (merged.gameModes || []).map(withGameModeDefaults);
   merged.checkpoints = (merged.checkpoints || []).map(withCheckpointDefaults);
   merged.riders = (merged.riders || []).map(withRiderDefaults);
   merged.manifestSettings = withManifestSettingsDefaults(merged.manifestSettings);
+  merged.zones = (merged.zones || []).map(withZoneDefaults);
   return merged;
 }
 

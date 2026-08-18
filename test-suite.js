@@ -746,6 +746,75 @@ async function runAlleycatTestSuite(){
       gEvt.gameModes = gEvt.gameModes.filter(m => m.type !== 'zone_active');
     }
 
+    /* zone_active + Paket 4: optionale Bindung an eine echte evt.zones-
+       Kreiszone (config.zoneId) statt am automatischen Checkpoint-Mittelpunkt.
+       Rückwärtskompatibilität ist im Block direkt oberhalb bereits erwiesen
+       (dort bleibt zoneId ungesetzt, Verhalten unverändert). */
+    {
+      gEvt.ruleRuntimeState.zoneStage = -1;
+      const zoneMode2 = enableMode('zone_active', {triggerMode: 'manual', stages: [{radius: 100, atMinute: 0}, {radius: 50, atMinute: 5}]});
+      const farCp2 = gEvt.checkpoints[2];
+      const linkedZone = addZone(gEvt, {type: 'circle', name: 'Arena', center: {lat: farCp2.lat, lng: farCp2.lng}, radiusMeters: 999});
+      zoneMode2.config.zoneId = linkedZone.id;
+
+      evaluateRules(gEvt, 'manual', {action: 'advance_zone_stage', modeId: zoneMode2.id});
+      checkEqual('Mit gesetzter zoneId liegt der Mittelpunkt auf der Zone statt dem Checkpoint-Mittelpunkt (derselbe Checkpoint war oben mit Auto-Mittelpunkt gesperrt)', isCpClosedByZone(gEvt, farCp2), false);
+      checkEqual('advanceZoneStage synct den Radius der verknüpften Zone auf die neue Stufe', linkedZone.radiusMeters, 100);
+
+      evaluateRules(gEvt, 'manual', {action: 'advance_zone_stage', modeId: zoneMode2.id});
+      checkEqual('Zweiter Stufenwechsel synct den Zonen-Radius erneut', linkedZone.radiusMeters, 50);
+
+      const formHtml = renderGameModeConfigForm(gEvt, zoneMode2);
+      check('Zonen-Auswahl erscheint im Konfigurationsformular', formHtml.includes(t('gameModes.zoneSourceLabel')) && formHtml.includes('Arena'));
+
+      removeZone(gEvt, linkedZone.id);
+      gEvt.ruleRuntimeState.zoneStage = -1;
+      gEvt.gameModes = gEvt.gameModes.filter(m => m.type !== 'zone_active');
+    }
+
+    /* districts ("Bezirke"): mehrere gleichzeitig aktive Zonen, unabhängig
+       vom einen schrumpfenden zone_active-Kreis — teilt sich nur das
+       zones.js-Fundament (group/active-Felder, getCheckpointZone()). */
+    {
+      checkEqual('withZoneDefaults: group-Default ist leer', withZoneDefaults({}).group, '');
+      checkEqual('withZoneDefaults: active-Default ist false', withZoneDefaults({}).active, false);
+
+      const districtMode = enableMode('districts', {subVariant: 'points_only', pointsPerCheckpoint: 5});
+      const insideCp = gEvt.checkpoints[0];
+      const outsideCp = gEvt.checkpoints[2];
+      const district = addZone(gEvt, {type: 'circle', name: 'Bezirk A', group: 'district', center: {lat: insideCp.lat, lng: insideCp.lng}, radiusMeters: 100});
+
+      checkEqual('getCheckpointZone findet die Zone für einen Checkpoint innerhalb', getCheckpointZone(insideCp, [district]).id, district.id);
+      checkEqual('getCheckpointZone liefert null für einen Checkpoint außerhalb', getCheckpointZone(outsideCp, [district]), null);
+
+      const before = pointsForRider(gEvt, gEvt.riders[0].bib);
+      evaluateRules(gEvt, 'on_checkin', {rider: gEvt.riders[0], checkpoint: insideCp, timestamp: toLocalDateTimeInputValue(new Date())});
+      checkEqual('points_only: keine Punkte, solange der Bezirk inaktiv ist', pointsForRider(gEvt, gEvt.riders[0].bib), before);
+
+      evaluateRules(gEvt, 'manual', {action: 'toggle_district', zoneId: district.id, active: true});
+      checkEqual('manuelles toggle_district aktiviert die Zone', district.active, true);
+      check('Aktivierung erzeugt eventLog-Eintrag', gEvt.ruleRuntimeState.eventLog.some(e => e.type === 'district_toggled'));
+
+      evaluateRules(gEvt, 'on_checkin', {rider: gEvt.riders[0], checkpoint: insideCp, timestamp: toLocalDateTimeInputValue(new Date())});
+      checkEqual('points_only: Punkte werden gutgeschrieben, sobald der Bezirk aktiv ist', pointsForRider(gEvt, gEvt.riders[0].bib), before + 5);
+
+      removeLedgerEntries(gEvt, p => p.source === 'districts');
+      districtMode.config.subVariant = 'gated';
+      evaluateRules(gEvt, 'manual', {action: 'toggle_district', zoneId: district.id, active: false});
+      const gatedBlock = evaluateRules(gEvt, 'on_checkin', {rider: gEvt.riders[0], checkpoint: insideCp, timestamp: toLocalDateTimeInputValue(new Date())});
+      check('gated: Check-in wird blockiert, solange der Bezirk inaktiv ist', gatedBlock.blocked);
+
+      evaluateRules(gEvt, 'manual', {action: 'toggle_district', zoneId: district.id, active: true});
+      const gatedOpen = evaluateRules(gEvt, 'on_checkin', {rider: gEvt.riders[0], checkpoint: insideCp, timestamp: toLocalDateTimeInputValue(new Date())});
+      check('gated: Check-in nicht blockiert, sobald der Bezirk aktiv ist', !gatedOpen.blocked);
+
+      const districtFormHtml = renderGameModeConfigForm(gEvt, districtMode);
+      check('Bezirks-Konfigurationsformular zeigt die Zone und die Variante', districtFormHtml.includes('Bezirk A') && districtFormHtml.includes(t('gameModes.districtSubVariantLabel')));
+
+      removeZone(gEvt, district.id);
+      gEvt.gameModes = gEvt.gameModes.filter(m => m.type !== 'districts');
+    }
+
     /* rider_flag: Wildcard/Joker */
     {
       enableMode('rider_flag');
@@ -1278,6 +1347,52 @@ async function runAlleycatTestSuite(){
     await wait(20);
   }
 
+  /* 3o) Paket 4 Teil A, Schritt 1: Zonen-Fundament — Datenmodell + Geometrie
+     (src/core/zones.js). Bewusst isoliert von game-modes.js/rules-engine.js
+     getestet — die bestehende Battle-Royale-Logik (zone_active) rechnet
+     weiterhin mit ihrem eigenen, auto-zentrierten Kreis; die Migration auf
+     evt.zones ist ein separater, späterer Schritt. */
+  {
+    checkEqual('Event hat leere zones per Default', evt.zones.length, 0);
+
+    const domCenter = {lat: 50.9413, lng: 6.9583};
+    const circleZone = addZone(evt, {name: 'Dom-Kreis', type: 'circle', center: domCenter, radiusMeters: 200});
+    checkEqual('addZone legt Zone an', evt.zones.length, 1);
+    check('withZoneDefaults vergibt eine zone-ID', circleZone.id.startsWith('zone-'));
+    checkEqual('withZoneDefaults: type-Default ist "circle"', withZoneDefaults({}).type, 'circle');
+
+    checkEqual('getZone findet die angelegte Zone', getZone(evt, circleZone.id).name, 'Dom-Kreis');
+    updateZone(evt, circleZone.id, {radiusMeters: 500});
+    checkEqual('updateZone ändert Felder', getZone(evt, circleZone.id).radiusMeters, 500);
+    updateZone(evt, circleZone.id, {radiusMeters: 200});
+
+    const squarePoints = [
+      {lat: 50.940, lng: 6.957}, {lat: 50.940, lng: 6.960},
+      {lat: 50.943, lng: 6.960}, {lat: 50.943, lng: 6.957}
+    ];
+    const polygonZone = addZone(evt, {name: 'Dom-Polygon', type: 'polygon', points: squarePoints});
+    checkEqual('Zweite Zone angelegt', evt.zones.length, 2);
+
+    check('isPointInCircle: Zentrum liegt im Kreis', isPointInCircle(domCenter.lat, domCenter.lng, domCenter.lat, domCenter.lng, 200));
+    check('isPointInCircle: 5km entfernter Punkt liegt außerhalb', !isPointInCircle(50.99, 7.02, domCenter.lat, domCenter.lng, 200));
+    check('isPointInCircle: fehlende Koordinaten liefern false statt Fehler', !isPointInCircle(NaN, 6.96, domCenter.lat, domCenter.lng, 200));
+
+    check('isPointInPolygon: Punkt innerhalb des Quadrats', isPointInPolygon(50.9415, 6.9585, squarePoints));
+    check('isPointInPolygon: Punkt klar außerhalb', !isPointInPolygon(50.95, 6.98, squarePoints));
+    check('isPointInPolygon: Polygon mit <3 Punkten liefert false', !isPointInPolygon(50.9415, 6.9585, squarePoints.slice(0, 2)));
+
+    check('isPointInZone dispatcht auf Kreis-Zone', isPointInZone(domCenter.lat, domCenter.lng, circleZone));
+    check('isPointInZone dispatcht auf Polygon-Zone', isPointInZone(50.9415, 6.9585, polygonZone));
+    check('isPointInZone: Punkt außerhalb beider Zonen', !isPointInZone(50.95, 6.98, polygonZone) && !isPointInZone(50.95, 6.98, circleZone));
+
+    const centroid = polygonCentroid(squarePoints);
+    check('polygonCentroid berechnet den Mittelpunkt korrekt', Math.abs(centroid.lat - 50.9415) < 0.0001 && Math.abs(centroid.lng - 6.9585) < 0.0001);
+
+    removeZone(evt, polygonZone.id);
+    checkEqual('removeZone entfernt die Zone wieder', evt.zones.length, 1);
+    /* Kreis-Zone bleibt bewusst stehen, für den Persistenz-Check in Abschnitt 4 */
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -1302,6 +1417,8 @@ async function runAlleycatTestSuite(){
   checkEqual('scoringMode persistiert', reloaded && reloaded.scoringMode, evt.scoringMode);
   checkEqual('gameModes persistiert', reloaded && reloaded.gameModes.length, evt.gameModes.length);
   checkEqual('gameModes-Aktivierung persistiert', reloaded && reloaded.gameModes.find(m => m.type === 'first_n') && reloaded.gameModes.find(m => m.type === 'first_n').enabled, true);
+  checkEqual('zones persistiert', reloaded && reloaded.zones.length, evt.zones.length);
+  checkEqual('Zonen-Radius persistiert', reloaded && reloaded.zones[0] && reloaded.zones[0].radiusMeters, 200);
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();

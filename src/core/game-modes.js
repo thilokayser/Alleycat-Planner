@@ -8,8 +8,8 @@
    Erweiterung" — needs live leader recalculation + rider-tag interaction) and
    intentionally not implemented here; its condition type `is_leader` is
    therefore unused for now. */
-const GAME_MODE_TYPES = ['time_window', 'first_n', 'prerequisite', 'zone_active', 'rider_flag', 'sequence_match', 'sudden_death'];
-const POINTS_AWARDING_MODE_TYPES = ['first_n', 'sequence_match'];
+const GAME_MODE_TYPES = ['time_window', 'first_n', 'prerequisite', 'zone_active', 'districts', 'rider_flag', 'sequence_match', 'sudden_death'];
+const POINTS_AWARDING_MODE_TYPES = ['first_n', 'sequence_match', 'districts'];
 /* `||` treats an intentional 0 (e.g. "eliminate immediately") the same as
    "unset", silently falling back to the default — use this instead for any
    numeric config field where 0 is a legitimate value. */
@@ -92,7 +92,7 @@ const GAME_MODE_DEFS = {
   },
   zone_active: {
     type: 'zone_active',
-    defaultConfig: {triggerMode: 'scheduled', stages: [{radius: 2000, atMinute: 10}, {radius: 1000, atMinute: 20}, {radius: 500, atMinute: 30}]},
+    defaultConfig: {triggerMode: 'scheduled', zoneId: '', stages: [{radius: 2000, atMinute: 10}, {radius: 1000, atMinute: 20}, {radius: 500, atMinute: 30}]},
     rules: [
       {
         trigger: 'on_tick',
@@ -108,6 +108,41 @@ const GAME_MODE_DEFS = {
         trigger: 'on_checkin',
         condition: (evt, mode, ctx) => ctx.checkpoint && isCpClosedByZone(evt, ctx.checkpoint),
         effect: () => ({block: true, message: t('gameModes.zoneClosedBlocked')})
+      }
+    ]
+  },
+  /* "Bezirke": the roadmap's own framing — Battle Royale and Districts are
+     two applications of the same zones.js system, just different activation
+     logic (one zone shrinking on a schedule vs. any number of zones toggled
+     independently). A zone joins the district set by being picked in this
+     mode's config UI (which tags it group:'district', mirroring how picking
+     a Battle-Royale zone tags group:'battle_royale') — deliberately manual
+     triggering only for v1 (an HQ button per district), no per-zone
+     schedule; the roadmap's "oder Zeitplan" option and per-checkpoint zone
+     overrides for edge cases are both noted as deferred, not built here. */
+  districts: {
+    type: 'districts',
+    defaultConfig: {subVariant: 'points_only', pointsPerCheckpoint: 5},
+    rules: [
+      {
+        trigger: 'on_checkin',
+        condition: (evt, mode, ctx) => ctx.checkpoint && !!getCheckpointZone(ctx.checkpoint, (evt.zones || []).filter(z => z.group === 'district')),
+        effect: (evt, mode, ctx) => {
+          const zone = getCheckpointZone(ctx.checkpoint, (evt.zones || []).filter(z => z.group === 'district'));
+          if(!zone) return;
+          if(mode.config.subVariant === 'gated'){
+            if(!zone.active) return {block: true, message: t('gameModes.districtInactiveBlocked', {name: zone.name || t('zones.unnamed')})};
+            return;
+          }
+          if(zone.active){
+            awardPoints(evt, ctx.rider.bib, ctx.checkpoint.id, numOr(mode.config.pointsPerCheckpoint, 5), t('gameModes.districtReason', {name: zone.name || t('zones.unnamed')}), 'districts');
+          }
+        }
+      },
+      {
+        trigger: 'manual',
+        condition: (evt, mode, ctx) => ctx.action === 'toggle_district' && ctx.zoneId,
+        effect: (evt, mode, ctx) => { setZoneActive(evt, ctx.zoneId, ctx.active); }
       }
     ]
   },
@@ -204,6 +239,15 @@ function onZoneTriggerModeChange(value){
   debouncedSave();
   renderOverview();
 }
+function onZoneModeZoneChange(value){
+  const evt = state.currentEvent;
+  const mode = getGameMode(evt, 'zone_active');
+  if(!mode) return;
+  mode.config.zoneId = value || '';
+  if(value) updateZone(evt, value, {group: 'battle_royale'});
+  debouncedSave();
+  renderOverview();
+}
 function addZoneStage(){
   const mode = getGameMode(state.currentEvent, 'zone_active');
   if(!mode) return;
@@ -224,6 +268,22 @@ function onZoneStageFieldChange(idx, field, value){
   if(!mode || !mode.config.stages[idx]) return;
   mode.config.stages[idx][field] = parseInt(value, 10) || 0;
   debouncedSave();
+}
+function addDistrictZone(zoneId){
+  if(!zoneId) return;
+  updateZone(state.currentEvent, zoneId, {group: 'district'});
+  debouncedSave();
+  renderOverview();
+}
+function removeDistrictZone(zoneId){
+  updateZone(state.currentEvent, zoneId, {group: '', active: false});
+  debouncedSave();
+  renderOverview();
+}
+function toggleDistrictActive(zoneId, active){
+  evaluateRules(state.currentEvent, 'manual', {action: 'toggle_district', zoneId, active});
+  debouncedSave();
+  renderOverview();
 }
 function manualAdvanceZoneStage(){
   const evt = state.currentEvent;
@@ -268,6 +328,7 @@ function renderGameModeConfigForm(evt, mode){
       const stages = mode.config.stages || [];
       const stageInfo = currentZoneStage(evt, mode);
       const closedCps = (evt.checkpoints || []).filter(cp => isCpClosedByZone(evt, cp));
+      const circleZones = (evt.zones || []).filter(z => z.type === 'circle');
       return `
         <div class="game-mode-config-row">
           <label>${t('gameModes.zoneTriggerModeLabel')}</label>
@@ -276,6 +337,14 @@ function renderGameModeConfigForm(evt, mode){
             <option value="manual" ${mode.config.triggerMode === 'manual' ? 'selected' : ''}>${t('gameModes.zoneTriggerManual')}</option>
             <option value="both" ${mode.config.triggerMode === 'both' ? 'selected' : ''}>${t('gameModes.zoneTriggerBoth')}</option>
           </select>
+        </div>
+        <div class="game-mode-config-row">
+          <label>${t('gameModes.zoneSourceLabel')}</label>
+          <select onchange="onZoneModeZoneChange(this.value)">
+            <option value="">${t('gameModes.zoneSourceAuto')}</option>
+            ${circleZones.map(z => `<option value="${z.id}" ${mode.config.zoneId === z.id ? 'selected' : ''}>${escapeHtml(z.name || t('zones.unnamed'))}</option>`).join('')}
+          </select>
+          <div class="settings-hint">${t('gameModes.zoneSourceHint')}</div>
         </div>
         <div class="game-mode-zone-stages">
           ${stages.map((s, i) => `
@@ -293,6 +362,43 @@ function renderGameModeConfigForm(evt, mode){
           ${(mode.config.triggerMode === 'manual' || mode.config.triggerMode === 'both') ? `<button type="button" class="btn btn-sm" onclick="manualAdvanceZoneStage()">${t('gameModes.advanceStageButton')}</button>` : ''}
         </div>
         ${closedCps.length ? `<div class="game-mode-zone-closed">${t('gameModes.closedCheckpoints', {names: closedCps.map(c => escapeHtml(c.name || '—')).join(', ')})}</div>` : ''}
+      `;
+    }
+    case 'districts': {
+      const districtZones = (evt.zones || []).filter(z => z.group === 'district');
+      const availableZones = (evt.zones || []).filter(z => !z.group);
+      return `
+        <div class="game-mode-config-row">
+          <label>${t('gameModes.districtSubVariantLabel')}</label>
+          <select onchange="onGameModeConfigChange('districts', 'subVariant', this.value)">
+            <option value="points_only" ${mode.config.subVariant !== 'gated' ? 'selected' : ''}>${t('gameModes.districtSubVariantPointsOnly')}</option>
+            <option value="gated" ${mode.config.subVariant === 'gated' ? 'selected' : ''}>${t('gameModes.districtSubVariantGated')}</option>
+          </select>
+        </div>
+        ${mode.config.subVariant !== 'gated' ? `
+        <div class="game-mode-config-row">
+          <label>${t('gameModes.districtPointsLabel')}</label>
+          <input type="number" min="0" value="${numOr(mode.config.pointsPerCheckpoint, 5)}" onchange="onGameModeConfigChange('districts', 'pointsPerCheckpoint', numOr(parseInt(this.value, 10), 5))">
+        </div>
+        ` : ''}
+        <div class="game-mode-zone-stages">
+          ${districtZones.map(z => `
+            <div class="game-mode-zone-stage-row">
+              <span>${escapeHtml(z.name || t('zones.unnamed'))}</span>
+              <button type="button" class="btn btn-sm ${z.active ? 'btn-primary' : ''}" onclick="toggleDistrictActive('${z.id}', ${!z.active})">${z.active ? t('gameModes.districtActiveLabel') : t('gameModes.districtInactiveLabel')}</button>
+              <button type="button" class="btn btn-sm btn-danger" onclick="removeDistrictZone('${z.id}')">${t('common.remove')}</button>
+            </div>
+          `).join('')}
+          ${availableZones.length ? `
+            <div class="game-mode-zone-stage-row">
+              <select id="district-zone-picker-${mode.id}">
+                ${availableZones.map(z => `<option value="${z.id}">${escapeHtml(z.name || t('zones.unnamed'))}</option>`).join('')}
+              </select>
+              <button type="button" class="btn btn-sm" onclick="addDistrictZone(document.getElementById('district-zone-picker-${mode.id}').value)">${t('gameModes.addDistrictZone')}</button>
+            </div>
+          ` : ''}
+          ${!districtZones.length && !availableZones.length ? `<div class="settings-hint">${t('gameModes.districtNoZones')}</div>` : ''}
+        </div>
       `;
     }
     default:

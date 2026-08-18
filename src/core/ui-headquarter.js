@@ -54,9 +54,10 @@ let state = {
   teamsPanelOpen: false,
   categoriesPanelOpen: false,
   cardDesignPanelOpen: false,
+  zonesPanelOpen: false,
 };
 let pdfPreviewDoc = null;
-let map, markersLayer, routeLine, cpMarkers = {};
+let map, markersLayer, zonesLayer, routeLine, cpMarkers = {};
 let qrScanStream = null;
 let qrScanRAF = null;
 let liveCountdownInterval = null;
