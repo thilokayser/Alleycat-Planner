@@ -2052,6 +2052,46 @@ async function runAlleycatTestSuite(){
     render();
   }
 
+  /* 3y) Paket 5 Teil A, Schritt 1: formatDistance() + Metrisch/Imperial-Switch
+     (Spec 20.1). Reine Formatierungsschicht — computeRouteLegs()/der
+     Routen-Schätzer rechnen weiterhin intern in km (unverändert), nur die
+     Ausgabe geht jetzt durch formatDistance(meters). Editierbare
+     Radius-Felder (Zonen, Proximity-Puffer) bewusst NICHT migriert — siehe
+     Kommentar in utils.js. */
+  {
+    checkEqual('formatDistance: Standard ist metrisch', state.appSettings.distanceUnit, 'metric');
+    checkEqual('formatDistance (metrisch, <1000m) rundet auf ganze Meter', formatDistance(542.7), '543 m');
+    checkEqual('formatDistance (metrisch, >=1000m) zeigt km mit 2 Nachkommastellen', formatDistance(2345), '2.35 km');
+    checkEqual('formatDistance: ungültiger Wert liefert leeren String', formatDistance(NaN), '');
+
+    const unitBefore = state.appSettings.distanceUnit;
+    setDistanceUnit('imperial');
+    checkEqual('setDistanceUnit persistiert die Einheit', state.appSettings.distanceUnit, 'imperial');
+    checkEqual('formatDistance (imperial, <528ft) zeigt Fuß', formatDistance(100), '328 ft');
+    checkEqual('formatDistance (imperial, >=528ft) zeigt Meilen', formatDistance(2000), '1.24 mi');
+
+    /* Integration: Sidebar-Gesamtdistanz + Routen-Schätzer respektieren die
+       Einheit, ohne dass computeRouteLegs()/estimateOptimalRoute() selbst
+       etwas von Einheiten wissen. */
+    const orderModeBefore = evt.checkpointOrderMode;
+    evt.checkpointOrderMode = 'fest';
+    state.view = 'editor';
+    render();
+    check('Sidebar-Gesamtdistanz zeigt Imperial-Einheit statt km', document.getElementById('sidebar').innerHTML.includes(' mi') || document.getElementById('sidebar').innerHTML.includes(' ft'));
+    evt.checkpointOrderMode = orderModeBefore;
+
+    state.logisticsPanelOpen = true;
+    state.routeEstimate = estimateOptimalRoute(evt);
+    const logisticsHtmlImperial = renderLogisticsPanel(evt);
+    check('Logistik-Panel zeigt Imperial-Einheit statt km', logisticsHtmlImperial.includes(' mi') || logisticsHtmlImperial.includes(' ft'));
+    state.logisticsPanelOpen = false;
+    state.routeEstimate = undefined;
+
+    setDistanceUnit(unitBefore);
+    checkEqual('setDistanceUnit zurückgesetzt', state.appSettings.distanceUnit, unitBefore);
+    render();
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();

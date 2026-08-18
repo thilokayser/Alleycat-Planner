@@ -639,7 +639,7 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
             </div>
             ${editBlock}
           </div>
-          ${routeInfo && routeInfo.legs[cpIdx] ? `<div class="cp-leg-distance">↓ ${routeInfo.legs[cpIdx].km.toFixed(2)} km</div>` : ''}`;
+          ${routeInfo && routeInfo.legs[cpIdx] ? `<div class="cp-leg-distance">↓ ${formatDistance(routeInfo.legs[cpIdx].km * 1000)}</div>` : ''}`;
 }
 function renderCpListRows(evt, locked, routeInfo){
   if(evt.checkpoints.length === 0) return emptyStateHtml({
@@ -694,7 +694,7 @@ function renderSidebar(){
     </div>
     ${routeInfo ? `
       <div class="cp-total-distance">
-        ${t('checkpointOrder.totalDistance', {km: routeInfo.total.toFixed(2)})}
+        ${t('checkpointOrder.totalDistance', {distance: formatDistance(routeInfo.total * 1000)})}
         <span class="cp-distance-hint">${t('checkpointOrder.distanceHint')}</span>
       </div>
     ` : ''}

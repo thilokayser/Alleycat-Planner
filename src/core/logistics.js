@@ -202,9 +202,9 @@ function renderLogisticsPanel(evt){
   } else {
     const percent = est.currentDistanceKm > 0 ? Math.round(est.savingsKm / est.currentDistanceKm * 100) : 0;
     routeBody = `
-      <div class="logistics-result-row"><span>${t('logistics.currentDistance')}</span><b>${est.currentDistanceKm.toFixed(2)} km</b></div>
-      <div class="logistics-result-row"><span>${t('logistics.optimizedDistance')}</span><b>${est.optimizedDistanceKm.toFixed(2)} km</b></div>
-      ${est.savingsKm > 0.05 ? `<div class="logistics-savings">${t('logistics.savings', {km: est.savingsKm.toFixed(2), percent})}</div>` : ''}
+      <div class="logistics-result-row"><span>${t('logistics.currentDistance')}</span><b>${formatDistance(est.currentDistanceKm * 1000)}</b></div>
+      <div class="logistics-result-row"><span>${t('logistics.optimizedDistance')}</span><b>${formatDistance(est.optimizedDistanceKm * 1000)}</b></div>
+      ${est.savingsKm > 0.05 ? `<div class="logistics-savings">${t('logistics.savings', {distance: formatDistance(est.savingsKm * 1000), percent})}</div>` : ''}
       <div class="logistics-speed-row">
         <label>${t('logistics.avgSpeedLabel')}</label>
         <input type="number" min="1" step="1" value="${speed}" onchange="onLogisticsSpeedChange(this.value)"> km/h

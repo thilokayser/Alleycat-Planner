@@ -49,6 +49,27 @@ function formatCountdown(ms){
   const pad = n => String(n).padStart(2, '0');
   return sign + (h > 0 ? h + ':' + pad(m) + ':' + pad(s) : pad(m) + ':' + pad(s));
 }
+/* Paket 5 Teil A, Schritt 1 (Spec 20.1): the one place display distances get
+   formatted, metric/imperial switch driven by state.appSettings.distanceUnit.
+   Takes meters (the canonical unit per spec) — callers that compute in km
+   (computeRouteLegs()/logistics.js's route estimator, both pre-dating this
+   step and left as-is rather than reworked to a meters-internal
+   representation, a much larger and purely internal change for zero
+   user-visible benefit) convert with `* 1000` at the call site. Deliberately
+   NOT applied to editable radius/buffer inputs (zone radius, proximity
+   buffer) — those are configured thresholds the organizer types directly in
+   meters, not a reported travel distance, so converting them bidirectionally
+   into feet would be a different, bigger feature than this step asks for. */
+function formatDistance(meters){
+  if(!Number.isFinite(meters)) return '';
+  if(state.appSettings.distanceUnit === 'imperial'){
+    const feet = meters * 3.28084;
+    if(feet < 528) return `${Math.round(feet)} ft`;
+    return `${(meters / 1609.344).toFixed(2)} mi`;
+  }
+  if(meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(2)} km`;
+}
 function haversineDistanceKm(lat1, lng1, lat2, lng2){
   const R = 6371;
   const toRad = deg => deg * Math.PI / 180;
