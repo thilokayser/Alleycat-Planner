@@ -34,7 +34,8 @@ function withEventDefaults(evt){
     pointsLedger: [],
     actionLog: [],
     featureFlags: {categories: true, gameModes: true},
-    zones: []
+    zones: [],
+    eventLocations: []
   }, evt);
   merged.pdfBlocks = (merged.pdfBlocks || []).map(withPdfBlockDefaults);
   merged.gameModes = (merged.gameModes || []).map(withGameModeDefaults);
@@ -42,6 +43,7 @@ function withEventDefaults(evt){
   merged.riders = (merged.riders || []).map(withRiderDefaults);
   merged.manifestSettings = withManifestSettingsDefaults(merged.manifestSettings);
   merged.zones = (merged.zones || []).map(withZoneDefaults);
+  merged.eventLocations = (merged.eventLocations || []).map(withEventLocationDefaults);
   return merged;
 }
 

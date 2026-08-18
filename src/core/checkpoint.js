@@ -151,6 +151,7 @@ function bulkDeleteCheckpoints(){
   if(!cps.length) return;
   if(!confirm(t('checkpoint.bulkDeleteConfirm', {count: cps.length}))) return;
   const ids = cps.map(cp => cp.id);
+  ids.forEach(id => unlinkHqIfCheckpointDeleted(state.currentEvent, id));
   if(ids.includes(state.editingId)) state.editingId = null;
   state.currentEvent.checkpoints = state.currentEvent.checkpoints.filter(c => !ids.includes(c.id));
   state.currentEvent.checkpoints.forEach((c, i) => c.order = i + 1);
@@ -158,6 +159,7 @@ function bulkDeleteCheckpoints(){
   debouncedSave();
   renderSidebar();
   redrawMarkers();
+  redrawEventLocations();
 }
 function renderCpBulkActionsBar(){
   if(!state.cpBulkSelectedIds.length) return '';
@@ -256,6 +258,7 @@ function askDeleteCp(id){
 function confirmDeleteCp(id){
   const cp = findCp(id);
   if(cp && (cp.locked || isCpLocked(state.currentEvent))) return;
+  unlinkHqIfCheckpointDeleted(state.currentEvent, id);
   state.currentEvent.checkpoints = state.currentEvent.checkpoints.filter(c => c.id !== id);
   state.currentEvent.checkpoints.forEach((c,i) => c.order = i+1);
   if(state.editingId === id) state.editingId = null;
@@ -263,6 +266,7 @@ function confirmDeleteCp(id){
   debouncedSave();
   renderSidebar();
   redrawMarkers();
+  redrawEventLocations();
 }
 function onEditName(id, value){
   const cp = findCp(id); if(!cp) return;
@@ -335,16 +339,27 @@ function onEditLat(id, value){
   const n = parseFloat(value);
   if(isNaN(n)) return;
   cp.lat = n;
+  syncHqLocationFromCheckpoint(state.currentEvent, cp);
   debouncedSave();
   redrawMarkers();
+  redrawEventLocations();
 }
 function onEditLng(id, value){
   const cp = findCp(id); if(!cp) return;
   const n = parseFloat(value);
   if(isNaN(n)) return;
   cp.lng = n;
+  syncHqLocationFromCheckpoint(state.currentEvent, cp);
   debouncedSave();
   redrawMarkers();
+  redrawEventLocations();
+}
+function onEditIsHq(id, checked){
+  const evt = state.currentEvent;
+  setCheckpointAsHq(evt, id, checked);
+  debouncedSave();
+  renderSidebar();
+  redrawEventLocations();
 }
 function duplicateCheckpoint(id){
   const evt = state.currentEvent;
@@ -467,6 +482,7 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
               <div class="cp-readonly-row"><b>${t('checkpoint.checkpointTypeLabel')}:</b> ${escapeHtml(getCheckpointType(cp.type).fullLabel)}</div>
               ${cp.clue ? `<div class="cp-readonly-row"><b>${t('checkpoint.clueLabel')}:</b> ${escapeHtml(cp.clue)}</div>` : ''}
               <div class="cp-readonly-row"><b>${t('checkpoint.coordinatesLabel')}:</b> ${cp.lat.toFixed(5)}, ${cp.lng.toFixed(5)}</div>
+              ${isCheckpointHq(evt, cp.id) ? `<div class="cp-readonly-row">🏠 ${t('eventLocations.hqLabel')}</div>` : ''}
               ${cp.locked ? `<div class="cp-readonly-row">${t('checkpoint.lockedHint')}</div>` : ''}
               ${staffCount ? `
                 <div class="cp-readonly-row"><b>${t('checkpoint.staffHeading')}:</b></div>
@@ -528,6 +544,10 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
                 <label class="checkbox-row">
                   <input type="checkbox" ${cp.timeWindowEnabled ? 'checked' : ''} onchange="onEditTimeWindowEnabled('${cp.id}', this.checked)">
                   ${t('checkpoint.timeWindowCheckboxLabel')}
+                </label>
+                <label class="checkbox-row">
+                  <input type="checkbox" ${isCheckpointHq(evt, cp.id) ? 'checked' : ''} onchange="onEditIsHq('${cp.id}', this.checked)">
+                  ${t('eventLocations.hqCheckboxLabel')}
                 </label>
                 ${cp.timeWindowEnabled ? `
                 <div class="row2">
@@ -606,6 +626,7 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
               ${cp.gameHidden && isGameModeEnabled(evt, 'prerequisite') ? `<span class="cp-hidden-badge" title="${t('gameModes.hiddenBadgeTitle')}">${isCpRevealed(evt, cp) ? t('gameModes.revealedBadge') : t('gameModes.hiddenBadge')}</span>` : ''}
               ${isGameModeEnabled(evt, 'zone_active') && isCpClosedByZone(evt, cp) ? `<span class="cp-hidden-badge cp-closed-badge" title="${t('gameModes.zoneClosedBadgeTitle')}">${t('gameModes.zoneClosedBadge')}</span>` : ''}
               ${staffCount ? `<span class="cp-staff-badge" title="${t('checkpoint.staffHeading')}">${t('checkpoint.staffBadgeIcon')} ${staffCount}</span>` : ''}
+              ${isCheckpointHq(evt, cp.id) ? `<span class="cp-staff-badge" title="${t('eventLocations.hqLabel')}">🏠 ${t('eventLocations.hqLabel')}</span>` : ''}
               <span class="cp-row-icon-actions">
                 <button type="button" class="cp-icon-btn" onclick="duplicateCheckpoint('${cp.id}')" title="${t('checkpoint.duplicate')}" ${itemLocked ? 'disabled' : ''}>⧉</button>
                 <button type="button" class="cp-icon-btn" onclick="toggleCpLocked('${cp.id}')" title="${cp.locked ? t('checkpoint.unlock') : t('checkpoint.lock')}" ${locked ? 'disabled' : ''}>${cp.locked ? '🔒' : '🔓'}</button>
@@ -688,6 +709,7 @@ function renderSidebar(){
       ` : ''}
     </div>
     ${renderZonesPanel(evt)}
+    ${renderEventLocationsPanel(evt)}
     ${evt.status === 'running' ? `
       <div class="cp-lock-banner ${evt.cpLockOverride ? 'unlocked' : ''}">
         <span>${evt.cpLockOverride ? t('raceState.cpUnlockedBanner') : t('raceState.cpLockedBanner')}</span>

@@ -18,6 +18,7 @@ const CORE_FILES = [
   'team.js',
   'category.js',
   'zones.js',
+  'event-locations.js',
   'action-log.js',
   'bulk-import.js',
   'feature-registry.js',

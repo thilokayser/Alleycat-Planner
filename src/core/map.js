@@ -11,6 +11,7 @@ function initMap(){
     }).addTo(map);
     markersLayer = L.layerGroup().addTo(map);
     zonesLayer = L.featureGroup().addTo(map);
+    eventLocationsLayer = L.layerGroup().addTo(map);
     map.on('click', onMapClick);
     initZoneDrawControl();
   } else {
@@ -20,6 +21,7 @@ function initMap(){
   if(legendTypes) legendTypes.innerHTML = CHECKPOINT_TYPES.map(t => `${typeIconHtml(t.key)} ${t.shortLabel}`).join(' &middot; ');
   redrawMarkers();
   redrawZones();
+  redrawEventLocations();
   fitToCheckpoints();
 }
 
@@ -169,6 +171,36 @@ function renderZonesPanel(evt){
     </div>
   `;
 }
+/* ---------------- event locations: map markers ----------------
+   Data model + panel UI live in event-locations.js; this is the
+   Leaflet-specific rendering, mirroring the zonesLayer/redrawZones()
+   split above. */
+function redrawEventLocations(){
+  if(!eventLocationsLayer || !state.currentEvent) return;
+  eventLocationsLayer.clearLayers();
+  (state.currentEvent.eventLocations || []).forEach(loc => {
+    if(!eventLocationHasPosition(loc)) return;
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="event-loc-marker event-loc-marker-${loc.type}">${loc.type === 'headquarters' ? '🏠' : '🎉'}</div>`,
+      iconSize: [30, 30], iconAnchor: [15, 15]
+    });
+    const marker = L.marker([loc.lat, loc.lng], {icon, draggable: !loc.linkedCheckpointId});
+    marker.bindTooltip(loc.name || (loc.type === 'headquarters' ? t('eventLocations.hqLabel') : t('eventLocations.afterpartyLabel')), {
+      direction: 'top', offset: [0, -16], className: 'zone-tooltip'
+    });
+    if(!loc.linkedCheckpointId){
+      marker.on('dragend', (ev) => {
+        const pos = ev.target.getLatLng();
+        loc.lat = pos.lat; loc.lng = pos.lng;
+        debouncedSave();
+        renderSidebar();
+      });
+    }
+    marker.addTo(eventLocationsLayer);
+  });
+}
+
 /* ---------------- hover sync: sidebar row <-> map marker ---------------- */
 function setCpRowHoverSync(cpId, on){
   const row = document.querySelector(`.cp-row[data-cp-id="${cpId}"]`);
@@ -269,6 +301,14 @@ function initSidebarResize(){
   });
 }
 function onMapClick(e){
+  if(state.locationPlacementMode && state.currentEvent){
+    const type = state.locationPlacementMode;
+    state.locationPlacementMode = null;
+    const loc = placeEventLocationAt(state.currentEvent, type, e.latlng.lat, e.latlng.lng);
+    if(loc){ debouncedSave(); redrawEventLocations(); }
+    renderSidebar();
+    return;
+  }
   if(!state.addMode || !state.currentEvent || isCpLocked(state.currentEvent)) return;
   const order = state.currentEvent.checkpoints.length + 1;
   const cp = {
@@ -315,8 +355,10 @@ function redrawMarkers(){
     marker.on('dragend', (ev) => {
       const pos = ev.target.getLatLng();
       cp.lat = pos.lat; cp.lng = pos.lng;
+      syncHqLocationFromCheckpoint(state.currentEvent, cp);
       debouncedSave();
       renderSidebar();
+      redrawEventLocations();
     });
     if(cp.timeWindowEnabled){
       marker.bindTooltip(`${formatTimeOnly(cp.timeWindowStart)}–${formatTimeOnly(cp.timeWindowEnd)}`, {

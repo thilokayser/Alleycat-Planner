@@ -1393,6 +1393,52 @@ async function runAlleycatTestSuite(){
     /* Kreis-Zone bleibt bewusst stehen, für den Persistenz-Check in Abschnitt 4 */
   }
 
+  /* 3p) Paket 4 Teil A, Schritt 5: Sonderorte (HQ & Afterparty) — event-locations.js.
+     HQ ist eine eigenständige, in evt.eventLocations gespeicherte Entität mit
+     optionalem Checkpoint-Link (Koordinaten dann vom Checkpoint geerbt und bei
+     Bewegung/Löschung nachgezogen); Afterparty ist immer freistehend. */
+  {
+    checkEqual('Event hat leere eventLocations per Default', evt.eventLocations.length, 0);
+
+    const hqCp = evt.checkpoints[0];
+    const otherCp = evt.checkpoints[1];
+
+    setCheckpointAsHq(evt, hqCp.id, true);
+    checkEqual('setCheckpointAsHq legt HQ-Location an', evt.eventLocations.length, 1);
+    check('HQ ist mit dem Checkpoint verknüpft', isCheckpointHq(evt, hqCp.id));
+    checkEqual('HQ erbt Koordinaten vom Checkpoint', getEventLocation(evt, 'headquarters').lat, hqCp.lat);
+
+    const origConfirmHq = window.confirm;
+    window.confirm = () => false;
+    setCheckpointAsHq(evt, otherCp.id, true);
+    check('Abgelehnter Confirm lässt HQ-Verknüpfung unverändert', isCheckpointHq(evt, hqCp.id) && !isCheckpointHq(evt, otherCp.id));
+
+    window.confirm = () => true;
+    setCheckpointAsHq(evt, otherCp.id, true);
+    check('Bestätigter Confirm verschiebt die HQ-Verknüpfung', isCheckpointHq(evt, otherCp.id) && !isCheckpointHq(evt, hqCp.id));
+    window.confirm = origConfirmHq;
+
+    otherCp.lat += 0.001; otherCp.lng += 0.001;
+    syncHqLocationFromCheckpoint(evt, otherCp);
+    checkEqual('syncHqLocationFromCheckpoint zieht die Koordinaten nach', getEventLocation(evt, 'headquarters').lat, otherCp.lat);
+    otherCp.lat -= 0.001; otherCp.lng -= 0.001;
+    syncHqLocationFromCheckpoint(evt, otherCp);
+
+    unlinkHqIfCheckpointDeleted(evt, otherCp.id);
+    const hqAfterUnlink = getEventLocation(evt, 'headquarters');
+    check('unlinkHqIfCheckpointDeleted löst die Verknüpfung, behält aber die Location', !hqAfterUnlink.linkedCheckpointId && eventLocationHasPosition(hqAfterUnlink));
+
+    const afterparty = placeEventLocationAt(evt, 'afterparty', 50.95, 6.96);
+    checkEqual('placeEventLocationAt legt Afterparty-Location an', evt.eventLocations.length, 2);
+    check('Afterparty ist freistehend (kein Checkpoint-Link)', afterparty && !afterparty.linkedCheckpointId);
+    check('eventLocationHasPosition erkennt gesetzte Koordinaten', eventLocationHasPosition(afterparty));
+    check('mapsDeepLink liefert eine Google-Maps-URL', mapsDeepLink(50.95, 6.96).includes('maps'));
+
+    removeEventLocation(evt, 'afterparty');
+    checkEqual('removeEventLocation entfernt die Location wieder', evt.eventLocations.length, 1);
+    /* HQ-Location bleibt bewusst stehen (freistehend), für den Persistenz-Check in Abschnitt 4 */
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -1419,6 +1465,8 @@ async function runAlleycatTestSuite(){
   checkEqual('gameModes-Aktivierung persistiert', reloaded && reloaded.gameModes.find(m => m.type === 'first_n') && reloaded.gameModes.find(m => m.type === 'first_n').enabled, true);
   checkEqual('zones persistiert', reloaded && reloaded.zones.length, evt.zones.length);
   checkEqual('Zonen-Radius persistiert', reloaded && reloaded.zones[0] && reloaded.zones[0].radiusMeters, 200);
+  checkEqual('eventLocations persistiert', reloaded && reloaded.eventLocations.length, evt.eventLocations.length);
+  checkEqual('freistehende HQ-Location (linkedCheckpointId=null) persistiert korrekt', reloaded && reloaded.eventLocations[0] && reloaded.eventLocations[0].linkedCheckpointId, null);
 
   /* 5) Ziel-Check-in: Fahrer bestätigen */
   openCheckin();

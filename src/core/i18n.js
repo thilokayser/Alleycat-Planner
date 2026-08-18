@@ -133,6 +133,26 @@ const translations = {
       unnamed: 'Zone',
       deleteConfirm: 'Diese Zone wirklich löschen?'
     },
+    eventLocations: {
+      heading: 'Sonderorte',
+      hint: 'Headquarter und Afterparty sind Infopunkte ohne Check-in — als Checkpoint-Checkbox verknüpfbar oder frei auf der Karte platzierbar.',
+      hqLabel: 'Headquarter',
+      afterpartyLabel: 'Afterparty',
+      hqEmptyHint: 'Noch nicht gesetzt — per Klick auf der Karte platzieren oder bei einem Checkpoint "Dies ist der Headquarter-Standort" aktivieren.',
+      afterpartyEmptyHint: 'Noch nicht gesetzt — per Klick auf der Karte platzieren.',
+      placeOnMap: 'Auf Karte platzieren',
+      placementActive: 'Klick auf die Karte …',
+      addressPlaceholder: 'Adresse',
+      notesPlaceholder: 'Notizen (optional)',
+      openInMaps: 'In Maps öffnen',
+      unlink: 'Von Checkpoint lösen',
+      removeConfirm: 'Diesen Sonderort wirklich löschen?',
+      linkedToCheckpoint: 'Verknüpft mit Checkpoint „{name}“',
+      hqCheckboxLabel: 'Dies ist der Headquarter-Standort',
+      switchHqConfirm: 'Der Checkpoint „{name}“ ist aktuell als Headquarter markiert. Stattdessen diesen als Headquarter setzen?',
+      overwriteFreeHqConfirm: 'Es gibt bereits einen frei platzierten Headquarter-Marker. Diesen durch den Checkpoint ersetzen?',
+      unknownCheckpoint: '(unbekannter Checkpoint)'
+    },
     exportCsv: {
       colRank: 'Rang', colBib: 'Bib', colName: 'Name', colTeam: 'Team',
       colFinishTime: 'Zielzeit', colStatus: 'Status',
