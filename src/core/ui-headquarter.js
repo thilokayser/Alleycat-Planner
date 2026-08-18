@@ -21,7 +21,7 @@ let state = {
   qrScannerActive: false,
   qrScanError: '',
   manifestSettingsOpen: false,
-  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric'},
+  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h'},
   featureRegistrySearch: '',
   settingsReturnView: 'dashboard',
   newTypeFormOpen: false,
@@ -362,7 +362,7 @@ function typeIconHtml(key){
 async function loadAppSettings(){
   try{
     const res = await storageGet('app:settings');
-    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric'}, JSON.parse(res.value));
+    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h'}, JSON.parse(res.value));
   }catch(e){ /* keep defaults */ }
 }
 async function saveAppSettings(){
@@ -395,6 +395,11 @@ function setIconPack(name){
 }
 function setDistanceUnit(unit){
   state.appSettings.distanceUnit = unit;
+  saveAppSettings();
+  render();
+}
+function setTimeFormat(fmt){
+  state.appSettings.timeFormat = fmt;
   saveAppSettings();
   render();
 }
@@ -588,6 +593,7 @@ function renderSettings(){
     <div class="settings-section">
       <h3>${t('settings.unitsHeading')}</h3>
       <div class="settings-section-desc">${t('settings.unitsDesc')}</div>
+      <div class="settings-subheading">${t('settings.unitsDistanceSubheading')}</div>
       <div class="option-grid">
         <button class="option-card ${state.appSettings.distanceUnit !== 'imperial' ? 'active' : ''}" onclick="setDistanceUnit('metric')">
           <span class="option-card-label">${t('settings.unitsMetricLabel')}</span>
@@ -596,6 +602,17 @@ function renderSettings(){
         <button class="option-card ${state.appSettings.distanceUnit === 'imperial' ? 'active' : ''}" onclick="setDistanceUnit('imperial')">
           <span class="option-card-label">${t('settings.unitsImperialLabel')}</span>
           <span class="option-card-desc">${t('settings.unitsImperialDesc')}</span>
+        </button>
+      </div>
+      <div class="settings-subheading">${t('settings.unitsTimeSubheading')}</div>
+      <div class="option-grid">
+        <button class="option-card ${state.appSettings.timeFormat !== '12h' ? 'active' : ''}" onclick="setTimeFormat('24h')">
+          <span class="option-card-label">${t('settings.timeFormat24hLabel')}</span>
+          <span class="option-card-desc">${t('settings.timeFormat24hDesc')}</span>
+        </button>
+        <button class="option-card ${state.appSettings.timeFormat === '12h' ? 'active' : ''}" onclick="setTimeFormat('12h')">
+          <span class="option-card-label">${t('settings.timeFormat12hLabel')}</span>
+          <span class="option-card-desc">${t('settings.timeFormat12hDesc')}</span>
         </button>
       </div>
     </div>

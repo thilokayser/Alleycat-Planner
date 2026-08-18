@@ -2092,6 +2092,36 @@ async function runAlleycatTestSuite(){
     render();
   }
 
+  /* 3z) Paket 5 Teil A, Schritt 2: 12h/24h-Zeitformat-Switch (Spec 20.1).
+     formatTimeOnly()/formatDateTime() um state.appSettings.timeFormat
+     erweitert, gleiches geräte-lokales Setting-Muster wie distanceUnit. */
+  {
+    const sampleTime = '2026-08-18T14:30:00';
+    checkEqual('timeFormat startet bei "24h"', state.appSettings.timeFormat, '24h');
+    checkEqual('formatTimeOnly (24h) zeigt 24-Stunden-Format', formatTimeOnly(sampleTime), '14:30');
+    checkEqual('formatDateTime (24h) hängt "Uhr" an', formatDateTime(sampleTime), '18.8.2026, 14:30 Uhr');
+
+    const formatBefore = state.appSettings.timeFormat;
+    setTimeFormat('12h');
+    checkEqual('setTimeFormat persistiert das Format', state.appSettings.timeFormat, '12h');
+    checkEqual('formatTimeOnly (12h) zeigt AM/PM statt 24h', formatTimeOnly(sampleTime), '02:30 PM');
+    checkEqual('formatDateTime (12h) hängt kein "Uhr" an (ergäbe mit AM/PM keinen Sinn)', formatDateTime(sampleTime), '18.8.2026, 02:30 PM');
+
+    setTimeFormat(formatBefore);
+    checkEqual('setTimeFormat zurückgesetzt', state.appSettings.timeFormat, formatBefore);
+
+    const settingsHtml = (() => {
+      const viewBeforeSettings = state.view;
+      state.view = 'settings';
+      render();
+      const html = document.getElementById('view-settings').innerHTML;
+      state.view = viewBeforeSettings;
+      render();
+      return html;
+    })();
+    check('Settings-Seite zeigt die "Einheiten"-Sektion mit Distanz- und Uhrzeit-Unterüberschriften', settingsHtml.includes(t('settings.unitsHeading')) && settingsHtml.includes(t('settings.unitsDistanceSubheading')) && settingsHtml.includes(t('settings.unitsTimeSubheading')));
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();

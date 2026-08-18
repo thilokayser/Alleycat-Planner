@@ -13,23 +13,33 @@ function downloadJSON(obj, filename){
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+/* Paket 5 Teil A, Schritt 2 (Spec 20.1): 12h/24h switch, state.appSettings.
+   timeFormat ('24h' default | '12h'). 12h mode formats via 'en-US' (not
+   'de-DE') specifically to guarantee an AM/PM suffix — Intl's hour12 option
+   is respected by de-DE too, but would render vorm./nachm.-style markers
+   rather than the spec's literal "2:30 PM" example, and the German-only
+   " Uhr" suffix makes no sense appended after an AM/PM time, so it's
+   dropped in 12h mode (formatDateTime delegates its time portion to
+   formatTimeOnly rather than duplicating the hour12 branch). */
+function formatTimeOnly(v){
+  if(!v) return '—';
+  const d = new Date(v);
+  if(isNaN(d.getTime())) return v;
+  const twelveHour = state.appSettings.timeFormat === '12h';
+  return d.toLocaleTimeString(twelveHour ? 'en-US' : 'de-DE', {hour: '2-digit', minute: '2-digit', hour12: twelveHour});
+}
 function formatDateTime(v){
   if(!v) return '—';
   const d = new Date(v);
   if(isNaN(d.getTime())) return v;
-  return d.toLocaleDateString('de-DE') + ', ' + d.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'}) + ' Uhr';
+  const twelveHour = state.appSettings.timeFormat === '12h';
+  return d.toLocaleDateString('de-DE') + ', ' + formatTimeOnly(v) + (twelveHour ? '' : ' Uhr');
 }
 function formatDateOnly(v){
   if(!v) return '';
   const d = new Date(v + 'T00:00:00');
   if(isNaN(d.getTime())) return v;
   return d.toLocaleDateString('de-DE');
-}
-function formatTimeOnly(v){
-  if(!v) return '—';
-  const d = new Date(v);
-  if(isNaN(d.getTime())) return v;
-  return d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
 }
 function truncateText(s, n){
   s = s || '';

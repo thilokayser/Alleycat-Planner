@@ -592,11 +592,12 @@
     width:52px; font-family:'JetBrains Mono',monospace; font-size:11px;
     border:1px solid var(--paper-line); background:#faf6ea; color:var(--ink); border-radius:2px; padding:3px 5px;
   }
-  .logistics-subheading{
+  .logistics-subheading, .settings-subheading{
     font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em;
     color:#8a8065; margin-top:10px; padding-top:10px; border-top:1px solid var(--paper-line);
   }
   .settings-body .logistics-subheading:first-child{margin-top:0; padding-top:0; border-top:none;}
+  .settings-section .settings-subheading:first-of-type{margin-top:0; padding-top:0; border-top:none;}
   .logistics-cluster-warning{
     font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--warn);
     background:rgba(217,164,6,0.1); border:1px solid var(--warn); border-radius:3px; padding:6px 8px;
