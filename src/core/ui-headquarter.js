@@ -61,9 +61,10 @@ let state = {
   logisticsPanelOpen: false,
   routeEstimate: undefined,
   showRouteEstimateOnMap: false,
+  showProximityBuffers: false,
 };
 let pdfPreviewDoc = null;
-let map, markersLayer, zonesLayer, eventLocationsLayer, routeLine, routeEstimateLine, cpMarkers = {};
+let map, markersLayer, zonesLayer, eventLocationsLayer, routeLine, routeEstimateLine, proximityBufferLayer, cpMarkers = {};
 let qrScanStream = null;
 let qrScanRAF = null;
 let liveCountdownInterval = null;

@@ -1719,6 +1719,61 @@ async function runAlleycatTestSuite(){
     state.showRouteEstimateOnMap = false;
   }
 
+  /* 3t) Paket 4 Teil B, Schritt 2: Proximity-Puffer-Ringe + Klumpen-Warnung.
+     Rein geometrisch, auf einem synthetischen Fixture getestet statt dem
+     Haupt-`evt` (dessen Checkpoints über die Stadt verteilt sind und
+     absichtlich keinen Klumpen bilden — s. Kartenüberprüfung während der
+     Entwicklung). */
+  {
+    const clusterFixture = {
+      checkpoints: [
+        {id: 'near1', order: 1, lat: 50.9400, lng: 6.9600, name: 'Nah 1'},
+        {id: 'near2', order: 2, lat: 50.9400, lng: 6.9601, name: 'Nah 2'}, // ~7m entfernt
+        {id: 'danger1', order: 3, lat: 50.9500, lng: 6.9700, name: 'Sehr nah 1'},
+        {id: 'danger2', order: 4, lat: 50.9500, lng: 6.97001, name: 'Sehr nah 2'}, // ~1m entfernt
+        {id: 'far', order: 5, lat: 50.9600, lng: 6.9800, name: 'Weit weg'}
+      ]
+    };
+    checkEqual('findProximityClusters: keine Paare bei sehr kleinem Radius', findProximityClusters(clusterFixture, 0.5).length, 0);
+    const clustersAt30 = findProximityClusters(clusterFixture, 30);
+    checkEqual('findProximityClusters findet beide nahen Paare bei 30m', clustersAt30.length, 2);
+    check('findProximityClusters: distanceMeters ist plausibel (<30m)', clustersAt30.every(p => p.distanceMeters < 30));
+
+    checkEqual('proximityClusterSeverity: null ohne Paare', proximityClusterSeverity([]), null);
+    checkEqual('proximityClusterSeverity: "warn" ohne extrem nahe Paare', proximityClusterSeverity(findProximityClusters(clusterFixture, 10).filter(p => p.a.id === 'near1')), 'warn');
+    checkEqual('proximityClusterSeverity: "danger" bei einem Paar <5m', proximityClusterSeverity(clustersAt30), 'danger');
+
+    const clusteredIds = clusteredCheckpointIds(clustersAt30);
+    check('clusteredCheckpointIds enthält alle vier beteiligten Checkpoints', ['near1', 'near2', 'danger1', 'danger2'].every(id => clusteredIds.has(id)) && !clusteredIds.has('far'));
+
+    localStorage.removeItem('alleycat:proximityBufferMeters');
+    checkEqual('currentProximityBufferMeters: Default ohne gespeicherte Präferenz', currentProximityBufferMeters(), 30);
+    onProximityBufferMetersChange('15');
+    checkEqual('onProximityBufferMetersChange persistiert den Radius', currentProximityBufferMeters(), 15);
+    localStorage.setItem('alleycat:proximityBufferMeters', '30');
+
+    check('renderProximitySection zeigt eine Warnung bei vorhandenen Klumpen', renderProximitySection(clusterFixture).includes(t('logistics.proximityClusterWarning', {count: 2, radius: 30})));
+    check('renderProximitySection (kein Klumpen): kein Warnungs-Div im Markup', !/class="logistics-cluster-warning/.test(renderProximitySection({checkpoints: [clusterFixture.checkpoints[0], clusterFixture.checkpoints[4]]})));
+
+    const todosWithCluster = computeDashboardTodos(Object.assign({}, evt, {checkpoints: clusterFixture.checkpoints, categoryGroups: [], tileCacheUpdatedAt: evt.tileCacheUpdatedAt}));
+    const clusterTodo = todosWithCluster.find(td => td.key === 'proximityCluster');
+    check('computeDashboardTodos meldet den Proximity-Klumpen mit "danger"', clusterTodo && clusterTodo.severity === 'danger');
+    const todosWithoutCluster = computeDashboardTodos(Object.assign({}, evt, {checkpoints: [clusterFixture.checkpoints[0], clusterFixture.checkpoints[4]], categoryGroups: [], tileCacheUpdatedAt: evt.tileCacheUpdatedAt}));
+    check('computeDashboardTodos meldet keinen Klumpen ohne nahe Checkpoints', !todosWithoutCluster.some(td => td.key === 'proximityCluster'));
+
+    /* Kartenlayer: auf dem echten evt (bereits initialisierte Karte), da
+       redrawProximityBuffers() state.currentEvent liest. */
+    const origBufferMeters = localStorage.getItem('alleycat:proximityBufferMeters');
+    localStorage.setItem('alleycat:proximityBufferMeters', '5000'); // großzügig, damit die echten Checkpoints sicher "clustern"
+    state.showProximityBuffers = true;
+    redrawProximityBuffers();
+    checkEqual('redrawProximityBuffers zeichnet einen Ring pro georeferenziertem Checkpoint', proximityBufferLayer.getLayers().length, evt.checkpoints.filter(c => Number.isFinite(c.lat) && Number.isFinite(c.lng)).length);
+    state.showProximityBuffers = false;
+    redrawProximityBuffers();
+    check('redrawProximityBuffers entfernt den Layer wieder, wenn ausgeschaltet', !proximityBufferLayer);
+    if(origBufferMeters === null) localStorage.removeItem('alleycat:proximityBufferMeters'); else localStorage.setItem('alleycat:proximityBufferMeters', origBufferMeters);
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();

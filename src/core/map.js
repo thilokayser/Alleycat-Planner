@@ -25,8 +25,34 @@ function initMap(){
   redrawZones();
   redrawEventLocations();
   redrawRouteEstimate();
+  redrawProximityBuffers();
   fitToCheckpoints();
   startZoneShrinkTick();
+}
+
+/* ---------------- logistics: proximity buffer rings ----------------
+   Faint ring around every geo-referenced checkpoint at the configured
+   buffer radius; rings for checkpoints involved in a clustering warning
+   are recolored so the problem pairs are visually obvious at a glance,
+   not just listed as text in the sidebar. */
+function redrawProximityBuffers(){
+  if(proximityBufferLayer){ map.removeLayer(proximityBufferLayer); proximityBufferLayer = null; }
+  if(!state.showProximityBuffers || !state.currentEvent || !map) return;
+  const evt = state.currentEvent;
+  const bufferMeters = currentProximityBufferMeters();
+  const clustered = clusteredCheckpointIds(findProximityClusters(evt, bufferMeters));
+  proximityBufferLayer = L.layerGroup().addTo(map);
+  (evt.checkpoints || []).filter(cp => Number.isFinite(cp.lat) && Number.isFinite(cp.lng)).forEach(cp => {
+    const flagged = clustered.has(cp.id);
+    L.circle([cp.lat, cp.lng], {
+      radius: bufferMeters,
+      color: flagged ? '#e0435b' : '#8a8065',
+      weight: 1,
+      dashArray: '2 4',
+      fillOpacity: flagged ? 0.1 : 0.04,
+      interactive: false
+    }).addTo(proximityBufferLayer);
+  });
 }
 
 /* ---------------- logistics: route-estimate map overlay ----------------

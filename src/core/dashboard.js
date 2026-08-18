@@ -250,6 +250,11 @@ function computeDashboardTodos(evt){
     const days = Math.floor((Date.now() - new Date(evt.tileCacheUpdatedAt).getTime()) / 86400000);
     todos.push({key: 'tileCacheStale', text: t('overview.todoTileCacheStale', {days}), severity: tileSeverity});
   }
+  const proximityPairs = findProximityClusters(evt, currentProximityBufferMeters());
+  const proximitySeverity = proximityClusterSeverity(proximityPairs);
+  if(proximitySeverity){
+    todos.push({key: 'proximityCluster', text: t('overview.todoProximityCluster', {count: proximityPairs.length, radius: currentProximityBufferMeters()}), severity: proximitySeverity});
+  }
   return todos;
 }
 

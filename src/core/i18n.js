@@ -166,7 +166,8 @@ const translations = {
       unknownCheckpoint: '(unbekannter Checkpoint)'
     },
     logistics: {
-      heading: 'Routen-Schätzer',
+      heading: 'Logistik',
+      routeHeading: 'Routen-Schätzung',
       hint: 'Schätzt die effizienteste Reihenfolge der Checkpoints per 2-Opt-Heuristik — rein informativ, ändert nichts an der geplanten Checkpoint-Reihenfolge.',
       estimateButton: 'Route schätzen',
       notYetHint: 'Noch nicht berechnet.',
@@ -177,7 +178,12 @@ const translations = {
       avgSpeedLabel: 'Ø Geschwindigkeit',
       estimatedTime: 'Geschätzte Fahrzeit',
       showOnMap: 'Optimierte Route auf Karte anzeigen',
-      legendLabel: 'Route (optimiert)'
+      legendLabel: 'Route (optimiert)',
+      proximityHeading: 'Proximity-Puffer',
+      proximityHint: 'Markiert Checkpoints, die näher beieinander liegen als der Puffer-Radius — häufige Verwechslungsquelle am Renntag.',
+      proximityRadiusLabel: 'Puffer-Radius',
+      proximityShowOnMap: 'Puffer-Ringe auf Karte anzeigen',
+      proximityClusterWarning: '{count} Checkpoint-Paar(e) liegen näher als {radius}m beieinander.'
     },
     exportCsv: {
       colRank: 'Rang', colBib: 'Bib', colName: 'Name', colTeam: 'Team',
@@ -523,7 +529,8 @@ const translations = {
       todoNotPrinted: 'Startnummern/Spokecards sind noch nicht gedruckt.',
       todoNoManifest: 'Manifest wurde noch nicht erzeugt.',
       todoNoStaff: '{count} Checkpoints ohne zugewiesenes Personal.',
-      todoTileCacheStale: '⚠ Kartenkacheln-Cache ist {days} Tage alt — iOS/Safari können Offline-Daten bei längerer Nichtbenutzung entfernen. Vor dem Event aktualisieren.'
+      todoTileCacheStale: '⚠ Kartenkacheln-Cache ist {days} Tage alt — iOS/Safari können Offline-Daten bei längerer Nichtbenutzung entfernen. Vor dem Event aktualisieren.',
+      todoProximityCluster: '{count} Checkpoint-Paar(e) liegen näher als {radius}m beieinander.'
     },
     raceState: {
       planning: 'In Planung',

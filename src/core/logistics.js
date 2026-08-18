@@ -104,6 +104,71 @@ function currentAvgSpeedKmh(){
   return 18;
 }
 
+/* ---------------- proximity buffer rings + clustering warning ----------------
+   Paket 4 Teil B, Schritt 2. Purely geometric — flags any two checkpoints
+   closer together than a configurable buffer radius, since tightly clustered
+   checkpoints are a common raceday confusion source (riders/marshals at the
+   wrong one, GPS jitter mixing them up). Two severities, same convention
+   offline-tiles.js already established for cache staleness: 'warn' for any
+   pair inside the buffer, 'danger' for pairs so close they're almost
+   certainly an accidental duplicate placement. */
+const PROXIMITY_DANGER_METERS = 5;
+function findProximityClusters(evt, thresholdMeters){
+  const checkpoints = (evt.checkpoints || []).filter(cp => Number.isFinite(cp.lat) && Number.isFinite(cp.lng));
+  const pairs = [];
+  for(let i = 0; i < checkpoints.length; i++){
+    for(let j = i + 1; j < checkpoints.length; j++){
+      const distanceMeters = haversineDistanceKm(checkpoints[i].lat, checkpoints[i].lng, checkpoints[j].lat, checkpoints[j].lng) * 1000;
+      if(distanceMeters < thresholdMeters) pairs.push({a: checkpoints[i], b: checkpoints[j], distanceMeters});
+    }
+  }
+  return pairs;
+}
+function proximityClusterSeverity(pairs){
+  if(!pairs.length) return null;
+  return pairs.some(p => p.distanceMeters < PROXIMITY_DANGER_METERS) ? 'danger' : 'warn';
+}
+function clusteredCheckpointIds(pairs){
+  const ids = new Set();
+  pairs.forEach(p => { ids.add(p.a.id); ids.add(p.b.id); });
+  return ids;
+}
+/* Buffer radius is a per-organizer device preference, not event data — same
+   localStorage pattern as alleycat:avgSpeedKmh above. */
+function currentProximityBufferMeters(){
+  try{
+    const v = parseFloat(localStorage.getItem('alleycat:proximityBufferMeters'));
+    if(!isNaN(v) && v > 0) return v;
+  }catch(e){}
+  return 30;
+}
+function onProximityBufferMetersChange(value){
+  const m = Math.max(1, parseFloat(value) || 1);
+  try{ localStorage.setItem('alleycat:proximityBufferMeters', String(m)); }catch(e){}
+  renderSidebar();
+  if(state.showProximityBuffers) redrawProximityBuffers();
+}
+function toggleProximityBuffersOnMap(){
+  state.showProximityBuffers = !state.showProximityBuffers;
+  redrawProximityBuffers();
+  renderSidebar();
+}
+function renderProximitySection(evt){
+  const bufferMeters = currentProximityBufferMeters();
+  const clusterPairs = findProximityClusters(evt, bufferMeters);
+  const severity = proximityClusterSeverity(clusterPairs);
+  return `
+    <div class="logistics-subheading">${t('logistics.proximityHeading')}</div>
+    <div class="settings-hint">${t('logistics.proximityHint')}</div>
+    <div class="logistics-speed-row">
+      <label>${t('logistics.proximityRadiusLabel')}</label>
+      <input type="number" min="1" step="5" value="${bufferMeters}" onchange="onProximityBufferMetersChange(this.value)"> m
+    </div>
+    <label class="checkbox-row"><input type="checkbox" ${state.showProximityBuffers ? 'checked' : ''} onchange="toggleProximityBuffersOnMap()">${t('logistics.proximityShowOnMap')}</label>
+    ${clusterPairs.length ? `<div class="logistics-cluster-warning ${severity === 'danger' ? 'danger' : ''}">${t('logistics.proximityClusterWarning', {count: clusterPairs.length, radius: bufferMeters})}</div>` : ''}
+  `;
+}
+
 /* ---------------- sidebar panel ---------------- */
 function toggleLogisticsPanel(){
   state.logisticsPanelOpen = !state.logisticsPanelOpen;
@@ -129,14 +194,14 @@ function toggleRouteEstimateOnMap(){
 function renderLogisticsPanel(evt){
   const est = state.routeEstimate;
   const speed = currentAvgSpeedKmh();
-  let body;
+  let routeBody;
   if(est === undefined){
-    body = `<div class="settings-hint">${t('logistics.notYetHint')}</div>`;
+    routeBody = `<div class="settings-hint">${t('logistics.notYetHint')}</div>`;
   } else if(est === false){
-    body = `<div class="settings-hint">${t('logistics.notEnoughPoints')}</div>`;
+    routeBody = `<div class="settings-hint">${t('logistics.notEnoughPoints')}</div>`;
   } else {
     const percent = est.currentDistanceKm > 0 ? Math.round(est.savingsKm / est.currentDistanceKm * 100) : 0;
-    body = `
+    routeBody = `
       <div class="logistics-result-row"><span>${t('logistics.currentDistance')}</span><b>${est.currentDistanceKm.toFixed(2)} km</b></div>
       <div class="logistics-result-row"><span>${t('logistics.optimizedDistance')}</span><b>${est.optimizedDistanceKm.toFixed(2)} km</b></div>
       ${est.savingsKm > 0.05 ? `<div class="logistics-savings">${t('logistics.savings', {km: est.savingsKm.toFixed(2), percent})}</div>` : ''}
@@ -153,9 +218,11 @@ function renderLogisticsPanel(evt){
       <button class="settings-toggle" onclick="toggleLogisticsPanel()">${state.logisticsPanelOpen ? '▾' : '▸'} ${t('logistics.heading')}</button>
       ${state.logisticsPanelOpen ? `
         <div class="settings-body">
+          <div class="logistics-subheading">${t('logistics.routeHeading')}</div>
           <div class="settings-hint">${t('logistics.hint')}</div>
           <button type="button" class="btn btn-sm" onclick="runRouteEstimate()">${t('logistics.estimateButton')}</button>
-          ${body}
+          ${routeBody}
+          ${renderProximitySection(evt)}
         </div>
       ` : ''}
     </div>
