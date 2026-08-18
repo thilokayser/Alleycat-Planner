@@ -2122,6 +2122,65 @@ async function runAlleycatTestSuite(){
     check('Settings-Seite zeigt die "Einheiten"-Sektion mit Distanz- und Uhrzeit-Unterüberschriften', settingsHtml.includes(t('settings.unitsHeading')) && settingsHtml.includes(t('settings.unitsDistanceSubheading')) && settingsHtml.includes(t('settings.unitsTimeSubheading')));
   }
 
+  /* 4a) Paket 5 Teil A, Schritt 3: Koordinatenanzeige-Switch (Spec 20.1) —
+     Dezimalgrad/DMS/UTM/MGRS. toUtm()/toMgrs() während der Entwicklung
+     gegen eine echte Referenz validiert (Wikipedia UTM-Artikel: CN Tower,
+     43.6425667°N 79.387139°W -> Zone 17, 630084mE 4833438mN, und dessen
+     bekannte MGRS-Angabe "17T PJ ..."); hier als Regressionstest
+     nachgebildet. */
+  {
+    checkEqual('coordFormat startet bei "decimal"', state.appSettings.coordFormat, 'decimal');
+    checkEqual('formatCoordinatesAs (decimal) — 5 Nachkommastellen', formatCoordinatesAs('decimal', 50.9375, 6.9603), '50.93750, 6.96030');
+    checkEqual('toDms entspricht dem Spec-Beispiel (50.9375, 6.9603 -> 50°56\'15"N 6°57\'37"E)', toDms(50.9375, 6.9603), `50°56'15"N 6°57'37"E`);
+
+    const cnTowerLat = 43.6425667, cnTowerLng = -79.387139;
+    const utm = toUtm(cnTowerLat, cnTowerLng);
+    checkEqual('toUtm: CN-Tower-Referenz — Zone 17', utm.zone, 17);
+    checkEqual('toUtm: CN-Tower-Referenz — Nordhalbkugel', utm.hemisphere, 'N');
+    check('toUtm: Easting stimmt mit der Wikipedia-Referenz (630084) auf < 1m', Math.abs(utm.easting - 630084) < 1);
+    check('toUtm: Northing stimmt mit der Wikipedia-Referenz (4833438) auf < 1m', Math.abs(utm.northing - 4833438) < 1);
+
+    const mgrs = toMgrs(cnTowerLat, cnTowerLng);
+    check('toMgrs: CN-Tower-Referenz — Zone+Band+Gitterquadrat "17T PJ"', mgrs.startsWith('17T PJ '));
+
+    const decimalDesc = formatCoordinatesAs('decimal', 50.9375, 6.9603);
+    const dmsDesc = formatCoordinatesAs('dms', 50.9375, 6.9603);
+    const utmDesc = formatCoordinatesAs('utm', 50.9375, 6.9603);
+    const mgrsDesc = formatCoordinatesAs('mgrs', 50.9375, 6.9603);
+    check('formatCoordinatesAs liefert für jedes Format einen unterschiedlichen String', new Set([decimalDesc, dmsDesc, utmDesc, mgrsDesc]).size === 4);
+    checkEqual('formatCoordinatesAs: ungültige Koordinaten liefern leeren String', formatCoordinatesAs('decimal', NaN, 6.96), '');
+
+    const coordFormatBefore = state.appSettings.coordFormat;
+    setCoordFormat('mgrs');
+    checkEqual('setCoordFormat persistiert das Format', state.appSettings.coordFormat, 'mgrs');
+    checkEqual('formatCoordinates folgt jetzt state.appSettings.coordFormat', formatCoordinates(cnTowerLat, cnTowerLng), mgrs);
+
+    /* Integration: Checkpoint-Sidebar (readonly-Block, sichtbar bei editing+
+       locked) nutzt formatCoordinates() statt fest verdrahtetem Dezimalgrad. */
+    const coordCp = evt.checkpoints[0];
+    const editingIdBefore = state.editingId;
+    state.editingId = coordCp.id;
+    const readonlyHtml = renderCpRow(coordCp, 0, evt, true, null, false);
+    check('Checkpoint-Readonly-Zeile zeigt die gewählte Koordinatenanzeige (MGRS)', readonlyHtml.includes(formatCoordinates(coordCp.lat, coordCp.lng)) && !readonlyHtml.includes(coordCp.lat.toFixed(5) + ', ' + coordCp.lng.toFixed(5)));
+    state.editingId = editingIdBefore;
+
+    setCoordFormat(coordFormatBefore);
+    checkEqual('setCoordFormat zurückgesetzt', state.appSettings.coordFormat, coordFormatBefore);
+
+    const settingsHtmlCoord = (() => {
+      const viewBeforeSettings = state.view;
+      state.view = 'settings';
+      render();
+      const html = document.getElementById('view-settings').innerHTML;
+      state.view = viewBeforeSettings;
+      render();
+      return html;
+    })();
+    check('Settings zeigt die "Koordinatenanzeige"-Unterüberschrift mit allen 4 Formaten', settingsHtmlCoord.includes(t('settings.unitsCoordSubheading'))
+      && settingsHtmlCoord.includes(t('settings.coordFormatDecimalLabel')) && settingsHtmlCoord.includes(t('settings.coordFormatDmsLabel'))
+      && settingsHtmlCoord.includes(t('settings.coordFormatUtmLabel')) && settingsHtmlCoord.includes(t('settings.coordFormatMgrsLabel')));
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();

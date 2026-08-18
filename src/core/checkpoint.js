@@ -486,7 +486,7 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
             <div class="cp-edit-readonly" onclick="event.stopPropagation()">
               <div class="cp-readonly-row"><b>${t('checkpoint.checkpointTypeLabel')}:</b> ${escapeHtml(getCheckpointType(cp.type).fullLabel)}</div>
               ${cp.clue ? `<div class="cp-readonly-row"><b>${t('checkpoint.clueLabel')}:</b> ${escapeHtml(cp.clue)}</div>` : ''}
-              <div class="cp-readonly-row"><b>${t('checkpoint.coordinatesLabel')}:</b> ${cp.lat.toFixed(5)}, ${cp.lng.toFixed(5)}</div>
+              <div class="cp-readonly-row"><b>${t('checkpoint.coordinatesLabel')}:</b> ${formatCoordinates(cp.lat, cp.lng)}</div>
               ${isCheckpointHq(evt, cp.id) ? `<div class="cp-readonly-row">🏠 ${t('eventLocations.hqLabel')}</div>` : ''}
               ${cp.locked ? `<div class="cp-readonly-row">${t('checkpoint.lockedHint')}</div>` : ''}
               ${staffCount ? `

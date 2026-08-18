@@ -21,7 +21,7 @@ let state = {
   qrScannerActive: false,
   qrScanError: '',
   manifestSettingsOpen: false,
-  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h'},
+  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal'},
   featureRegistrySearch: '',
   settingsReturnView: 'dashboard',
   newTypeFormOpen: false,
@@ -362,7 +362,7 @@ function typeIconHtml(key){
 async function loadAppSettings(){
   try{
     const res = await storageGet('app:settings');
-    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h'}, JSON.parse(res.value));
+    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal'}, JSON.parse(res.value));
   }catch(e){ /* keep defaults */ }
 }
 async function saveAppSettings(){
@@ -400,6 +400,11 @@ function setDistanceUnit(unit){
 }
 function setTimeFormat(fmt){
   state.appSettings.timeFormat = fmt;
+  saveAppSettings();
+  render();
+}
+function setCoordFormat(fmt){
+  state.appSettings.coordFormat = fmt;
   saveAppSettings();
   render();
 }
@@ -614,6 +619,15 @@ function renderSettings(){
           <span class="option-card-label">${t('settings.timeFormat12hLabel')}</span>
           <span class="option-card-desc">${t('settings.timeFormat12hDesc')}</span>
         </button>
+      </div>
+      <div class="settings-subheading">${t('settings.unitsCoordSubheading')}</div>
+      <div class="option-grid">
+        ${['decimal', 'dms', 'utm', 'mgrs'].map(fmt => `
+          <button class="option-card ${(state.appSettings.coordFormat || 'decimal') === fmt ? 'active' : ''}" onclick="setCoordFormat('${fmt}')">
+            <span class="option-card-label">${t('settings.coordFormat' + fmt.charAt(0).toUpperCase() + fmt.slice(1) + 'Label')}</span>
+            <span class="option-card-desc">${formatCoordinatesAs(fmt, 50.9375, 6.9603)}</span>
+          </button>
+        `).join('')}
       </div>
     </div>
     <div class="settings-section">

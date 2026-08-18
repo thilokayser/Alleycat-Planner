@@ -656,7 +656,18 @@ async function exportManifestPDF(){
     if(colX.koordinaten !== undefined){
       doc.setFont('courier','normal'); doc.setFontSize(7.5);
       doc.setTextColor(STEEL);
-      doc.text(cp.lat.toFixed(5) + ', ' + cp.lng.toFixed(5), colX.koordinaten, y);
+      /* Non-decimal coordinate formats (UTM/MGRS especially) can run wider
+         than this column was sized for ("50.93750, 6.96030") — shrink the
+         font just enough to fit rather than letting it overflow into the
+         next column on a printed manifest. */
+      const coordText = formatCoordinates(cp.lat, cp.lng);
+      const availableWidth = (colW.koordinaten || 60) - 2;
+      let coordFontSize = 7.5;
+      while(coordFontSize > 5 && doc.getTextWidth(coordText) > availableWidth){
+        coordFontSize -= 0.5;
+        doc.setFontSize(coordFontSize);
+      }
+      doc.text(coordText, colX.koordinaten, y);
     }
     if(colX.punch !== undefined){
       const px = colX.punch;
@@ -717,7 +728,7 @@ function renderManifest(){
       </td>` : ''}
       ${ms.showTyp ? `<td class="m-type">${escapeHtml(type.fullLabel)}</td>` : ''}
       ${ms.showClue ? `<td>${escapeHtml(cp.clue || '\u2014')}</td>` : ''}
-      ${ms.showKoordinaten ? `<td class="m-coord">${cp.lat.toFixed(5)}, ${cp.lng.toFixed(5)}</td>` : ''}
+      ${ms.showKoordinaten ? `<td class="m-coord">${formatCoordinates(cp.lat, cp.lng)}</td>` : ''}
       ${ms.showPunch ? `<td>${punchCellHtml}</td>` : ''}
     </tr>
   `;

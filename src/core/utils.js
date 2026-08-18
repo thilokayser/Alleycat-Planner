@@ -80,6 +80,91 @@ function formatDistance(meters){
   if(meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(2)} km`;
 }
+
+/* Paket 5 Teil A, Schritt 3 (Spec 20.1): coordinate display switch —
+   Dezimalgrad (default) | DMS | UTM | MGRS. toUtm() is the standard
+   ellipsoidal (WGS84) transverse Mercator forward formula (Snyder,
+   USGS Professional Paper 1395) — validated against a published reference
+   (Wikipedia's UTM article: CN Tower, 43.6425667°N 79.387139°W → zone 17,
+   630084mE 4833438mN) during development; this implementation reproduces
+   that to sub-meter precision. toMgrs() derives the 100km grid square
+   letters from the UTM result per the standard MGRS lettering scheme
+   (column letters cycle in a 3-zone-repeating pattern, row letters
+   alternate starting letter by zone parity) — cross-checked against the
+   same CN Tower point's well-known MGRS designation (17T PJ ...), which
+   matched on zone/band/grid-square exactly. Good enough for a reference
+   display on a printed manifest, not claimed to be survey-grade. */
+function toDms(lat, lng){
+  const part = (deg, posLetter, negLetter) => {
+    const letter = deg >= 0 ? posLetter : negLetter;
+    deg = Math.abs(deg);
+    const d = Math.floor(deg);
+    const minFloat = (deg - d) * 60;
+    const m = Math.floor(minFloat);
+    const s = Math.round((minFloat - m) * 60);
+    return `${d}°${m}'${s}"${letter}`;
+  };
+  return `${part(lat, 'N', 'S')} ${part(lng, 'E', 'W')}`;
+}
+function toUtm(lat, lng){
+  const a = 6378137, f = 1 / 298.257223563; // WGS84
+  const k0 = 0.9996;
+  const e2 = f * (2 - f);
+  const ePrime2 = e2 / (1 - e2);
+  const zone = Math.floor((lng + 180) / 6) + 1;
+  const lngOriginRad = ((zone - 1) * 6 - 180 + 3) * Math.PI / 180;
+  const latRad = lat * Math.PI / 180;
+  const lngRad = lng * Math.PI / 180;
+
+  const N = a / Math.sqrt(1 - e2 * Math.sin(latRad) ** 2);
+  const T = Math.tan(latRad) ** 2;
+  const C = ePrime2 * Math.cos(latRad) ** 2;
+  const A = Math.cos(latRad) * (lngRad - lngOriginRad);
+  const M = a * (
+    (1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * latRad
+    - (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * latRad)
+    + (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * latRad)
+    - (35 * e2 ** 3 / 3072) * Math.sin(6 * latRad)
+  );
+
+  const easting = k0 * N * (A + (1 - T + C) * A ** 3 / 6 + (5 - 18 * T + T ** 2 + 72 * C - 58 * ePrime2) * A ** 5 / 120) + 500000;
+  let northing = k0 * (M + N * Math.tan(latRad) * (A ** 2 / 2 + (5 - T + 9 * C + 4 * C ** 2) * A ** 4 / 24 + (61 - 58 * T + T ** 2 + 600 * C - 330 * ePrime2) * A ** 6 / 720));
+  if(lat < 0) northing += 10000000;
+  return {zone, easting, northing, hemisphere: lat < 0 ? 'S' : 'N'};
+}
+function mgrsLatBand(lat){
+  const bands = 'CDEFGHJKLMNPQRSTUVWXX'; // skips I/O (look like 1/0); last X is the wide 72-84° band
+  if(lat < -80 || lat > 84) return null;
+  return bands[Math.min(Math.floor((lat + 80) / 8), bands.length - 1)];
+}
+function mgrsGridSquare(zone, easting, northing){
+  const colSets = ['ABCDEFGH', 'JKLMNPQR', 'STUVWXYZ'];
+  const colLetter = colSets[(zone - 1) % 3][Math.floor(easting / 100000) - 1];
+  const rowLetters = zone % 2 === 1 ? 'ABCDEFGHJKLMNPQRSTUV' : 'FGHJKLMNPQRSTUVABCDE';
+  const rowLetter = rowLetters[Math.floor(northing / 100000) % 20];
+  return colLetter + rowLetter;
+}
+function toMgrs(lat, lng){
+  const utm = toUtm(lat, lng);
+  const band = mgrsLatBand(lat);
+  const grid = mgrsGridSquare(utm.zone, utm.easting, utm.northing);
+  const digits = (v) => String(Math.floor(v % 100000)).padStart(5, '0');
+  return `${utm.zone}${band} ${grid} ${digits(utm.easting)} ${digits(utm.northing)}`;
+}
+function formatCoordinatesAs(fmt, lat, lng){
+  if(!Number.isFinite(lat) || !Number.isFinite(lng)) return '';
+  if(fmt === 'dms') return toDms(lat, lng);
+  if(fmt === 'utm'){
+    const u = toUtm(lat, lng);
+    return `${u.zone}${u.hemisphere} ${Math.round(u.easting)}mE ${Math.round(u.northing)}mN`;
+  }
+  if(fmt === 'mgrs') return toMgrs(lat, lng);
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
+function formatCoordinates(lat, lng){
+  return formatCoordinatesAs(state.appSettings.coordFormat || 'decimal', lat, lng);
+}
+
 function haversineDistanceKm(lat1, lng1, lat2, lng2){
   const R = 6371;
   const toRad = deg => deg * Math.PI / 180;
