@@ -1774,6 +1774,38 @@ async function runAlleycatTestSuite(){
     if(origBufferMeters === null) localStorage.removeItem('alleycat:proximityBufferMeters'); else localStorage.setItem('alleycat:proximityBufferMeters', origBufferMeters);
   }
 
+  /* 3u) Paket 4 Teil B, Schritt 3: Logistik-Overlay — Marker-Farbbadge nach
+     Personal-Status (gestaffelt: unstaffed rot, staffed grün, kein separates
+     Material-Tracking, s. Roadmap-Entscheidung 18.08.2026) + Klick-zu-Sidebar. */
+  {
+    const staffCp = evt.checkpoints[0];
+    const origStaff = staffCp.staff;
+    staffCp.staff = [];
+    redrawMarkers();
+    let markerEl = cpMarkers[staffCp.id].getElement();
+    check('Unbesetzter Checkpoint zeigt roten Personal-Marker', markerEl.querySelector('.cp-marker-staffing').classList.contains('unstaffed'));
+    staffCp.staff = [withCpStaffDefaults({name: 'Marshal Mo'})];
+    redrawMarkers();
+    markerEl = cpMarkers[staffCp.id].getElement();
+    check('Besetzter Checkpoint zeigt grünen Personal-Marker (keine "unstaffed"-Klasse)', !markerEl.querySelector('.cp-marker-staffing').classList.contains('unstaffed'));
+
+    /* Klick auf den Marker selektiert denselben Checkpoint wie ein Sidebar-Klick
+       (selectCp()) und scrollt dessen Zeile ins Blickfeld. */
+    state.editingId = null;
+    markerEl.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+    checkEqual('Marker-Klick selektiert den Checkpoint über selectCp()', state.editingId, staffCp.id);
+    const selectedRow = document.querySelector(`.cp-row[data-cp-id="${staffCp.id}"]`);
+    check('Ausgewählte Sidebar-Zeile ist nach Marker-Klick im DOM vorhanden', !!selectedRow);
+    selectCp(staffCp.id); // Toggle: erneuter Aufruf mit derselben id schaltet ab
+    checkEqual('Erneutes selectCp() mit derselben id schaltet die Auswahl ab', state.editingId, null);
+
+    const legendStaffingHtml = document.getElementById('map-legend-staffing').innerHTML;
+    check('Legende enthält Personal-Status-Einträge (grün+rot)', legendStaffingHtml.includes('dot staffed') && legendStaffingHtml.includes('dot unstaffed'));
+
+    staffCp.staff = origStaff;
+    redrawMarkers();
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();

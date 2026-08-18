@@ -100,6 +100,10 @@ function selectCp(id){
   renderSidebar();
   const cp = findCp(id);
   if(cp && map) map.flyTo([cp.lat, cp.lng], Math.max(map.getZoom(), 15), {duration: 0.6});
+  if(state.editingId === id){
+    const row = document.querySelector(`.cp-row[data-cp-id="${id}"]`);
+    if(row) row.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
 }
 function onCpRowClick(e, id){
   if(e.shiftKey){

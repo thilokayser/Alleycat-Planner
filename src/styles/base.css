@@ -254,6 +254,8 @@
   .map-legend .dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
   .map-legend .dot.mandatory{background:var(--stamp);}
   .map-legend .dot.optional{background:var(--steel); border:1px dashed var(--chalk);}
+  .map-legend .dot.staffed{background:var(--ok);}
+  .map-legend .dot.unstaffed{background:var(--stamp);}
   .map-legend .line{width:16px; height:0; border-top:2px dashed var(--hivis);}
   .map-legend .line.map-legend-line-estimate{border-top-color:#3fa9f5;}
   .cp-marker{
@@ -274,6 +276,12 @@
     display:flex; align-items:center; justify-content:center;
     font-size:10px; line-height:1;
   }
+  .cp-marker-staffing{
+    position:absolute; top:-3px; left:-3px;
+    width:11px; height:11px; border-radius:50%;
+    background:var(--ok); border:1.5px solid var(--chalk);
+  }
+  .cp-marker-staffing.unstaffed{background:var(--stamp);}
   .cp-marker.cp-marker-hover-sync{animation:cp-marker-hover-pulse 0.8s ease-in-out infinite; z-index:1000 !important;}
   @keyframes cp-marker-hover-pulse{0%,100%{transform:scale(1); opacity:1;} 50%{transform:scale(1.25); opacity:0.75;}}
   .cp-row.cp-row-hover-sync{background:var(--paper-2); border-left:3px solid var(--hivis);}

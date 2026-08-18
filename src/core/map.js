@@ -21,6 +21,8 @@ function initMap(){
   if(legendTypes) legendTypes.innerHTML = CHECKPOINT_TYPES.map(t => `${typeIconHtml(t.key)} ${t.shortLabel}`).join(' &middot; ');
   const legendLocations = document.getElementById('map-legend-locations');
   if(legendLocations) legendLocations.innerHTML = `🏠 ${t('eventLocations.hqLabel')} &middot; 🎉 ${t('eventLocations.afterpartyLabel')}`;
+  const legendStaffing = document.getElementById('map-legend-staffing');
+  if(legendStaffing) legendStaffing.innerHTML = `<span class="dot staffed"></span> ${t('logistics.staffedLegend')} <span class="dot unstaffed"></span> ${t('logistics.unstaffedLegend')}`;
   redrawMarkers();
   redrawZones();
   redrawEventLocations();
@@ -540,14 +542,16 @@ function redrawMarkers(){
   document.querySelectorAll('.leaflet-tooltip.cp-time-tooltip').forEach(el => el.remove());
   state.currentEvent.checkpoints.forEach((cp, idx) => {
     const rot = idx % 2 === 0 ? -5 : 4;
+    const staffed = (cp.staff || []).length > 0;
+    const staffingTitle = staffed ? t('logistics.staffedHint') : t('logistics.unstaffedHint');
     const icon = L.divIcon({
       className:'',
-      html: `<div class="cp-marker ${cp.mandatory ? '' : 'optional'}" style="transform:rotate(${rot}deg);">${cp.order}<span class="cp-marker-type">${typeIconHtml(cp.type)}</span></div>`,
+      html: `<div class="cp-marker ${cp.mandatory ? '' : 'optional'}" style="transform:rotate(${rot}deg);">${cp.order}<span class="cp-marker-type">${typeIconHtml(cp.type)}</span><span class="cp-marker-staffing ${staffed ? '' : 'unstaffed'}" title="${escapeHtml(staffingTitle)}"></span></div>`,
       iconSize:[32,32], iconAnchor:[16,16]
     });
     const marker = L.marker([cp.lat, cp.lng], {icon, draggable:true});
     cpMarkers[cp.id] = marker;
-    marker.on('click', () => { state.editingId = cp.id; renderSidebar(); });
+    marker.on('click', () => selectCp(cp.id));
     marker.on('mouseover', () => setCpRowHoverSync(cp.id, true));
     marker.on('mouseout', () => setCpRowHoverSync(cp.id, false));
     marker.on('dragend', (ev) => {

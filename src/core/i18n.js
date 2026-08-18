@@ -183,7 +183,11 @@ const translations = {
       proximityHint: 'Markiert Checkpoints, die näher beieinander liegen als der Puffer-Radius — häufige Verwechslungsquelle am Renntag.',
       proximityRadiusLabel: 'Puffer-Radius',
       proximityShowOnMap: 'Puffer-Ringe auf Karte anzeigen',
-      proximityClusterWarning: '{count} Checkpoint-Paar(e) liegen näher als {radius}m beieinander.'
+      proximityClusterWarning: '{count} Checkpoint-Paar(e) liegen näher als {radius}m beieinander.',
+      staffedLegend: 'Personal zugewiesen',
+      unstaffedLegend: 'Kein Personal',
+      staffedHint: 'Personal zugewiesen',
+      unstaffedHint: 'Kein Personal zugewiesen — Checkpoint anklicken, um Personal einzutragen'
     },
     exportCsv: {
       colRank: 'Rang', colBib: 'Bib', colName: 'Name', colTeam: 'Team',
