@@ -24,8 +24,33 @@ function initMap(){
   redrawMarkers();
   redrawZones();
   redrawEventLocations();
+  redrawRouteEstimate();
   fitToCheckpoints();
   startZoneShrinkTick();
+}
+
+/* ---------------- logistics: route-estimate map overlay ----------------
+   Draws the 2-opt-optimized path from logistics.js as a distinct dashed
+   line — separate from the real order-based routeLine so the two are
+   never visually confused, since one reflects actual planned checkpoint
+   order and the other a pure distance-minimizing suggestion. */
+function redrawRouteEstimate(){
+  if(routeEstimateLine){ map.removeLayer(routeEstimateLine); routeEstimateLine = null; }
+  const legendEl = document.getElementById('map-legend-route-estimate');
+  if(!state.showRouteEstimateOnMap || !state.routeEstimate || !map){
+    if(legendEl) legendEl.innerHTML = '';
+    return;
+  }
+  const est = state.routeEstimate;
+  const byId = new Map(est.points.map(p => [p.id, p]));
+  const orderedPoints = est.optimizedOrderIds.map(id => byId.get(id)).filter(Boolean);
+  if(orderedPoints.length >= 2){
+    routeEstimateLine = L.polyline(orderedPoints.map(p => [p.lat, p.lng]), {
+      color: '#3fa9f5', weight: 3, dashArray: '3 6', opacity: 0.85, lineJoin: 'round'
+    }).addTo(map);
+    routeEstimateLine.bringToBack();
+  }
+  if(legendEl) legendEl.innerHTML = `<span class="line map-legend-line-estimate"></span> ${t('logistics.legendLabel')}`;
 }
 
 /* ---------------- zone shrink: live ticking redraw ----------------

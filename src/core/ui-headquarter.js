@@ -58,9 +58,12 @@ let state = {
   eventLocationsPanelOpen: false,
   locationPlacementMode: null,
   mapSearchOpen: false,
+  logisticsPanelOpen: false,
+  routeEstimate: undefined,
+  showRouteEstimateOnMap: false,
 };
 let pdfPreviewDoc = null;
-let map, markersLayer, zonesLayer, eventLocationsLayer, routeLine, cpMarkers = {};
+let map, markersLayer, zonesLayer, eventLocationsLayer, routeLine, routeEstimateLine, cpMarkers = {};
 let qrScanStream = null;
 let qrScanRAF = null;
 let liveCountdownInterval = null;

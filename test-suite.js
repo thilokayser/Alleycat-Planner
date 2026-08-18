@@ -1644,6 +1644,81 @@ async function runAlleycatTestSuite(){
     check('toggleMapSearch(false): erzwingt geschlossenen Zustand', !state.mapSearchOpen);
   }
 
+  /* 3s) Paket 4 Teil B, Schritt 1: Routen-Schätzer (2-Opt-TSP-Heuristik).
+     Reine Planungshilfe — rührt evt.checkpoints[].order/checkpointOrderMode
+     nicht an. Geometrie-Tests laufen auf einem eigenständigen synthetischen
+     Fixture statt dem Haupt-`evt`, um unabhängig von dessen Checkpoint-
+     Koordinaten (die sich im Lauf der Suite ändern) ein bekanntes,
+     nachrechenbares Ergebnis zu haben. */
+  {
+    const square = [
+      {lat: 0, lng: 0}, {lat: 0, lng: 1}, {lat: 1, lng: 1}, {lat: 1, lng: 0}
+    ];
+    checkEqual('tourDistanceKm: Summe der Einzeldistanzen', tourDistanceKm(square, [0, 1, 2]).toFixed(4), (haversineDistanceKm(0, 0, 0, 1) + haversineDistanceKm(0, 1, 1, 1)).toFixed(4));
+
+    const nn = nearestNeighborTour(square, 0);
+    checkEqual('nearestNeighborTour startet am vorgegebenen Index', nn[0], 0);
+    checkEqual('nearestNeighborTour besucht jeden Punkt genau einmal', nn.slice().sort().join(','), '0,1,2,3');
+
+    /* Bewusst schlecht sortierte Reihenfolge (Diagonalen-Kreuzung: 0→2→1→3) —
+       2-Opt muss das auf die kreuzungsfreie Quadrat-Umrandung verbessern. */
+    const crossedTour = [0, 2, 1, 3];
+    const crossedDist = tourDistanceKm(square, crossedTour);
+    const {tour: improvedTour, distanceKm: improvedDist} = twoOptImprove(square, crossedTour);
+    check('twoOptImprove verbessert eine sich kreuzende Route', improvedDist < crossedDist - 0.01);
+    checkEqual('twoOptImprove lässt den Startindex unangetastet', improvedTour[0], 0);
+    check('twoOptImprove liefert weiterhin eine gültige Permutation', improvedTour.slice().sort().join(',') === '0,1,2,3');
+
+    check('estimateOptimalRoute: null bei weniger als 2 georeferenzierten Checkpoints', estimateOptimalRoute({checkpoints: [{id: 'a', order: 1, lat: 0, lng: 0}], eventLocations: []}) === null);
+
+    const synthEvtNoHq = {
+      eventLocations: [],
+      checkpoints: [
+        {id: 'sq0', order: 1, lat: 0, lng: 0},
+        {id: 'sq1', order: 2, lat: 0, lng: 1},
+        {id: 'sq2', order: 3, lat: 1, lng: 1},
+        {id: 'sq3', order: 4, lat: 1, lng: 0}
+      ]
+    };
+    const estNoHq = estimateOptimalRoute(synthEvtNoHq);
+    check('estimateOptimalRoute ohne HQ verankert am ersten Checkpoint (order 1)', estNoHq.points[0].id === 'sq0');
+    check('estimateOptimalRoute: optimierte Distanz ≤ aktuelle Distanz', estNoHq.optimizedDistanceKm <= estNoHq.currentDistanceKm + 1e-9);
+    checkEqual('estimateOptimalRoute: savingsKm ist die Differenz', estNoHq.savingsKm.toFixed(4), Math.max(0, estNoHq.currentDistanceKm - estNoHq.optimizedDistanceKm).toFixed(4));
+    check('estimateOptimalRoute: optimierte Reihenfolge ist eine Permutation aller Punkt-IDs', estNoHq.optimizedOrderIds.slice().sort().join(',') === estNoHq.points.map(p => p.id).sort().join(','));
+
+    const synthEvtWithHq = Object.assign({}, synthEvtNoHq, {
+      eventLocations: [withEventLocationDefaults({type: 'headquarters', lat: 5, lng: 5})]
+    });
+    const estWithHq = estimateOptimalRoute(synthEvtWithHq);
+    check('estimateOptimalRoute mit HQ verankert am HQ statt am ersten Checkpoint', estWithHq.points[0].id === '__hq__');
+
+    checkEqual('estimateRouteTimeMinutes rechnet Distanz/Geschwindigkeit*60', estimateRouteTimeMinutes(18, 18), 60);
+    checkEqual('estimateRouteTimeMinutes: ungültige Geschwindigkeit liefert 0', estimateRouteTimeMinutes(10, 0), 0);
+    checkEqual('formatEstimatedDuration formatiert Stunden+Minuten', formatEstimatedDuration(75), '1h 15min');
+    checkEqual('formatEstimatedDuration unter einer Stunde ohne Stunden-Anteil', formatEstimatedDuration(42), '42min');
+
+    localStorage.removeItem('alleycat:avgSpeedKmh');
+    checkEqual('currentAvgSpeedKmh: Default ohne gespeicherte Präferenz', currentAvgSpeedKmh(), 18);
+    onLogisticsSpeedChange('25');
+    checkEqual('onLogisticsSpeedChange persistiert die Geschwindigkeit', currentAvgSpeedKmh(), 25);
+    localStorage.removeItem('alleycat:avgSpeedKmh');
+
+    /* Panel-Zustände: nicht berechnet / zu wenige Punkte / Ergebnis vorhanden.
+       Nutzt state.currentEvent (Haupt-evt), unabhängig von dessen konkreten
+       Checkpoint-Koordinaten — nur die drei Render-Zweige werden geprüft. */
+    state.routeEstimate = undefined;
+    state.logisticsPanelOpen = true;
+    check('renderLogisticsPanel (offen, noch nicht berechnet) zeigt den Hinweis', renderLogisticsPanel(evt).includes(t('logistics.notYetHint')));
+    state.routeEstimate = false;
+    check('renderLogisticsPanel (offen, zu wenige Punkte) zeigt den Hinweis', renderLogisticsPanel(evt).includes(t('logistics.notEnoughPoints')));
+    state.routeEstimate = estNoHq;
+    const panelHtml = renderLogisticsPanel(evt);
+    check('renderLogisticsPanel (offen, Ergebnis vorhanden) zeigt Distanzen', panelHtml.includes('km') && panelHtml.includes(t('logistics.showOnMap')));
+    state.logisticsPanelOpen = false;
+    state.routeEstimate = undefined;
+    state.showRouteEstimateOnMap = false;
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();

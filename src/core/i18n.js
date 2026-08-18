@@ -165,6 +165,20 @@ const translations = {
       overwriteFreeHqConfirm: 'Es gibt bereits einen frei platzierten Headquarter-Marker. Diesen durch den Checkpoint ersetzen?',
       unknownCheckpoint: '(unbekannter Checkpoint)'
     },
+    logistics: {
+      heading: 'Routen-Schätzer',
+      hint: 'Schätzt die effizienteste Reihenfolge der Checkpoints per 2-Opt-Heuristik — rein informativ, ändert nichts an der geplanten Checkpoint-Reihenfolge.',
+      estimateButton: 'Route schätzen',
+      notYetHint: 'Noch nicht berechnet.',
+      notEnoughPoints: 'Mindestens 2 platzierte Checkpoints nötig.',
+      currentDistance: 'Aktuelle Reihenfolge',
+      optimizedDistance: 'Optimierte Reihenfolge',
+      savings: 'Einsparung: {km} km (–{percent}%)',
+      avgSpeedLabel: 'Ø Geschwindigkeit',
+      estimatedTime: 'Geschätzte Fahrzeit',
+      showOnMap: 'Optimierte Route auf Karte anzeigen',
+      legendLabel: 'Route (optimiert)'
+    },
     exportCsv: {
       colRank: 'Rang', colBib: 'Bib', colName: 'Name', colTeam: 'Team',
       colFinishTime: 'Zielzeit', colStatus: 'Status',
