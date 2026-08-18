@@ -430,6 +430,7 @@ function toggleAddMode(){
   if(isCpLocked(state.currentEvent)) return;
   state.addMode = !state.addMode;
   renderSidebar();
+  applyMobileMapCollapsed();
 }
 function cpTimeWindowStatus(cp){
   if(!cp.timeWindowEnabled || !cp.timeWindowStart || !cp.timeWindowEnd) return null;

@@ -134,6 +134,7 @@ function updateZoneLegend(){
 function toggleZonesPanel(){
   state.zonesPanelOpen = !state.zonesPanelOpen;
   renderSidebar();
+  applyMobileMapCollapsed();
 }
 function onZoneNameChange(id, value){
   const evt = state.currentEvent;
@@ -312,6 +313,57 @@ function fitToCheckpoints(){
   map.fitBounds(bounds.pad(0.25));
 }
 
+/* ---------------- mobile: collapsible map panel ----------------
+   Below SIDEBAR_BREAKPOINT the editor already stacks map-above-list (see
+   the @media rule in base.css); on a phone that leaves very little room
+   for the checkpoint/Sonderorte/Zonen lists below a large map. This lets
+   the organizer collapse the map down to a thin toggle bar so the list
+   gets the space instead — persisted per device, independent of the
+   desktop sidebar-collapse feature above. Deliberately ignored while the
+   map itself is the input surface (drawing a zone, placing a checkpoint
+   or a freestanding HQ/Afterparty marker) — collapsing it there would
+   hide the exact thing the organizer is trying to interact with. */
+const MAP_COLLAPSE_BREAKPOINT = 768;
+function isMapForceExpanded(){
+  return !!(state.zonesPanelOpen || state.addMode || state.locationPlacementMode);
+}
+function isMobileMapCollapsed(){
+  if(window.innerWidth > SIDEBAR_BREAKPOINT || isMapForceExpanded()) return false;
+  try{
+    const stored = localStorage.getItem('alleycat:mapCollapsed');
+    if(stored === '1') return true;
+    if(stored === '0') return false;
+  }catch(e){}
+  return window.innerWidth < MAP_COLLAPSE_BREAKPOINT;
+}
+function applyMobileMapCollapsed(){
+  const viewEditor = document.getElementById('view-editor');
+  const toggle = document.getElementById('mobile-map-toggle');
+  if(!viewEditor || !toggle) return;
+  const active = window.innerWidth <= SIDEBAR_BREAKPOINT;
+  toggle.style.display = active ? 'flex' : 'none';
+  if(!active){
+    viewEditor.classList.remove('mobile-map-collapsed');
+    if(map && state.view === 'editor') map.invalidateSize();
+    return;
+  }
+  const collapsed = isMobileMapCollapsed();
+  viewEditor.classList.toggle('mobile-map-collapsed', collapsed);
+  toggle.disabled = isMapForceExpanded();
+  toggle.textContent = collapsed ? t('map.showMap') : t('map.hideMap');
+  /* Synchron statt setTimeout — dieselbe Begründung wie bei
+     applyEditorSidebarCollapsed() weiter unten: eine verzögerte
+     invalidateSize() nach einem Zwischen-View-Wechsel würde eine
+     0x0-Größe cachen. */
+  if(!collapsed && map && state.view === 'editor') map.invalidateSize();
+}
+function toggleMobileMapCollapsed(){
+  if(isMapForceExpanded()) return;
+  const next = !isMobileMapCollapsed();
+  try{ localStorage.setItem('alleycat:mapCollapsed', next ? '1' : '0'); }catch(e){}
+  applyMobileMapCollapsed();
+}
+
 /* ---------------- sidebar resize ---------------- */
 const SIDEBAR_MIN = 280, SIDEBAR_MAX = 640, SIDEBAR_BREAKPOINT = 820;
 function applySidebarWidth(){
@@ -389,6 +441,7 @@ function initSidebarResize(){
     if(state.view === 'editor'){
       applySidebarWidth();
       applyEditorSidebarCollapsed();
+      applyMobileMapCollapsed();
       if(map) map.invalidateSize();
     }
   });
@@ -400,6 +453,7 @@ function onMapClick(e){
     const loc = placeEventLocationAt(state.currentEvent, type, e.latlng.lat, e.latlng.lng);
     if(loc){ debouncedSave(); redrawEventLocations(); }
     renderSidebar();
+    applyMobileMapCollapsed();
     return;
   }
   if(!state.addMode || !state.currentEvent || isCpLocked(state.currentEvent)) return;
@@ -476,6 +530,18 @@ function redrawMarkers(){
 }
 
 /* ---------------- map search (Nominatim) ---------------- */
+function toggleMapSearch(forceOpen){
+  const open = typeof forceOpen === 'boolean' ? forceOpen : !state.mapSearchOpen;
+  state.mapSearchOpen = open;
+  const wrap = document.getElementById('map-search-wrap');
+  if(wrap) wrap.classList.toggle('open', open);
+  if(open){
+    const input = document.getElementById('map-search-input');
+    if(input) setTimeout(() => input.focus(), 20);
+  } else {
+    clearSearch();
+  }
+}
 function onSearchInput(value){
   clearTimeout(searchDebounce);
   document.getElementById('map-search-clear').style.display = value ? 'inline-block' : 'none';

@@ -116,7 +116,9 @@ const translations = {
       sidebarResizeTitle: 'Ziehen, um die Sidebar zu vergrößern',
       routeLegend: 'Route (Reihenfolge)',
       collapseSidebar: 'Sidebar einklappen',
-      expandSidebar: 'Sidebar wieder anzeigen'
+      expandSidebar: 'Sidebar wieder anzeigen',
+      showMap: '▾ Karte anzeigen',
+      hideMap: '▴ Karte einklappen'
     },
     zones: {
       heading: 'Zonen',

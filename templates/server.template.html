@@ -42,9 +42,11 @@
     <div id="view-editor" class="view">
       <div class="map-wrap">
         <div id="map"></div>
-        <div class="map-search">
-          <div class="map-search-box">
+        <div class="map-search" id="map-search-wrap">
+          <button type="button" class="map-search-toggle" id="map-search-toggle" onclick="toggleMapSearch()" title="Suche">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+          <div class="map-search-box">
             <input type="text" id="map-search-input" oninput="onSearchInput(this.value)" autocomplete="off">
             <button class="search-clear" id="map-search-clear" onclick="clearSearch()" style="display:none;">&times;</button>
           </div>
@@ -61,6 +63,7 @@
       </div>
       <button type="button" class="sidebar-collapse-toggle" id="sidebar-collapse-toggle" onclick="toggleEditorSidebarCollapsed()"></button>
       <div class="sidebar-resize-handle" id="sidebar-resize-handle"></div>
+      <button type="button" class="mobile-map-toggle" id="mobile-map-toggle" onclick="toggleMobileMapCollapsed()"></button>
       <div class="sidebar" id="sidebar"></div>
     </div>
     <div id="view-manifest" class="view"></div>

@@ -205,22 +205,35 @@
   #map{flex:1; background:#111;}
 
   .map-search{
-    position:absolute; top:14px; right:14px; z-index:1000; width:300px;
-    font-family:'Inter',sans-serif;
+    position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:1000;
+    font-family:'Inter',sans-serif; display:flex; align-items:center;
   }
-  .map-search-box{display:flex; align-items:center; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:3px; box-shadow:0 6px 18px rgba(0,0,0,.4);}
-  .map-search-box svg{flex-shrink:0; margin-left:10px; opacity:0.6;}
+  .map-search-toggle{
+    flex-shrink:0; width:34px; height:34px; padding:0; border-radius:3px;
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); box-shadow:0 6px 18px rgba(0,0,0,.4);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--chalk); opacity:0.85;
+  }
+  .map-search-toggle:hover{color:var(--hivis-2); opacity:1;}
+  .map-search.open .map-search-toggle{color:var(--hivis-2); opacity:1;}
+  .map-search-box{
+    display:flex; align-items:center; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:3px;
+    box-shadow:0 6px 18px rgba(0,0,0,.4);
+    width:0; opacity:0; margin-left:0; overflow:hidden; pointer-events:none;
+    transition:width .18s ease, opacity .12s ease, margin-left .18s ease;
+  }
+  .map-search.open .map-search-box{width:280px; opacity:1; margin-left:8px; pointer-events:auto;}
   .map-search-box input{
-    flex:1; background:transparent; border:none; color:var(--chalk);
+    flex:1; min-width:0; background:transparent; border:none; color:var(--chalk);
     font-family:'Inter',sans-serif; font-size:13px; padding:11px 10px;
   }
   .map-search-box input::placeholder{color:var(--steel);}
   .map-search-box .search-clear{
-    background:none; border:none; color:var(--steel); cursor:pointer; padding:4px 10px; font-size:15px;
+    flex-shrink:0; background:none; border:none; color:var(--steel); cursor:pointer; padding:4px 10px; font-size:15px;
   }
   .map-search-box .search-clear:hover{color:var(--hivis-2);}
   .map-search-results{
-    margin-top:4px; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:3px;
+    position:absolute; top:calc(100% + 4px); right:0; width:280px;
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:3px;
     max-height:240px; overflow:auto; display:none; box-shadow:0 6px 18px rgba(0,0,0,.4);
   }
   .map-search-result{
@@ -302,6 +315,15 @@
   .sidebar-resize-handle:hover::after, .sidebar-resize-handle.dragging::after{
     background:repeating-linear-gradient(var(--ink) 0 2px, transparent 2px 5px);
   }
+
+  .mobile-map-toggle{
+    display:none; width:100%; flex-shrink:0; border:none; cursor:pointer;
+    background:var(--asphalt-3); color:var(--hivis-2);
+    font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    padding:9px; align-items:center; justify-content:center;
+  }
+  .mobile-map-toggle:hover{background:var(--hivis); color:var(--asphalt);}
+  .mobile-map-toggle:disabled{opacity:0.5; cursor:not-allowed; background:var(--asphalt-3); color:var(--hivis-2);}
 
   .sidebar{
     width:340px; flex-shrink:0;
@@ -1285,6 +1307,13 @@
     .sidebar-resize-handle{display:none;}
     .sidebar-collapse-toggle{display:none;}
     #map{height:54%;}
+    .mobile-map-toggle{display:flex;}
+    /* Zone-Editor/Checkpoint-setzen/Sonderort-platzieren ignorieren das
+       Einklappen (applyMobileMapCollapsed() lässt die Klasse dann gar nicht
+       erst zu) — hier nur die reine Größenumverteilung. */
+    #view-editor.mobile-map-collapsed .map-wrap{flex:0 0 0; height:0; min-height:0; overflow:hidden;}
+    #view-editor.mobile-map-collapsed #map{height:0;}
+    #view-editor.mobile-map-collapsed .sidebar{height:auto; flex:1;}
     #view-checkin{flex-direction:column;}
     .checkin-side{width:100%; max-height:38vh; border-left:none; border-top:1px solid var(--asphalt-3);}
   }

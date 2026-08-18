@@ -7,5 +7,7 @@ php-backend/config.php
 # Build-Output — per `node build.js` aus src/ generiert, nicht versioniert.
 dist/
 
-# Lokaler Cache/Config des Impeccable-Design-Review-Hooks.
+# Lokaler Cache/Config von Claude Code
 .impeccable/
+.agents/
+.claude/

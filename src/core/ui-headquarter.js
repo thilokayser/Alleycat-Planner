@@ -57,6 +57,7 @@ let state = {
   zonesPanelOpen: false,
   eventLocationsPanelOpen: false,
   locationPlacementMode: null,
+  mapSearchOpen: false,
 };
 let pdfPreviewDoc = null;
 let map, markersLayer, zonesLayer, eventLocationsLayer, routeLine, cpMarkers = {};
@@ -239,7 +240,7 @@ async function openEditor(id){
   registerEventSounds(state.currentEvent);
   state.loading = false;
   render();
-  setTimeout(() => { initMap(); initSidebarResize(); applySidebarWidth(); applyEditorSidebarCollapsed(); }, 30);
+  setTimeout(() => { initMap(); initSidebarResize(); applySidebarWidth(); applyEditorSidebarCollapsed(); applyMobileMapCollapsed(); }, 30);
 }
 function openOverview(){
   state.view = 'overview';
@@ -287,6 +288,7 @@ function handleGlobalEscape(){
   if(state.pdfPreviewOpen){ closePdfPreview(); return true; }
   if(state.socialShareOpen){ closeSocialShareCard(); return true; }
   if(state.commandPaletteOpen){ closeCommandPalette(); return true; }
+  if(state.mapSearchOpen){ toggleMapSearch(false); return true; }
   if(state.addMode){ toggleAddMode(); return true; }
   return false;
 }

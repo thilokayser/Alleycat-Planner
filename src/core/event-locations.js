@@ -88,6 +88,7 @@ function unlinkHqFromCheckpoint(){
 function toggleLocationPlacementMode(type){
   state.locationPlacementMode = state.locationPlacementMode === type ? null : type;
   renderSidebar();
+  applyMobileMapCollapsed();
 }
 /* Returns the placed location, or null if placement was cancelled (e.g. user
    declined to override an HQ that's still linked to a checkpoint). */

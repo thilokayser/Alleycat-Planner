@@ -1524,6 +1524,73 @@ async function runAlleycatTestSuite(){
     /* Kreis-Zone aus 3o bleibt weiterhin stehen, für den Persistenz-Check in Abschnitt 4 */
   }
 
+  /* 3r) Paket 4 Teil A, Schritt 7: Mobiles CollapsibleMapPanel + Lupen-Icon-Suche.
+     window.innerWidth wird für die breitenabhängigen Checks gezielt mit
+     Object.defineProperty gemockt (danach zurückgesetzt) statt vom
+     tatsächlichen Testfenster abzuhängen — gleiches Prinzip wie die
+     window.confirm-Mocks weiter oben in dieser Suite. */
+  {
+    state.zonesPanelOpen = false; state.addMode = false; state.locationPlacementMode = null;
+    check('isMapForceExpanded: false ohne aktiven Eingabemodus', !isMapForceExpanded());
+    state.zonesPanelOpen = true;
+    check('isMapForceExpanded: true bei offenem Zonen-Panel', isMapForceExpanded());
+    state.zonesPanelOpen = false;
+    state.addMode = true;
+    check('isMapForceExpanded: true bei aktivem "Checkpoint setzen"', isMapForceExpanded());
+    state.addMode = false;
+    state.locationPlacementMode = 'headquarters';
+    check('isMapForceExpanded: true bei aktiver Sonderort-Platzierung', isMapForceExpanded());
+    state.locationPlacementMode = null;
+
+    const origInnerWidthDesc = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+    const setTestWidth = (w) => Object.defineProperty(window, 'innerWidth', {value: w, configurable: true});
+    try{
+      localStorage.removeItem('alleycat:mapCollapsed');
+      setTestWidth(1200);
+      check('isMobileMapCollapsed: false bei Desktop-Breite (>820px)', !isMobileMapCollapsed());
+
+      setTestWidth(500);
+      check('isMobileMapCollapsed: Default eingeklappt unter 768px ohne gespeicherte Präferenz', isMobileMapCollapsed());
+
+      setTestWidth(800);
+      check('isMobileMapCollapsed: Default ausgeklappt zwischen 768 und 820px', !isMobileMapCollapsed());
+
+      localStorage.setItem('alleycat:mapCollapsed', '0');
+      setTestWidth(500);
+      check('isMobileMapCollapsed: gespeicherte Präferenz "0" übersteuert den <768px-Default', !isMobileMapCollapsed());
+
+      localStorage.setItem('alleycat:mapCollapsed', '1');
+      setTestWidth(800);
+      check('isMobileMapCollapsed: gespeicherte Präferenz "1" übersteuert den 768–820px-Default', isMobileMapCollapsed());
+
+      state.zonesPanelOpen = true;
+      check('isMobileMapCollapsed: Zonen-Editor ignoriert eine gespeicherte "1"-Präferenz', !isMobileMapCollapsed());
+      state.zonesPanelOpen = false;
+
+      localStorage.removeItem('alleycat:mapCollapsed');
+    } finally {
+      Object.defineProperty(window, 'innerWidth', origInnerWidthDesc);
+    }
+
+    /* Kartensuche: Icon-only, klappt per toggleMapSearch() aus/ein. Die
+       statischen #map-search-*-Elemente existieren unabhängig von der
+       aktiven Ansicht (nur per CSS .active ein-/ausgeblendet), daher hier
+       ohne erneutes openEditor() testbar. */
+    state.mapSearchOpen = false;
+    document.getElementById('map-search-wrap').classList.remove('open');
+    toggleMapSearch();
+    check('toggleMapSearch: öffnet die Suche (state + DOM-Klasse)', state.mapSearchOpen && document.getElementById('map-search-wrap').classList.contains('open'));
+    document.getElementById('map-search-input').value = 'Testsuche';
+    document.getElementById('map-search-clear').style.display = 'inline-block';
+    toggleMapSearch();
+    check('toggleMapSearch: schließt die Suche wieder', !state.mapSearchOpen && !document.getElementById('map-search-wrap').classList.contains('open'));
+    checkEqual('toggleMapSearch: Schließen leert das Eingabefeld (clearSearch())', document.getElementById('map-search-input').value, '');
+    toggleMapSearch(true);
+    check('toggleMapSearch(true): erzwingt offenen Zustand', state.mapSearchOpen);
+    toggleMapSearch(false);
+    check('toggleMapSearch(false): erzwingt geschlossenen Zustand', !state.mapSearchOpen);
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
