@@ -842,6 +842,13 @@ function redrawMarkers(){
         permanent: true, direction: 'top', offset: [0, -18], className: 'cp-time-tooltip'
       });
     }
+    /* Clue-Vorschau (Spec 18.6): only bound while the mode is active — in
+       normal mode markers have never had a popup (order number + type icon
+       on the marker itself already identifies the checkpoint), so adding
+       one unconditionally would be new, unrequested clutter. */
+    if(state.cluePreviewMode){
+      marker.bindPopup(cp.clue ? escapeHtml(cp.clue).replace(/\n/g, '<br>') : `<i>${t('cluePreview.noClue')}</i>`);
+    }
     marker.addTo(markersLayer);
   });
 
@@ -857,6 +864,20 @@ function redrawMarkers(){
     }).addTo(map);
     routeLine.bringToBack();
   }
+}
+
+/* ---------------- clue preview mode (Spec 18.6) ----------------
+   Toggle-only, no persistence (localStorage or evt) — this is a one-off
+   proofreading pass right before print, not a device/event preference
+   worth remembering across sessions, same category as state.addMode. Swaps
+   checkpoint names for their clue text in both the sidebar rows
+   (checkpoint.js's renderCpListRows()) and new marker popups. */
+function toggleCluePreviewMode(){
+  state.cluePreviewMode = !state.cluePreviewMode;
+  const btn = document.getElementById('clue-preview-toggle');
+  if(btn) btn.classList.toggle('active', state.cluePreviewMode);
+  redrawMarkers();
+  renderSidebar();
 }
 
 /* ---------------- map search (Nominatim) ---------------- */

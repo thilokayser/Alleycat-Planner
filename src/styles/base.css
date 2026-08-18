@@ -215,6 +215,15 @@
   }
   .map-search-toggle:hover{color:var(--hivis-2); opacity:1;}
   .map-search.open .map-search-toggle{color:var(--hivis-2); opacity:1;}
+
+  .clue-preview-toggle{
+    position:absolute; top:14px; left:14px; z-index:1000;
+    width:34px; height:34px; padding:0; border-radius:3px; font-size:15px;
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); box-shadow:0 6px 18px rgba(0,0,0,.4);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--chalk); opacity:0.85;
+  }
+  .clue-preview-toggle:hover{color:var(--hivis-2); opacity:1;}
+  .clue-preview-toggle.active{color:var(--asphalt); background:var(--hivis); opacity:1;}
   .map-search-box{
     display:flex; align-items:center; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:3px;
     box-shadow:0 6px 18px rgba(0,0,0,.4);
@@ -480,6 +489,7 @@
   .cp-row.optional .cp-no{background:var(--steel);}
   .cp-row-chevron{font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a8065; flex-shrink:0; width:10px; text-align:center;}
   .cp-name{font-family:'Oswald',sans-serif; font-weight:600; font-size:14px; text-transform:uppercase; flex:1; min-width:0;}
+  .cp-name.cp-name-clue{text-transform:none; font-style:italic; font-weight:400; color:var(--hivis-2);}
   .tag-type{
     font-family:'JetBrains Mono',monospace; font-size:8.5px; text-transform:uppercase; letter-spacing:0.04em;
     border:1px solid #8a8065; color:#5b5340; padding:2px 5px; border-radius:2px; flex-shrink:0;

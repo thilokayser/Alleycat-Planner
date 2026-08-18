@@ -195,6 +195,10 @@ const translations = {
       deleteConfirm: 'Diesen importierten Layer wirklich löschen?',
       parseError: 'Datei konnte nicht gelesen werden — unterstützt werden .gpx, .geojson und .kml.'
     },
+    cluePreview: {
+      activeHint: '👁 Clue-Vorschau aktiv — Checkpoint-Namen sind ausgeblendet, stattdessen werden Rätsel-/Hinweistexte angezeigt (Karten-Popups + Sidebar).',
+      noClue: 'Kein Rätsel-Text hinterlegt'
+    },
     logistics: {
       heading: 'Logistik',
       routeHeading: 'Routen-Schätzung',

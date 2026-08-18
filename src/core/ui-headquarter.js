@@ -67,7 +67,7 @@ let state = {
   mapContextMenu: null,
   geoImportPanelOpen: false,
   geoImportLayers: [], // session-only ("temporär") imported layers — see geo-import.js
-  mapDragOver: false,
+  cluePreviewMode: false,
 };
 let pdfPreviewDoc = null;
 let map, markersLayer, zonesLayer, eventLocationsLayer, orgaPinsLayer, importedGeoLayer, routeLine, routeEstimateLine, proximityBufferLayer, cpMarkers = {};

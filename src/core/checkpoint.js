@@ -614,7 +614,7 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
               </span>
               <div class="cp-no">${cp.order}</div>
               <span class="cp-row-chevron">${editing ? '▾' : '▸'}</span>
-              <div class="cp-name" id="row-name-${cp.id}">${escapeHtml(cp.name || t('checkpoint.noName'))}</div>
+              <div class="cp-name ${state.cluePreviewMode ? 'cp-name-clue' : ''}" id="row-name-${cp.id}">${state.cluePreviewMode ? (cp.clue ? escapeHtml(cp.clue) : `<i>${t('cluePreview.noClue')}</i>`) : escapeHtml(cp.name || t('checkpoint.noName'))}</div>
               <span class="tag-type">${typeLabel(cp.type)}</span>
               <label class="cp-quick-toggle" title="${t('checkpoint.mandatoryCheckpointTitle')}" onclick="event.stopPropagation()">
                 <input type="checkbox" ${cp.mandatory ? 'checked' : ''} ${itemLocked ? 'disabled' : ''} onchange="onEditMandatory('${cp.id}', this.checked)">
@@ -711,6 +711,7 @@ function renderSidebar(){
         <option value="type" ${state.cpListGroupBy === 'type' ? 'selected' : ''}>${t('checkpoint.groupByType')}</option>
       </select>
     </div>
+    ${state.cluePreviewMode ? `<div class="cp-lock-banner">${t('cluePreview.activeHint')}</div>` : ''}
     ${state.cpBulkSelectedIds.length ? renderCpBulkActionsBar() : `<div class="cp-bulk-hint">${t('checkpoint.bulkSelectHint')}</div>`}
     <div class="cp-list">${rows}</div>
     ${renderEventSettingsPanel(evt)}

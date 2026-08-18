@@ -2011,6 +2011,47 @@ async function runAlleycatTestSuite(){
     check('initGeoImportDragDrop setzt den Drop-Hint als Attribut', document.querySelector('.map-wrap').getAttribute('data-drop-hint') === t('geoImport.dropHint'));
   }
 
+  /* 3x) Paket 4 Teil B, Schritt 6 (letzter Teil-B-Schritt): Clue-Vorschau-
+     Modus (Spec 18.6). Kein eigenes Datenmodell/keine Persistenz — reiner
+     Anzeige-Umschalter, geprüft auf dem echten evt/der echten Karte. */
+  {
+    const viewBeforeClue = state.view;
+    state.view = 'editor';
+    render();
+
+    const clueCp = evt.checkpoints[0];
+    const noClueCp = evt.checkpoints[1];
+    const origClue = clueCp.clue, origNoClue = noClueCp.clue;
+    clueCp.clue = 'Finde die rote Tür am Marktplatz.';
+    noClueCp.clue = '';
+
+    checkEqual('cluePreviewMode startet deaktiviert', state.cluePreviewMode, false);
+    check('Sidebar zeigt normal den Checkpoint-Namen', document.getElementById(`row-name-${clueCp.id}`).textContent.trim() === (clueCp.name || t('checkpoint.noName')));
+    redrawMarkers();
+    check('Marker haben ohne Clue-Vorschau kein Popup gebunden', !cpMarkers[clueCp.id].getPopup());
+
+    toggleCluePreviewMode();
+    check('toggleCluePreviewMode aktiviert den Modus', state.cluePreviewMode);
+    check('Toggle-Button bekommt die "active"-Klasse', document.getElementById('clue-preview-toggle').classList.contains('active'));
+    check('Sidebar zeigt jetzt den Rätsel-Text statt des Namens', document.getElementById(`row-name-${clueCp.id}`).textContent.trim() === clueCp.clue);
+    check('Sidebar zeigt den "kein Rätsel-Text"-Hinweis bei leerem clue', document.getElementById(`row-name-${noClueCp.id}`).textContent.includes(t('cluePreview.noClue')));
+    check('Hinweis-Banner erscheint im Sidebar-Markup', document.getElementById('sidebar').innerHTML.includes(t('cluePreview.activeHint')));
+    check('Marker mit Rätsel-Text bekommen jetzt ein Popup', !!cpMarkers[clueCp.id].getPopup());
+    check('Popup-Inhalt enthält den Rätsel-Text', cpMarkers[clueCp.id].getPopup().getContent().includes('Finde die rote Tür'));
+    check('Popup für Checkpoint ohne Rätsel-Text zeigt den Leer-Hinweis', cpMarkers[noClueCp.id].getPopup().getContent().includes(t('cluePreview.noClue')));
+
+    toggleCluePreviewMode();
+    checkEqual('Erneutes Umschalten deaktiviert den Modus wieder', state.cluePreviewMode, false);
+    check('Toggle-Button verliert die "active"-Klasse', !document.getElementById('clue-preview-toggle').classList.contains('active'));
+    check('Sidebar zeigt wieder den normalen Namen', document.getElementById(`row-name-${clueCp.id}`).textContent.trim() === (clueCp.name || t('checkpoint.noName')));
+    check('Marker verlieren das Popup wieder', !cpMarkers[clueCp.id].getPopup());
+
+    clueCp.clue = origClue; noClueCp.clue = origNoClue;
+    redrawMarkers();
+    state.view = viewBeforeClue;
+    render();
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
