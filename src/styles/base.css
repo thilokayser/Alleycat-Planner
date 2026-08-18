@@ -474,6 +474,10 @@
     width:60px; font-family:'JetBrains Mono',monospace; font-size:11px;
     border:1px solid var(--paper-line); background:#faf6ea; color:var(--ink); border-radius:2px; padding:3px 5px;
   }
+  .zone-shrink-config{display:flex; flex-direction:column; gap:6px; margin-left:4px; padding-left:8px; border-left:2px solid var(--paper-line);}
+  .zone-shrink-config select{font-family:'Inter',sans-serif; font-size:12px; border:1px solid var(--paper-line); background:#faf6ea; color:var(--ink); border-radius:2px; padding:4px 6px;}
+  .zone-visibility-row{display:flex; flex-direction:column; gap:2px; margin-top:2px;}
+  .legend-zone-swatch{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:3px; vertical-align:middle;}
 
   .event-loc-row{background:rgba(0,0,0,0.03); border-radius:3px; padding:8px; display:flex; flex-direction:column; gap:6px; margin-bottom:8px;}
   .event-loc-row:last-child{margin-bottom:0;}

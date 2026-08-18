@@ -1439,6 +1439,91 @@ async function runAlleycatTestSuite(){
     /* HQ-Location bleibt bewusst stehen (freistehend), für den Persistenz-Check in Abschnitt 4 */
   }
 
+  /* 3q) Paket 4 Teil A, Schritt 6: Zonen-Schrumpfen + Sichtbarkeits-Flags.
+     Kontinuierliches, kreis-only Schrumpfen (zones.js) ist bewusst unabhängig
+     vom diskreten, stufenbasierten Battle-Royale-Schrumpfen (rules-engine.js)
+     — siehe die separaten zone_active-Checks weiter oben, die unverändert
+     bleiben. */
+  {
+    const defaults = withZoneDefaults({});
+    checkEqual('withZoneDefaults: shrinkEnabled-Default ist false', defaults.shrinkEnabled, false);
+    checkEqual('withZoneDefaults: shrinkMode-Default ist "duration"', defaults.shrinkMode, 'duration');
+    checkEqual('withZoneDefaults: visibleOnHqMap-Default ist true', defaults.visibleOnHqMap, true);
+    checkEqual('withZoneDefaults: hiddenOnBeamerUntilActive-Default ist false', defaults.hiddenOnBeamerUntilActive, false);
+
+    const shrinkCenter = {lat: 50.94, lng: 6.96};
+    const shrinkZone = addZone(evt, {name: 'Schrumpf-Zone', type: 'circle', center: shrinkCenter, radiusMeters: 1000, shrinkEnabled: true, shrinkMode: 'duration', shrinkDurationMinutes: 60, shrinkEndRadiusMeters: 100});
+
+    const origStartConfirmedAt = evt.startConfirmedAt, origCurfewTime = evt.curfewTime;
+    checkEqual('effectiveZoneRadius ohne evt liefert den rohen Radius', effectiveZoneRadius(shrinkZone, null), 1000);
+    evt.startConfirmedAt = ''; // startRace() weiter oben in der Suite hat evt.startConfirmedAt bereits gesetzt
+    checkEqual('effectiveZoneRadius ohne startConfirmedAt liefert den rohen Radius', effectiveZoneRadius(shrinkZone, evt), 1000);
+
+    /* toLocalDateTimeInputValue() (utils.js) rundet auf die Minute — exakt wie
+       ein echtes datetime-local-Feld im Browser. shrinkStart wird deshalb aus
+       dem bereits gerundeten String zurückgelesen statt aus dem rohen
+       new Date(), sonst würden die Sekunden des rohen Zeitstempels beim
+       internen new Date(evt.startConfirmedAt) verloren gehen und einen
+       Zeitversatz von bis zu 59s in jeden folgenden Vergleich einschleusen. */
+    evt.startConfirmedAt = toLocalDateTimeInputValue(new Date());
+    const shrinkStart = new Date(evt.startConfirmedAt);
+
+    checkEqual('effectiveZoneRadius am Rennstart: voller Radius', effectiveZoneRadius(shrinkZone, evt, shrinkStart), 1000);
+    checkEqual('effectiveZoneRadius nach halber Dauer: Radius exakt in der Mitte', effectiveZoneRadius(shrinkZone, evt, new Date(shrinkStart.getTime() + 30 * 60000)), 550);
+    checkEqual('effectiveZoneRadius nach voller Dauer: Endradius erreicht', effectiveZoneRadius(shrinkZone, evt, new Date(shrinkStart.getTime() + 60 * 60000)), 100);
+    checkEqual('effectiveZoneRadius über die Dauer hinaus: bleibt auf Endradius geklemmt', effectiveZoneRadius(shrinkZone, evt, new Date(shrinkStart.getTime() + 90 * 60000)), 100);
+    check('effectiveZoneRadius vor dem Rennstart: voller Radius', effectiveZoneRadius(shrinkZone, evt, new Date(shrinkStart.getTime() - 60000)) === 1000);
+
+    updateZone(evt, shrinkZone.id, {shrinkMode: 'curfew'});
+    const curfewEnd = new Date(shrinkStart.getTime() + 120 * 60000); // liegt bereits auf einer vollen Minute, kein weiterer Rundungsverlust
+    evt.curfewTime = toLocalDateTimeInputValue(curfewEnd);
+    checkEqual('Curfew-Modus: Endradius exakt zur Curfew-Zeit', effectiveZoneRadius(shrinkZone, evt, curfewEnd), 100);
+    checkEqual('Curfew-Modus: nach 60 von 120 Minuten exakt auf halbem Weg', effectiveZoneRadius(shrinkZone, evt, new Date(shrinkStart.getTime() + 60 * 60000)), 550);
+
+    updateZone(evt, shrinkZone.id, {shrinkMode: 'duration'});
+    /* getCheckpointZone/isPointInZone mit echtem "jetzt" (kein injiziertes atDate)
+       — startConfirmedAt 45 von 60 Minuten in der Vergangenheit ergibt einen
+       aktuellen Radius von 1000 - 900*0.75 = 325m. */
+    evt.startConfirmedAt = toLocalDateTimeInputValue(new Date(Date.now() - 45 * 60000));
+    const farButInFullRadius = {lat: 50.94 + 0.0045, lng: 6.96}; // ~500m vom Zentrum
+    const closeToCenterRadius = {lat: 50.94 + 0.001, lng: 6.96}; // ~110m vom Zentrum
+    check('getCheckpointZone: Checkpoint bei ~500m liegt außerhalb der geschrumpften (aber innerhalb der ursprünglichen) Zone', !getCheckpointZone(farButInFullRadius, [shrinkZone], evt));
+    check('getCheckpointZone: Checkpoint bei ~110m liegt weiterhin innerhalb der geschrumpften Zone', !!getCheckpointZone(closeToCenterRadius, [shrinkZone], evt));
+    check('isPointInZone ohne evt bleibt rückwärtskompatibel (roher, ungeschrumpfter Radius)', isPointInZone(farButInFullRadius.lat, farButInFullRadius.lng, getZone(evt, shrinkZone.id)));
+
+    const polygonNoShrink = addZone(evt, {name: 'Polygon ohne Schrumpfen', type: 'polygon', points: [{lat: 50.94, lng: 6.96}, {lat: 50.94, lng: 6.962}, {lat: 50.942, lng: 6.962}, {lat: 50.942, lng: 6.96}], shrinkEnabled: true});
+    checkEqual('effectiveZoneRadius ignoriert shrinkEnabled bei Polygon-Zonen', effectiveZoneRadius(polygonNoShrink, evt, new Date(shrinkStart.getTime() + 30 * 60000)), polygonNoShrink.radiusMeters);
+    removeZone(evt, polygonNoShrink.id);
+
+    evt.startConfirmedAt = origStartConfirmedAt;
+    evt.curfewTime = origCurfewTime;
+
+    updateZone(evt, shrinkZone.id, {visibleOnHqMap: false});
+    checkEqual('Sichtbarkeits-Flag setzt visibleOnHqMap', getZone(evt, shrinkZone.id).visibleOnHqMap, false);
+    updateZone(evt, shrinkZone.id, {visibleOnHqMap: true, hiddenOnBeamerUntilActive: true, active: false});
+
+    /* Die Dom-Kreis-Zone aus Block 3o ist immer noch in evt.zones (bleibt dort
+       bewusst stehen) und wäre standardmäßig beamer-sichtbar — für einen
+       sauberen "gar keine Zone sichtbar"-Fall hier kurz mitverstecken. */
+    const domKreisZone = evt.zones.find(z => z.name === 'Dom-Kreis');
+    const domKreisOrigHidden = domKreisZone.hiddenOnBeamerUntilActive, domKreisOrigActive = domKreisZone.active;
+    domKreisZone.hiddenOnBeamerUntilActive = true;
+    domKreisZone.active = false;
+
+    check('getBeamerLayout: alle Zonen mit hiddenOnBeamerUntilActive+inaktiv zeigen keine Zonenkarte', !getBeamerLayout(evt).showZoneMap);
+    updateZone(evt, shrinkZone.id, {active: true});
+    check('getBeamerLayout: Zonenkarte erscheint, sobald eine Zone aktiviert wird', getBeamerLayout(evt).showZoneMap);
+    updateZone(evt, shrinkZone.id, {hiddenOnBeamerUntilActive: false});
+    check('getBeamerLayout: Zonenkarte erscheint auch ganz ohne aktivierten Spielmodus', getBeamerLayout(evt).showZoneMap && evt.gameModes.filter(m => m.enabled).every(m => m.type !== 'zone_active'));
+
+    domKreisZone.hiddenOnBeamerUntilActive = domKreisOrigHidden;
+    domKreisZone.active = domKreisOrigActive;
+
+    removeZone(evt, shrinkZone.id);
+    checkEqual('Aufräumen: Schrumpf-Testzone wieder entfernt', evt.zones.length, 1);
+    /* Kreis-Zone aus 3o bleibt weiterhin stehen, für den Persistenz-Check in Abschnitt 4 */
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
@@ -1465,6 +1550,7 @@ async function runAlleycatTestSuite(){
   checkEqual('gameModes-Aktivierung persistiert', reloaded && reloaded.gameModes.find(m => m.type === 'first_n') && reloaded.gameModes.find(m => m.type === 'first_n').enabled, true);
   checkEqual('zones persistiert', reloaded && reloaded.zones.length, evt.zones.length);
   checkEqual('Zonen-Radius persistiert', reloaded && reloaded.zones[0] && reloaded.zones[0].radiusMeters, 200);
+  checkEqual('Zonen-Sichtbarkeits-Flag persistiert', reloaded && reloaded.zones[0] && reloaded.zones[0].visibleOnHqMap, true);
   checkEqual('eventLocations persistiert', reloaded && reloaded.eventLocations.length, evt.eventLocations.length);
   checkEqual('freistehende HQ-Location (linkedCheckpointId=null) persistiert korrekt', reloaded && reloaded.eventLocations[0] && reloaded.eventLocations[0].linkedCheckpointId, null);
 

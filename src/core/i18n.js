@@ -131,7 +131,17 @@ const translations = {
       flyToTitle: 'Auf Karte zeigen',
       defaultName: 'Zone {n}',
       unnamed: 'Zone',
-      deleteConfirm: 'Diese Zone wirklich löschen?'
+      deleteConfirm: 'Diese Zone wirklich löschen?',
+      shrinkEnableLabel: 'Radius schrumpft mit der Zeit',
+      shrinkModeDuration: 'Über festen Zeitraum',
+      shrinkModeCurfew: 'Bis Curfew-Endzeit',
+      shrinkDurationLabel: 'Dauer',
+      shrinkCurfewHint: 'Schrumpft linear vom Rennstart bis zur Curfew-Zeit des Events.',
+      shrinkEndRadiusLabel: 'Endradius',
+      shrinkLiveHint: 'Aktueller Radius: {radius} m',
+      visibleOnHqLabel: 'Sichtbar auf HQ-Karte',
+      activeLabel: 'Aktiv',
+      hiddenUntilActiveLabel: 'Auf Beamer erst bei "Aktiv" zeigen'
     },
     eventLocations: {
       heading: 'Sonderorte',

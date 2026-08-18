@@ -23,20 +23,52 @@ function withZoneDefaults(z){
     type: 'circle', // 'circle' | 'polygon'
     color: '#ff5f1f',
     group: '',    // '' | 'battle_royale' | 'district'
-    active: false, // meaningful for 'district' zones only
+    active: false, // generic on/off flag — meaningful for 'district' zones (per-zone HQ toggle) and for hiddenOnBeamerUntilActive on any zone
     center: null,      // {lat, lng} — circle only
-    radiusMeters: 300, // circle only
-    points: []         // [{lat, lng}, ...], >= 3 — polygon only
+    radiusMeters: 300, // circle only — also the shrink *start* radius when shrinkEnabled
+    points: [],        // [{lat, lng}, ...], >= 3 — polygon only
+    visibleOnHqMap: true,
+    hiddenOnBeamerUntilActive: false,
+    // Live, continuous radius shrink — circle-only, independent of any game
+    // mode (unlike Battle Royale's discrete stage-based shrink in
+    // rules-engine.js, which mutates radiusMeters directly on each stage
+    // change instead). Polygon zones deliberately have no shrink concept.
+    shrinkEnabled: false,
+    shrinkMode: 'duration', // 'duration' | 'curfew'
+    shrinkDurationMinutes: 60,
+    shrinkEndRadiusMeters: 20
   }, z);
+}
+/* Radius a circle zone actually has right now, linearly interpolated between
+   radiusMeters (at evt.startConfirmedAt) and shrinkEndRadiusMeters (at either
+   startConfirmedAt + shrinkDurationMinutes, or evt.curfewTime). Returns the
+   plain stored radiusMeters whenever shrink isn't enabled/configured, before
+   the race has actually started, or when evt isn't supplied — callers that
+   don't care about live shrink (e.g. existing tests) keep working unchanged. */
+function effectiveZoneRadius(zone, evt, atDate){
+  if(!zone) return 0;
+  if(zone.type !== 'circle' || !zone.shrinkEnabled || !evt) return zone.radiusMeters;
+  const start = evt.startConfirmedAt ? new Date(evt.startConfirmedAt) : null;
+  if(!start || isNaN(start.getTime())) return zone.radiusMeters;
+  const end = zone.shrinkMode === 'curfew'
+    ? (evt.curfewTime ? new Date(evt.curfewTime) : null)
+    : new Date(start.getTime() + numOr(zone.shrinkDurationMinutes, 60) * 60000);
+  if(!end || isNaN(end.getTime()) || end <= start) return zone.radiusMeters;
+  const now = atDate || new Date();
+  if(now <= start) return zone.radiusMeters;
+  const endRadius = numOr(zone.shrinkEndRadiusMeters, 0);
+  if(now >= end) return endRadius;
+  const progress = (now - start) / (end - start);
+  return zone.radiusMeters - (zone.radiusMeters - endRadius) * progress;
 }
 /* First zone (in evt.zones array order) whose shape contains the point —
    array order is the deliberate, simple tie-break for overlapping zones
    (same "order decides" convention as category options/checkpoint types/
    PDF blocks/dashboard widgets elsewhere in this app); manual per-checkpoint
    overrides for edge cases are a deferred nice-to-have, not built here. */
-function getCheckpointZone(cp, zones){
+function getCheckpointZone(cp, zones, evt){
   if(!cp || !Number.isFinite(cp.lat) || !Number.isFinite(cp.lng)) return null;
-  return (zones || []).find(z => isPointInZone(cp.lat, cp.lng, z)) || null;
+  return (zones || []).find(z => isPointInZone(cp.lat, cp.lng, z, evt)) || null;
 }
 function addZone(evt, zone){
   evt.zones = evt.zones || [];
@@ -73,11 +105,11 @@ function isPointInPolygon(lat, lng, points){
   }
   return inside;
 }
-function isPointInZone(lat, lng, zone){
+function isPointInZone(lat, lng, zone, evt){
   if(!zone) return false;
   if(zone.type === 'polygon') return isPointInPolygon(lat, lng, zone.points);
   if(!zone.center || !Number.isFinite(zone.center.lat) || !Number.isFinite(zone.center.lng)) return false;
-  return isPointInCircle(lat, lng, zone.center.lat, zone.center.lng, zone.radiusMeters);
+  return isPointInCircle(lat, lng, zone.center.lat, zone.center.lng, effectiveZoneRadius(zone, evt));
 }
 function polygonCentroid(points){
   if(!Array.isArray(points) || !points.length) return null;

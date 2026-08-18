@@ -126,9 +126,9 @@ const GAME_MODE_DEFS = {
     rules: [
       {
         trigger: 'on_checkin',
-        condition: (evt, mode, ctx) => ctx.checkpoint && !!getCheckpointZone(ctx.checkpoint, (evt.zones || []).filter(z => z.group === 'district')),
+        condition: (evt, mode, ctx) => ctx.checkpoint && !!getCheckpointZone(ctx.checkpoint, (evt.zones || []).filter(z => z.group === 'district'), evt),
         effect: (evt, mode, ctx) => {
-          const zone = getCheckpointZone(ctx.checkpoint, (evt.zones || []).filter(z => z.group === 'district'));
+          const zone = getCheckpointZone(ctx.checkpoint, (evt.zones || []).filter(z => z.group === 'district'), evt);
           if(!zone) return;
           if(mode.config.subVariant === 'gated'){
             if(!zone.active) return {block: true, message: t('gameModes.districtInactiveBlocked', {name: zone.name || t('zones.unnamed')})};

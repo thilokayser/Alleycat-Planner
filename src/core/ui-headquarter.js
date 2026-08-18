@@ -64,6 +64,7 @@ let qrScanStream = null;
 let qrScanRAF = null;
 let liveCountdownInterval = null;
 let overviewTickInterval = null;
+let zoneShrinkTickInterval = null;
 let saveTimeout;
 let searchDebounce;
 let cpDragState = null;

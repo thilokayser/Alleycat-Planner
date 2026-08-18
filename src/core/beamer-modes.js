@@ -6,7 +6,13 @@
 function getBeamerLayout(evt){
   const modes = (evt.gameModes || []).filter(m => m.enabled);
   return {
-    showZoneMap: modes.some(m => m.type === 'zone_active'),
+    /* Any organizer-drawn zone counts, not just Battle Royale — Bezirke and
+       plain, mode-less zones deserve beamer visibility too. Legacy events
+       that enabled zone_active before Paket 4's zones.js existed still have
+       no evt.zones entry at all, so the mode-enabled check stays as a
+       fallback (updateBeamerZoneMap() below draws its own centroid+stage
+       circle in exactly that case). */
+    showZoneMap: (evt.zones || []).some(z => !(z.hiddenOnBeamerUntilActive && !z.active)) || modes.some(m => m.type === 'zone_active'),
     showPointsBoard: evt.scoringMode === 'points',
     showEventTicker: modes.length > 0,
     showZoneCountdown: modes.some(m => m.type === 'zone_active' && m.config.triggerMode !== 'manual')
@@ -65,16 +71,35 @@ function updateBeamerZoneMap(evt){
   const container = document.getElementById('beamer-zone-map');
   if(!container) return;
   if(beamerZoneMap){ beamerZoneMap.remove(); beamerZoneMap = null; }
-  const mode = getGameMode(evt, 'zone_active');
-  if(!mode) return;
-  const center = zoneActiveCenterOf(evt, mode);
+  const brMode = getGameMode(evt, 'zone_active');
+  /* Draw every organizer-drawn zone generically (circle live-shrink-aware
+     via effectiveZoneRadius(), polygon as-is) — this already covers a
+     Battle-Royale zone that's linked via mode.config.zoneId, since
+     advanceZoneStage() keeps that zone's own radiusMeters in sync. The
+     legacy red stage circle below only fires for pre-Paket-4 zone_active
+     events that never picked a real zone (auto-centroid fallback), so
+     nothing is drawn twice. */
+  const zones = (evt.zones || []).filter(z => !(z.hiddenOnBeamerUntilActive && !z.active));
+  const hasLegacyBrCircle = brMode && brMode.enabled && !(brMode.config && brMode.config.zoneId);
+  if(!zones.length && !hasLegacyBrCircle) return;
+  const firstZoneCenter = zones.length ? (zones[0].type === 'circle' ? zones[0].center : polygonCentroid(zones[0].points)) : null;
+  const center = firstZoneCenter || (brMode ? zoneActiveCenterOf(evt, brMode) : zoneCenterOf(evt));
   if(!center) return;
   beamerZoneMap = L.map(container, {zoomControl: false, attributionControl: false, scrollWheelZoom: false}).setView([center.lat, center.lng], 14);
   createOfflineTileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
     subdomains: 'abcd', maxZoom: 20
   }).addTo(beamerZoneMap);
-  const stage = currentZoneStage(evt, mode);
-  if(stage) L.circle([center.lat, center.lng], {radius: stage.radius, color: '#e0435b', weight: 2, fillOpacity: 0.08}).addTo(beamerZoneMap);
+  zones.forEach(zone => {
+    if(zone.type === 'circle' && zone.center){
+      L.circle([zone.center.lat, zone.center.lng], {radius: effectiveZoneRadius(zone, evt), color: zone.color, weight: 2, fillOpacity: 0.08}).addTo(beamerZoneMap);
+    } else if(zone.type === 'polygon' && zone.points && zone.points.length >= 3){
+      L.polygon(zone.points.map(p => [p.lat, p.lng]), {color: zone.color, weight: 2, fillOpacity: 0.08}).addTo(beamerZoneMap);
+    }
+  });
+  if(hasLegacyBrCircle){
+    const stage = currentZoneStage(evt, brMode);
+    if(stage) L.circle([center.lat, center.lng], {radius: stage.radius, color: '#e0435b', weight: 2, fillOpacity: 0.08}).addTo(beamerZoneMap);
+  }
   const bounds = [];
   (evt.checkpoints || []).filter(cp => isCpRevealed(evt, cp) && Number.isFinite(cp.lat) && Number.isFinite(cp.lng)).forEach(cp => {
     const color = cp.locked ? '#888888' : (isCpClosedByZone(evt, cp) ? '#e0435b' : '#3fb950');
@@ -84,10 +109,10 @@ function updateBeamerZoneMap(evt){
   if(bounds.length) beamerZoneMap.fitBounds(L.latLngBounds(bounds).pad(0.2));
 }
 function renderBeamerZoneSide(evt){
-  const mode = getGameMode(evt, 'zone_active');
-  if(!mode) return '';
   const layout = getBeamerLayout(evt);
-  const countdown = layout.showZoneCountdown ? beamerZoneCountdownText(evt, mode) : null;
+  if(!layout.showZoneMap) return '';
+  const mode = getGameMode(evt, 'zone_active');
+  const countdown = mode && layout.showZoneCountdown ? beamerZoneCountdownText(evt, mode) : null;
   return `
     <div class="beamer-live-side">
       <div id="beamer-zone-map" class="beamer-zone-map"></div>

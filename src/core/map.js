@@ -19,10 +19,32 @@ function initMap(){
   }
   const legendTypes = document.getElementById('map-legend-types');
   if(legendTypes) legendTypes.innerHTML = CHECKPOINT_TYPES.map(t => `${typeIconHtml(t.key)} ${t.shortLabel}`).join(' &middot; ');
+  const legendLocations = document.getElementById('map-legend-locations');
+  if(legendLocations) legendLocations.innerHTML = `🏠 ${t('eventLocations.hqLabel')} &middot; 🎉 ${t('eventLocations.afterpartyLabel')}`;
   redrawMarkers();
   redrawZones();
   redrawEventLocations();
   fitToCheckpoints();
+  startZoneShrinkTick();
+}
+
+/* ---------------- zone shrink: live ticking redraw ----------------
+   Continuous circle-only radius shrink (zones.js's effectiveZoneRadius())
+   is time-based, not event-based, so nothing calls redrawZones() as it
+   progresses — a self-stopping interval is needed, same pattern as
+   dashboard.js's startOverviewTick()/checkin.js's startLiveCountdown().
+   Only runs at all when at least one zone actually has shrink enabled. */
+function startZoneShrinkTick(){
+  stopZoneShrinkTick();
+  if(!state.currentEvent || !(state.currentEvent.zones || []).some(z => z.shrinkEnabled)) return;
+  zoneShrinkTickInterval = setInterval(updateZoneShrinkTick, 5000);
+}
+function stopZoneShrinkTick(){
+  if(zoneShrinkTickInterval){ clearInterval(zoneShrinkTickInterval); zoneShrinkTickInterval = null; }
+}
+function updateZoneShrinkTick(){
+  if(state.view !== 'editor'){ stopZoneShrinkTick(); return; }
+  redrawZones();
 }
 
 /* ---------------- zones: Leaflet.draw control + layer ----------------
@@ -88,10 +110,11 @@ function onZoneDrawDeleted(e){
 function redrawZones(){
   if(!zonesLayer || !state.currentEvent) return;
   zonesLayer.clearLayers();
-  (state.currentEvent.zones || []).forEach(zone => {
+  const evt = state.currentEvent;
+  (evt.zones || []).filter(z => z.visibleOnHqMap !== false).forEach(zone => {
     let layer = null;
     if(zone.type === 'circle' && zone.center){
-      layer = L.circle([zone.center.lat, zone.center.lng], {radius: zone.radiusMeters, color: zone.color, weight: 2, fillOpacity: 0.12});
+      layer = L.circle([zone.center.lat, zone.center.lng], {radius: effectiveZoneRadius(zone, evt), color: zone.color, weight: 2, fillOpacity: 0.12});
     } else if(zone.type === 'polygon' && zone.points && zone.points.length >= 3){
       layer = L.polygon(zone.points.map(p => [p.lat, p.lng]), {color: zone.color, weight: 2, fillOpacity: 0.12});
     }
@@ -100,6 +123,13 @@ function redrawZones(){
     layer.bindTooltip(zone.name || t('zones.unnamed'), {direction: 'center', className: 'zone-tooltip'});
     layer.addTo(zonesLayer);
   });
+  updateZoneLegend();
+}
+function updateZoneLegend(){
+  const el = document.getElementById('map-legend-zones');
+  if(!el || !state.currentEvent) return;
+  const zones = (state.currentEvent.zones || []).filter(z => z.visibleOnHqMap !== false);
+  el.innerHTML = zones.length ? zones.map(z => `<span class="legend-zone-swatch" style="background:${escapeHtml(z.color)}"></span>${escapeHtml(z.name || t('zones.unnamed'))}`).join(' &middot; ') : '';
 }
 function toggleZonesPanel(){
   state.zonesPanelOpen = !state.zonesPanelOpen;
@@ -122,6 +152,45 @@ function onZoneRadiusChange(id, value){
   updateZone(state.currentEvent, id, {radiusMeters: radius});
   debouncedSave();
   redrawZones();
+}
+function onZoneShrinkEnabledChange(id, checked){
+  updateZone(state.currentEvent, id, {shrinkEnabled: checked});
+  debouncedSave();
+  redrawZones();
+  renderSidebar();
+  startZoneShrinkTick();
+}
+function onZoneShrinkModeChange(id, value){
+  updateZone(state.currentEvent, id, {shrinkMode: value});
+  debouncedSave();
+  redrawZones();
+  renderSidebar();
+}
+function onZoneShrinkDurationChange(id, value){
+  const mins = Math.max(1, parseInt(value, 10) || 1);
+  updateZone(state.currentEvent, id, {shrinkDurationMinutes: mins});
+  debouncedSave();
+  redrawZones();
+}
+function onZoneShrinkEndRadiusChange(id, value){
+  const r = Math.max(0, parseInt(value, 10) || 0);
+  updateZone(state.currentEvent, id, {shrinkEndRadiusMeters: r});
+  debouncedSave();
+  redrawZones();
+}
+function onZoneVisibleOnHqChange(id, checked){
+  updateZone(state.currentEvent, id, {visibleOnHqMap: checked});
+  debouncedSave();
+  redrawZones();
+}
+function onZoneActiveToggleChange(id, checked){
+  updateZone(state.currentEvent, id, {active: checked});
+  debouncedSave();
+  renderSidebar();
+}
+function onZoneHiddenUntilActiveChange(id, checked){
+  updateZone(state.currentEvent, id, {hiddenOnBeamerUntilActive: checked});
+  debouncedSave();
 }
 function deleteZoneFromSidebar(id){
   if(!confirm(t('zones.deleteConfirm'))) return;
@@ -153,6 +222,30 @@ function renderZoneRow(z){
           <button type="button" class="cp-icon-btn" onclick="flyToZone('${z.id}')" title="${t('zones.flyToTitle')}">🎯</button>
           <button type="button" class="cp-icon-btn" onclick="deleteZoneFromSidebar('${z.id}')" title="${t('common.delete')}">🗑</button>
         </span>
+      </div>
+      ${z.type === 'circle' ? `
+      <label class="checkbox-row">
+        <input type="checkbox" ${z.shrinkEnabled ? 'checked' : ''} onchange="onZoneShrinkEnabledChange('${z.id}', this.checked)">
+        ${t('zones.shrinkEnableLabel')}
+      </label>
+      ${z.shrinkEnabled ? `
+      <div class="zone-shrink-config">
+        <select onchange="onZoneShrinkModeChange('${z.id}', this.value)">
+          <option value="duration" ${z.shrinkMode !== 'curfew' ? 'selected' : ''}>${t('zones.shrinkModeDuration')}</option>
+          <option value="curfew" ${z.shrinkMode === 'curfew' ? 'selected' : ''}>${t('zones.shrinkModeCurfew')}</option>
+        </select>
+        ${z.shrinkMode !== 'curfew'
+          ? `<label class="zone-radius-field">${t('zones.shrinkDurationLabel')} <input type="number" min="1" step="1" value="${z.shrinkDurationMinutes}" onchange="onZoneShrinkDurationChange('${z.id}', this.value)"> min</label>`
+          : `<div class="settings-hint">${t('zones.shrinkCurfewHint')}</div>`}
+        <label class="zone-radius-field">${t('zones.shrinkEndRadiusLabel')} <input type="number" min="0" step="5" value="${z.shrinkEndRadiusMeters}" onchange="onZoneShrinkEndRadiusChange('${z.id}', this.value)"> m</label>
+        <div class="settings-hint">${t('zones.shrinkLiveHint', {radius: Math.round(effectiveZoneRadius(z, state.currentEvent))})}</div>
+      </div>
+      ` : ''}
+      ` : ''}
+      <div class="zone-visibility-row">
+        <label class="checkbox-row"><input type="checkbox" ${z.visibleOnHqMap !== false ? 'checked' : ''} onchange="onZoneVisibleOnHqChange('${z.id}', this.checked)">${t('zones.visibleOnHqLabel')}</label>
+        <label class="checkbox-row"><input type="checkbox" ${z.active ? 'checked' : ''} onchange="onZoneActiveToggleChange('${z.id}', this.checked)">${t('zones.activeLabel')}</label>
+        <label class="checkbox-row"><input type="checkbox" ${z.hiddenOnBeamerUntilActive ? 'checked' : ''} onchange="onZoneHiddenUntilActiveChange('${z.id}', this.checked)">${t('zones.hiddenUntilActiveLabel')}</label>
       </div>
     </div>
   `;
