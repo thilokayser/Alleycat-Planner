@@ -20,6 +20,7 @@ const CORE_FILES = [
   'zones.js',
   'event-locations.js',
   'logistics.js',
+  'geo-import.js',
   'action-log.js',
   'bulk-import.js',
   'feature-registry.js',

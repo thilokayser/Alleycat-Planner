@@ -328,6 +328,20 @@
   .map-context-menu button:disabled{color:var(--steel); cursor:not-allowed;}
   .map-context-menu button:disabled:hover{background:none; color:var(--steel);}
 
+  .map-wrap.map-drag-over{outline:3px dashed var(--hivis); outline-offset:-3px;}
+  .map-wrap.map-drag-over::after{
+    content:attr(data-drop-hint);
+    position:absolute; inset:0; z-index:1400; pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(10,10,10,0.55); color:var(--chalk);
+    font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; text-align:center; padding:20px;
+  }
+  .geo-import-popup-btn{
+    font-family:'Inter',sans-serif; font-size:11.5px; font-weight:600; padding:5px 9px; margin-top:4px;
+    background:var(--hivis); color:var(--ink); border:none; border-radius:3px; cursor:pointer;
+  }
+  .geo-import-popup-btn:hover{background:var(--hivis-2);}
+
   .sidebar-collapse-toggle{
     width:18px; flex-shrink:0; border:none; cursor:pointer;
     background:var(--asphalt-3); color:var(--hivis-2); font-size:14px; line-height:1;

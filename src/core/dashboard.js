@@ -36,7 +36,8 @@ function withEventDefaults(evt){
     featureFlags: {categories: true, gameModes: true},
     zones: [],
     eventLocations: [],
-    orgaPins: []
+    orgaPins: [],
+    importedGeoLayers: []
   }, evt);
   merged.pdfBlocks = (merged.pdfBlocks || []).map(withPdfBlockDefaults);
   merged.gameModes = (merged.gameModes || []).map(withGameModeDefaults);

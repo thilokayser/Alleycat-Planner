@@ -13,6 +13,8 @@ function initMap(){
     zonesLayer = L.featureGroup().addTo(map);
     eventLocationsLayer = L.layerGroup().addTo(map);
     orgaPinsLayer = L.layerGroup().addTo(map);
+    importedGeoLayer = L.layerGroup().addTo(map);
+    initGeoImportDragDrop();
     map.on('click', onMapClick);
     map.on('contextmenu', onMapContextMenu);
     document.addEventListener('click', (e) => {
@@ -34,6 +36,7 @@ function initMap(){
   redrawZones();
   redrawEventLocations();
   redrawOrgaPins();
+  redrawImportedGeo();
   redrawRouteEstimate();
   redrawProximityBuffers();
   fitToCheckpoints();
@@ -521,6 +524,96 @@ function contextMenuAddOrgaPin(){
 function contextMenuSearchHere(){
   hideMapContextMenu();
   toggleMapSearch(true);
+}
+
+/* ---------------- imported geo layers: map rendering + drag & drop ----------------
+   Parsing/data model lives in geo-import.js, same split as zones/event-
+   locations/orga-pins above. Tracks render as dashed polylines (visually
+   distinct from the real, order-based routeLine and the logistics route-
+   estimate line — three different dash patterns/colors so none get
+   confused on a busy map), points as small circle markers whose popup
+   offers the spec's "Als Checkpoint übernehmen" one-click conversion. */
+function redrawImportedGeo(){
+  if(!importedGeoLayer || !state.currentEvent) return;
+  importedGeoLayer.clearLayers();
+  const evt = state.currentEvent;
+  allGeoImportLayers(evt).filter(l => l.visible !== false).forEach(layer => {
+    layer.tracks.forEach(track => {
+      L.polyline(track.map(p => [p.lat, p.lng]), {color: layer.color, weight: 3, opacity: 0.75, dashArray: '1 6'}).addTo(importedGeoLayer);
+    });
+    layer.points.forEach((pt, idx) => {
+      const marker = L.circleMarker([pt.lat, pt.lng], {radius: 6, color: layer.color, weight: 2, fillColor: layer.color, fillOpacity: 0.7});
+      const label = pt.name ? `<b>${escapeHtml(pt.name)}</b><br>` : '';
+      marker.bindPopup(`${label}<button type="button" class="geo-import-popup-btn" onclick="convertGeoImportPointToCheckpoint('${layer.id}', ${idx})">${t('geoImport.convertToCheckpoint')}</button>`);
+      marker.addTo(importedGeoLayer);
+    });
+  });
+}
+function convertGeoImportPointToCheckpoint(layerId, idx){
+  const evt = state.currentEvent;
+  const layer = findGeoImportLayer(evt, layerId);
+  const pt = layer && layer.points[idx];
+  if(!pt) return;
+  const cp = addCheckpointAt(pt.lat, pt.lng);
+  if(cp && pt.name){ cp.name = pt.name; debouncedSave(); renderSidebar(); }
+  if(map) map.closePopup();
+}
+/* Bound to .map-wrap (not #map itself) so the drop target still covers the
+   legend/search/context-menu overlay area — self-guarding via a dataset
+   flag since initMap() can re-run invalidateSize() paths without wanting a
+   second set of listeners. dragCounter handles the classic "dragleave
+   fires when entering a child element" flicker (same problem the browser's
+   own drag-and-drop docs call out), so the highlight only clears once the
+   pointer has actually left .map-wrap entirely. */
+function initGeoImportDragDrop(){
+  const mapWrap = document.querySelector('.map-wrap');
+  if(!mapWrap || mapWrap.dataset.geoDropBound) return;
+  mapWrap.dataset.geoDropBound = '1';
+  mapWrap.setAttribute('data-drop-hint', t('geoImport.dropHint'));
+  let dragCounter = 0;
+  mapWrap.addEventListener('dragenter', (e) => {
+    if(!state.currentEvent) return;
+    e.preventDefault();
+    dragCounter++;
+    mapWrap.classList.add('map-drag-over');
+  });
+  mapWrap.addEventListener('dragover', (e) => { if(state.currentEvent) e.preventDefault(); });
+  mapWrap.addEventListener('dragleave', () => {
+    dragCounter = Math.max(0, dragCounter - 1);
+    if(dragCounter === 0) mapWrap.classList.remove('map-drag-over');
+  });
+  mapWrap.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dragCounter = 0;
+    mapWrap.classList.remove('map-drag-over');
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(file) await handleGeoImportFileDrop(file);
+  });
+}
+/* Split out from the 'drop' listener above so it's directly callable (and
+   testable) with a plain File object, without needing to simulate a real
+   DragEvent/DataTransfer — same reasoning as addCheckpointAt() being
+   pulled out of onMapClick(). Returns the created layer, or null if there
+   was no current event or the file couldn't be parsed. */
+async function handleGeoImportFileDrop(file){
+  if(!state.currentEvent) return null;
+  const text = await file.text();
+  const parsed = parseGeoImportFile(file.name, text);
+  if(!parsed){ alert(t('geoImport.parseError')); return null; }
+  const layer = withGeoImportLayerDefaults({
+    name: file.name.replace(/\.[^.]+$/, ''),
+    filename: file.name,
+    format: parsed.format,
+    color: GEO_IMPORT_COLORS[allGeoImportLayers(state.currentEvent).length % GEO_IMPORT_COLORS.length],
+    tracks: parsed.tracks,
+    points: parsed.points
+  });
+  state.geoImportLayers = state.geoImportLayers || [];
+  state.geoImportLayers.push(layer);
+  state.geoImportPanelOpen = true;
+  redrawImportedGeo();
+  renderSidebar();
+  return layer;
 }
 
 /* ---------------- hover sync: sidebar row <-> map marker ---------------- */

@@ -780,6 +780,7 @@ function renderEventSettingsPanel(evt){
           ${renderEventLocationsPanel(evt)}
           ${renderLogisticsPanel(evt)}
           ${renderOrgaPinsPanel(evt)}
+          ${renderGeoImportPanel(evt)}
         </div>
       ` : ''}
     </div>

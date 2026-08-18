@@ -1911,6 +1911,106 @@ async function runAlleycatTestSuite(){
     toggleMapSearch(false);
   }
 
+  /* 3w) Paket 4 Teil B, Schritt 5: GeoJSON/GPX/KML-Import (geo-import.js).
+     Parser sind reine Funktionen (kein DOM/Karte nötig), Rendering + Drop-
+     Handling laufen auf dem echten evt/der echten Karte — mit derselben
+     Restaurierungs-Disziplin wie 3v (Abschnitt 4 prüft eine feste
+     Checkpoint-Anzahl). */
+  {
+    const gpxSample = `<?xml version="1.0"?><gpx><wpt lat="50.95" lon="6.96"><name>Bäckerei</name></wpt><trk><trkseg><trkpt lat="50.90" lon="6.90"></trkpt><trkpt lat="50.91" lon="6.91"></trkpt></trkseg></trk></gpx>`;
+    const geoJsonSample = JSON.stringify({type: 'FeatureCollection', features: [
+      {type: 'Feature', geometry: {type: 'Point', coordinates: [6.96, 50.95]}, properties: {name: 'Kiosk'}},
+      {type: 'Feature', geometry: {type: 'LineString', coordinates: [[6.90, 50.90], [6.91, 50.91]]}, properties: {}}
+    ]});
+    const kmlSample = `<?xml version="1.0"?><kml><Document><Placemark><name>Treffpunkt</name><Point><coordinates>6.96,50.95,0</coordinates></Point></Placemark><Placemark><LineString><coordinates>6.90,50.90,0 6.91,50.91,0</coordinates></LineString></Placemark></Document></kml>`;
+
+    const gpxResult = parseGpxFile(gpxSample);
+    checkEqual('parseGpxFile findet eine Strecke mit 2 Punkten', gpxResult.tracks.length === 1 && gpxResult.tracks[0].length, 2);
+    check('parseGpxFile findet den benannten Wegpunkt', gpxResult.points.length === 1 && gpxResult.points[0].name === 'Bäckerei' && gpxResult.points[0].lat === 50.95);
+
+    const geoJsonResult = parseGeoJsonFile(geoJsonSample);
+    checkEqual('parseGeoJsonFile findet eine Strecke mit 2 Punkten', geoJsonResult.tracks.length === 1 && geoJsonResult.tracks[0].length, 2);
+    check('parseGeoJsonFile findet den benannten Punkt (lng/lat vertauscht zu lat/lng)', geoJsonResult.points.length === 1 && geoJsonResult.points[0].name === 'Kiosk' && geoJsonResult.points[0].lat === 50.95 && geoJsonResult.points[0].lng === 6.96);
+
+    const kmlResult = parseKmlFile(kmlSample);
+    checkEqual('parseKmlFile findet eine Strecke mit 2 Punkten', kmlResult.tracks.length === 1 && kmlResult.tracks[0].length, 2);
+    check('parseKmlFile findet den benannten Punkt', kmlResult.points.length === 1 && kmlResult.points[0].name === 'Treffpunkt');
+
+    check('parseGeoImportFile erkennt .gpx', parseGeoImportFile('route.gpx', gpxSample).format === 'gpx');
+    check('parseGeoImportFile erkennt .geojson', parseGeoImportFile('layer.geojson', geoJsonSample).format === 'geojson');
+    check('parseGeoImportFile erkennt .kml', parseGeoImportFile('layer.kml', kmlSample).format === 'kml');
+    checkEqual('parseGeoImportFile: nicht unterstützte Endung liefert null', parseGeoImportFile('layer.txt', gpxSample), null);
+    checkEqual('parseGeoImportFile: kaputtes GPX liefert null', parseGeoImportFile('broken.gpx', '<gpx><trk><trkseg><trkpt/></trkseg></trk></gpx>'), null);
+    checkEqual('parseGeoImportFile: kaputtes GeoJSON (kein valides JSON) liefert null', parseGeoImportFile('broken.geojson', '{not json'), null);
+
+    const defLayer = withGeoImportLayerDefaults({});
+    check('withGeoImportLayerDefaults: format "gpx", sichtbar, leere Arrays', defLayer.format === 'gpx' && defLayer.visible === true && defLayer.tracks.length === 0 && defLayer.points.length === 0);
+
+    /* CRUD + persistent/temporär-Umschaltung auf dem echten evt */
+    const tempLayer = withGeoImportLayerDefaults({name: 'Testlayer', filename: 'test.gpx', tracks: gpxResult.tracks, points: gpxResult.points});
+    state.geoImportLayers = state.geoImportLayers || [];
+    state.geoImportLayers.push(tempLayer);
+    check('allGeoImportLayers enthält den temporären Layer', allGeoImportLayers(evt).some(l => l.id === tempLayer.id));
+    check('findGeoImportLayer findet ihn', findGeoImportLayer(evt, tempLayer.id) === tempLayer);
+    check('isGeoImportLayerPersistent: temporärer Layer ist nicht persistent', !isGeoImportLayerPersistent(evt, tempLayer.id));
+
+    setGeoImportLayerPersistent(evt, tempLayer.id, true);
+    check('setGeoImportLayerPersistent(true) verschiebt in evt.importedGeoLayers', isGeoImportLayerPersistent(evt, tempLayer.id) && evt.importedGeoLayers.some(l => l.id === tempLayer.id));
+    check('Layer ist nicht mehr in state.geoImportLayers', !state.geoImportLayers.some(l => l.id === tempLayer.id));
+
+    setGeoImportLayerPersistent(evt, tempLayer.id, false);
+    check('setGeoImportLayerPersistent(false) verschiebt zurück in state.geoImportLayers', !isGeoImportLayerPersistent(evt, tempLayer.id) && state.geoImportLayers.some(l => l.id === tempLayer.id));
+
+    /* Kartenrendering: 1 Polyline (Strecke) + 1 CircleMarker (Wegpunkt) */
+    redrawImportedGeo();
+    checkEqual('redrawImportedGeo zeichnet Strecke + Wegpunkt', importedGeoLayer.getLayers().length, 2);
+    tempLayer.visible = false;
+    redrawImportedGeo();
+    checkEqual('redrawImportedGeo überspringt unsichtbare Layer', importedGeoLayer.getLayers().length, 0);
+    tempLayer.visible = true;
+
+    /* Wegpunkt-zu-Checkpoint-Konvertierung */
+    const cpCountBeforeGeo = evt.checkpoints.length;
+    const convertedCp = convertGeoImportPointToCheckpoint(tempLayer.id, 0);
+    checkEqual('convertGeoImportPointToCheckpoint legt einen Checkpoint an', evt.checkpoints.length, cpCountBeforeGeo + 1);
+    const lastCp = evt.checkpoints[evt.checkpoints.length - 1];
+    check('Neuer Checkpoint übernimmt Koordinaten und Namen des Wegpunkts', lastCp.lat === 50.95 && lastCp.lng === 6.96 && lastCp.name === 'Bäckerei');
+    evt.checkpoints.pop(); // exakte Checkpoint-Anzahl für Abschnitt 4 wiederherstellen
+    state.editingId = null;
+
+    removeGeoImportLayer(evt, tempLayer.id);
+    check('removeGeoImportLayer entfernt aus beiden Arrays', !allGeoImportLayers(evt).some(l => l.id === tempLayer.id));
+    redrawImportedGeo();
+
+    /* Drop-Handling: handleGeoImportFileDrop() ist aus dem 'drop'-Listener
+       herausgezogen, testbar mit einem echten File-Objekt statt einem
+       simulierten DragEvent/DataTransfer. */
+    const gpxFile = new File([gpxSample], 'strecke.gpx', {type: 'application/gpx+xml'});
+    const droppedLayer = await handleGeoImportFileDrop(gpxFile);
+    check('handleGeoImportFileDrop parst und legt einen temporären Layer an', !!droppedLayer && droppedLayer.tracks.length === 1 && droppedLayer.points.length === 1);
+    check('Layer landet in state.geoImportLayers (temporär, nicht im Event gespeichert)', state.geoImportLayers.some(l => l.id === droppedLayer.id) && !isGeoImportLayerPersistent(evt, droppedLayer.id));
+    check('handleGeoImportFileDrop öffnet das Panel zur Kontrolle', state.geoImportPanelOpen);
+    removeGeoImportLayer(evt, droppedLayer.id);
+    state.geoImportPanelOpen = false;
+    redrawImportedGeo();
+
+    const origAlertGeo = window.alert;
+    let geoAlertMsg = null;
+    window.alert = (msg) => { geoAlertMsg = msg; };
+    const badFile = new File(['not a real gpx/geojson/kml file'], 'notes.txt', {type: 'text/plain'});
+    const badResult = await handleGeoImportFileDrop(badFile);
+    check('handleGeoImportFileDrop: nicht unterstützte Datei liefert null + Fehlermeldung', badResult === null && !!geoAlertMsg);
+    window.alert = origAlertGeo;
+
+    const realCurrentEvt = state.currentEvent;
+    state.currentEvent = null;
+    checkEqual('handleGeoImportFileDrop: ohne aktuelles Event liefert null', await handleGeoImportFileDrop(gpxFile), null);
+    state.currentEvent = realCurrentEvt;
+
+    initGeoImportDragDrop();
+    check('initGeoImportDragDrop setzt den Drop-Hint als Attribut', document.querySelector('.map-wrap').getAttribute('data-drop-hint') === t('geoImport.dropHint'));
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();

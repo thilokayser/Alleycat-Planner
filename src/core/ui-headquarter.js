@@ -65,9 +65,12 @@ let state = {
   eventSettingsPanelOpen: false,
   orgaPinsPanelOpen: false,
   mapContextMenu: null,
+  geoImportPanelOpen: false,
+  geoImportLayers: [], // session-only ("temporär") imported layers — see geo-import.js
+  mapDragOver: false,
 };
 let pdfPreviewDoc = null;
-let map, markersLayer, zonesLayer, eventLocationsLayer, orgaPinsLayer, routeLine, routeEstimateLine, proximityBufferLayer, cpMarkers = {};
+let map, markersLayer, zonesLayer, eventLocationsLayer, orgaPinsLayer, importedGeoLayer, routeLine, routeEstimateLine, proximityBufferLayer, cpMarkers = {};
 let qrScanStream = null;
 let qrScanRAF = null;
 let liveCountdownInterval = null;
@@ -244,6 +247,7 @@ async function openEditor(id){
   state.currentEvent = withEventDefaults(evt || {id, name:t('common.unnamedEvent'), date:'', checkpoints:[]});
   state.actionUndoHandlers = {};
   state.cpBulkSelectedIds = [];
+  state.geoImportLayers = []; // "temporär" imported geo layers are session-only, tied to whichever event is currently open
   registerEventSounds(state.currentEvent);
   state.loading = false;
   render();

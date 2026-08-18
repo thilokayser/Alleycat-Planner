@@ -183,6 +183,18 @@ const translations = {
       noneYet: 'Noch keine Orga-Pins — per Rechtsklick auf der Karte anlegen.',
       deleteConfirm: 'Diesen Orga-Pin wirklich löschen?'
     },
+    geoImport: {
+      heading: 'Importierte Layer',
+      hint: '.gpx-, .geojson- oder .kml-Datei direkt auf die Karte ziehen — z. B. das städtische Hauptradnetz oder eine Komoot-Vorplanung als Referenz. Wegpunkte lassen sich per Klick auf der Karte in echte Checkpoints umwandeln.',
+      dropHint: 'Datei hier ablegen zum Importieren',
+      layerStats: '{tracks} Strecke(n), {points} Wegpunkt(e)',
+      visibleLabel: 'Auf Karte sichtbar',
+      persistLabel: 'Im Event speichern',
+      convertToCheckpoint: 'Als Checkpoint übernehmen',
+      noneYet: 'Noch keine Layer importiert.',
+      deleteConfirm: 'Diesen importierten Layer wirklich löschen?',
+      parseError: 'Datei konnte nicht gelesen werden — unterstützt werden .gpx, .geojson und .kml.'
+    },
     logistics: {
       heading: 'Logistik',
       routeHeading: 'Routen-Schätzung',
