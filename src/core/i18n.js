@@ -291,6 +291,7 @@ const translations = {
       moveUp: 'Nach oben',
       moveDown: 'Nach unten',
       eventNamePlaceholder: 'Eventname',
+      eventSettingsHeading: 'Event-Einstellungen',
       startAndCurfew: 'Start &amp; Curfew',
       startModeLabel: 'Start-Modus',
       manualStartOption: 'Manueller Startknopf',

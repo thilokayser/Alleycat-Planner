@@ -332,7 +332,15 @@
     background:var(--paper);
     color:var(--ink);
     display:flex; flex-direction:column;
-    overflow:hidden;
+    /* Was overflow:hidden with only .cp-list scrolling internally (flex:1)
+       — worked while every settings section rendered before the list, but
+       broke once the Event-Einstellungen drawer moved after it (impeccable
+       critique, 2026-08-18, P0 fix): a flex:1 sibling still claims all
+       space regardless of position, so anything after it got clipped by
+       the container's own overflow:hidden instead of being reachable.
+       The whole sidebar scrolling as one region is simpler and correct
+       for content in any order. */
+    overflow-y:auto; overflow-x:hidden;
   }
   .sidebar-head{
     padding:16px 18px 10px;
@@ -384,7 +392,7 @@
   .settings-row2 > div{flex:1;}
   .settings-hint{font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#8a8065; line-height:1.4;}
 
-  .cp-list{flex:1; overflow:auto; padding:8px 0;}
+  .cp-list{padding:8px 0;}
   .cp-row{
     padding:10px 18px;
     border-bottom:1px solid var(--paper-line);
@@ -402,6 +410,14 @@
   .cp-bulk-bar select{font-family:'Inter',sans-serif; font-size:12px; border:1px solid var(--paper-line); background:#faf6ea; color:var(--ink); border-radius:2px; padding:5px 6px;}
   .cp-row.dragging{opacity:0.55; background:rgba(255,95,31,0.1);}
   .cp-row-top{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  /* impeccable critique (2026-08-18, P2): a single expanded checkpoint's
+     edit form can run ~500px+ tall — without this, its name scrolls out of
+     view before reaching the duplicate/delete buttons at the bottom. */
+  .cp-row.editing .cp-row-top{
+    position:sticky; top:0; z-index:5;
+    background:var(--paper); margin:-10px -18px 8px; padding:10px 18px 8px;
+    border-bottom:2px solid var(--hivis);
+  }
   .cp-drag-handle{
     display:flex; align-items:center; justify-content:center; flex-shrink:0;
     width:16px; height:22px; color:#8a8065; cursor:grab; touch-action:none;
@@ -545,8 +561,15 @@
 
   .cp-list-empty{padding:40px 18px; text-align:center; color:#8a8065; font-family:'JetBrains Mono',monospace; font-size:11.5px; line-height:1.5;}
 
-  .sidebar-foot{padding:12px 18px; border-top:1px solid var(--paper-line); flex-shrink:0; display:flex; gap:8px;}
-  .sidebar-foot .btn{flex:1;}
+  /* impeccable critique (2026-08-18, P0): fixed flex:1 on 3 buttons clipped
+     the "Personal-Briefing (PDF)" label at the app's own default 340px
+     sidebar width. auto-fit + a minmax floor lets columns wrap to a second
+     row instead of shrinking text below readability, at any sidebar width. */
+  .sidebar-foot{
+    padding:12px 18px; border-top:1px solid var(--paper-line); flex-shrink:0;
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(112px, 1fr)); gap:8px;
+  }
+  .sidebar-foot .btn{min-width:0; white-space:normal; text-align:center; line-height:1.3;}
   /* .btn defaults to --chalk text for use on dark (--asphalt) backgrounds; the sidebar
      sits on --paper instead, where --chalk is too close to the background to read
      (e.g. Feldpost theme: both are light cream) — use --ink like the rest of the sidebar. */
@@ -1341,6 +1364,17 @@
   }
 
   @media (max-width: 700px){
+    /* impeccable critique (2026-08-18, P3): the spelled-out wordmark plus a
+       wrapping event name ate ~17% of viewport height before any content
+       on a phone. The AC stamp mark alone already carries brand identity
+       at this width (same logic as an app dropping its wordmark for an
+       icon in a mobile header); the event name gets one truncated line
+       instead of wrapping to two or three. */
+    .topbar{padding:10px 14px; gap:10px;}
+    .brand h1{display:none;}
+    .brand span.sub{
+      display:block; max-width:52vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
     .topbar-nav-buttons{display:none;}
     .bottom-nav{
       display:flex; flex-shrink:0; background:var(--asphalt-2); border-top:1px solid var(--asphalt-3);
@@ -1376,6 +1410,14 @@
        triples the rider-delete hit area over the 20px default. */
     .rider-delete-btn{width:32px; height:32px; line-height:30px; font-size:17px;}
     .category-option-chip button{padding:8px 9px; font-size:14px;}
+    /* impeccable critique (2026-08-18, P1): the checkpoint-row duplicate/lock
+       buttons measured ~16×22px, packed against the mandatory-checkpoint
+       quick-toggle — exactly the raceday-marshal-on-a-phone scenario this
+       breakpoint exists for. Same 32px compromise as .rider-delete-btn
+       above (full 44px would crowd the tightly packed cp-row-meta row). */
+    .cp-icon-btn{width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; font-size:15px; padding:0;}
+    .cp-quick-toggle{padding:4px 0;}
+    .cp-quick-toggle input{width:17px; height:17px;}
   }
 
   @media (max-width: 520px){

@@ -62,6 +62,7 @@ let state = {
   routeEstimate: undefined,
   showRouteEstimateOnMap: false,
   showProximityBuffers: false,
+  eventSettingsPanelOpen: false,
 };
 let pdfPreviewDoc = null;
 let map, markersLayer, zonesLayer, eventLocationsLayer, routeLine, routeEstimateLine, proximityBufferLayer, cpMarkers = {};

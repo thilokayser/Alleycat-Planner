@@ -629,8 +629,8 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
               ${staffCount ? `<span class="cp-staff-badge" title="${t('checkpoint.staffHeading')}">${t('checkpoint.staffBadgeIcon')} ${staffCount}</span>` : ''}
               ${isCheckpointHq(evt, cp.id) ? `<span class="cp-staff-badge" title="${t('eventLocations.hqLabel')}">🏠 ${t('eventLocations.hqLabel')}</span>` : ''}
               <span class="cp-row-icon-actions">
-                <button type="button" class="cp-icon-btn" onclick="duplicateCheckpoint('${cp.id}')" title="${t('checkpoint.duplicate')}" ${itemLocked ? 'disabled' : ''}>⧉</button>
-                <button type="button" class="cp-icon-btn" onclick="toggleCpLocked('${cp.id}')" title="${cp.locked ? t('checkpoint.unlock') : t('checkpoint.lock')}" ${locked ? 'disabled' : ''}>${cp.locked ? '🔒' : '🔓'}</button>
+                <button type="button" class="cp-icon-btn" onclick="duplicateCheckpoint('${cp.id}')" title="${t('checkpoint.duplicate')}" aria-label="${t('checkpoint.duplicate')}" ${itemLocked ? 'disabled' : ''}>⧉</button>
+                <button type="button" class="cp-icon-btn" onclick="toggleCpLocked('${cp.id}')" title="${cp.locked ? t('checkpoint.unlock') : t('checkpoint.lock')}" aria-label="${cp.locked ? t('checkpoint.unlock') : t('checkpoint.lock')}" ${locked ? 'disabled' : ''}>${cp.locked ? '🔒' : '🔓'}</button>
               </span>
             </div>
             ${editBlock}
@@ -671,47 +671,6 @@ function renderSidebar(){
       <input type="text" class="event-title-input" value="${escapeHtml(evt.name)}" oninput="onEventNameInput(this.value)" placeholder="${t('checkpoint.eventNamePlaceholder')}">
       <input type="date" class="event-date-input" value="${escapeHtml(evt.date || '')}" oninput="onEventDateInput(this.value)">
     </div>
-    <div class="settings-section">
-      <button class="settings-toggle" onclick="toggleSettings()">${state.settingsOpen ? '\u25be' : '\u25b8'} ${t('checkpoint.startAndCurfew')}</button>
-      ${state.settingsOpen ? `
-        <div class="settings-body">
-          <div>
-            <label>${t('checkpoint.startModeLabel')}</label>
-            <select onchange="onStartModeChange(this.value)">
-              <option value="manual" ${evt.startMode !== 'scheduled' ? 'selected' : ''}>${t('checkpoint.manualStartOption')}</option>
-              <option value="scheduled" ${evt.startMode === 'scheduled' ? 'selected' : ''}>${t('checkpoint.scheduledStartOption')}</option>
-            </select>
-          </div>
-          ${evt.startMode === 'scheduled' ? `
-          <div>
-            <label>${t('checkpoint.startTimeLabel')}</label>
-            <input type="datetime-local" value="${escapeHtml(evt.startTime || '')}" oninput="onStartTimeChange(this.value)">
-          </div>` : `<div class="settings-hint">${t('checkpoint.manualStartHint')}</div>`}
-          <div>
-            <label>${t('checkpoint.curfewModeLabel')}</label>
-            <select onchange="onCurfewModeChange(this.value)">
-              <option value="hard" ${evt.curfewMode !== 'soft' ? 'selected' : ''}>${t('checkpoint.hardCutoffOption')}</option>
-              <option value="soft" ${evt.curfewMode === 'soft' ? 'selected' : ''}>${t('checkpoint.softCurfewOption')}</option>
-            </select>
-          </div>
-          <div class="settings-row2">
-            <div>
-              <label>${t('checkpoint.curfewTimeLabel')}</label>
-              <input type="datetime-local" value="${escapeHtml(evt.curfewTime || '')}" oninput="onCurfewTimeChange(this.value)">
-            </div>
-            ${evt.curfewMode === 'soft' ? `
-            <div>
-              <label>${t('checkpoint.penaltyPerMinLabel')}</label>
-              <input type="text" inputmode="decimal" value="${escapeHtml(String(evt.curfewPenaltyPerMin ?? 1))}" oninput="onCurfewPenaltyChange(this.value)">
-            </div>` : ''}
-          </div>
-          <div class="settings-hint">${evt.curfewMode === 'soft' ? t('checkpoint.softCurfewHint') : t('checkpoint.hardCurfewHint')}</div>
-        </div>
-      ` : ''}
-    </div>
-    ${renderZonesPanel(evt)}
-    ${renderEventLocationsPanel(evt)}
-    ${renderLogisticsPanel(evt)}
     ${evt.status === 'running' ? `
       <div class="cp-lock-banner ${evt.cpLockOverride ? 'unlocked' : ''}">
         <span>${evt.cpLockOverride ? t('raceState.cpUnlockedBanner') : t('raceState.cpLockedBanner')}</span>
@@ -750,10 +709,74 @@ function renderSidebar(){
     </div>
     ${state.cpBulkSelectedIds.length ? renderCpBulkActionsBar() : `<div class="cp-bulk-hint">${t('checkpoint.bulkSelectHint')}</div>`}
     <div class="cp-list">${rows}</div>
+    ${renderEventSettingsPanel(evt)}
     <div class="sidebar-foot">
       <button class="btn" onclick="exportRouteGPX()">${t('checkpoint.exportGpx')}</button>
       <button class="btn" onclick="openManifest()">${t('checkpoint.generateManifest')}</button>
       <button class="btn" onclick="exportStaffBriefingPDF()">${t('checkpoint.exportStaffBriefing')}</button>
+    </div>
+  `;
+}
+/* Reading-order fix (impeccable critique, 2026-08-18): the checkpoint list
+   is this screen's primary task content, but used to render after four
+   always-visible settings-panel headers (Start & Curfew/Zonen/Sonderorte/
+   Logistik) \u2014 pushing it below the fold on every visit. Those four now
+   live behind a single "Event-Einstellungen" entry point rendered AFTER
+   the list, collapsed by default; each inner panel keeps its own existing
+   toggle state/behavior unchanged once this outer drawer is opened. */
+function toggleEventSettingsPanel(){
+  state.eventSettingsPanelOpen = !state.eventSettingsPanelOpen;
+  renderSidebar();
+}
+function renderEventSettingsPanel(evt){
+  return `
+    <div class="settings-section event-settings-drawer">
+      <button class="settings-toggle" onclick="toggleEventSettingsPanel()">${state.eventSettingsPanelOpen ? '\u25be' : '\u25b8'} ${t('checkpoint.eventSettingsHeading')}</button>
+      ${state.eventSettingsPanelOpen ? `
+        <div class="settings-body">
+          <div class="settings-section">
+            <button class="settings-toggle" onclick="toggleSettings()">${state.settingsOpen ? '\u25be' : '\u25b8'} ${t('checkpoint.startAndCurfew')}</button>
+            ${state.settingsOpen ? `
+              <div class="settings-body">
+                <div>
+                  <label>${t('checkpoint.startModeLabel')}</label>
+                  <select onchange="onStartModeChange(this.value)">
+                    <option value="manual" ${evt.startMode !== 'scheduled' ? 'selected' : ''}>${t('checkpoint.manualStartOption')}</option>
+                    <option value="scheduled" ${evt.startMode === 'scheduled' ? 'selected' : ''}>${t('checkpoint.scheduledStartOption')}</option>
+                  </select>
+                </div>
+                ${evt.startMode === 'scheduled' ? `
+                <div>
+                  <label>${t('checkpoint.startTimeLabel')}</label>
+                  <input type="datetime-local" value="${escapeHtml(evt.startTime || '')}" oninput="onStartTimeChange(this.value)">
+                </div>` : `<div class="settings-hint">${t('checkpoint.manualStartHint')}</div>`}
+                <div>
+                  <label>${t('checkpoint.curfewModeLabel')}</label>
+                  <select onchange="onCurfewModeChange(this.value)">
+                    <option value="hard" ${evt.curfewMode !== 'soft' ? 'selected' : ''}>${t('checkpoint.hardCutoffOption')}</option>
+                    <option value="soft" ${evt.curfewMode === 'soft' ? 'selected' : ''}>${t('checkpoint.softCurfewOption')}</option>
+                  </select>
+                </div>
+                <div class="settings-row2">
+                  <div>
+                    <label>${t('checkpoint.curfewTimeLabel')}</label>
+                    <input type="datetime-local" value="${escapeHtml(evt.curfewTime || '')}" oninput="onCurfewTimeChange(this.value)">
+                  </div>
+                  ${evt.curfewMode === 'soft' ? `
+                  <div>
+                    <label>${t('checkpoint.penaltyPerMinLabel')}</label>
+                    <input type="text" inputmode="decimal" value="${escapeHtml(String(evt.curfewPenaltyPerMin ?? 1))}" oninput="onCurfewPenaltyChange(this.value)">
+                  </div>` : ''}
+                </div>
+                <div class="settings-hint">${evt.curfewMode === 'soft' ? t('checkpoint.softCurfewHint') : t('checkpoint.hardCurfewHint')}</div>
+              </div>
+            ` : ''}
+          </div>
+          ${renderZonesPanel(evt)}
+          ${renderEventLocationsPanel(evt)}
+          ${renderLogisticsPanel(evt)}
+        </div>
+      ` : ''}
     </div>
   `;
 }

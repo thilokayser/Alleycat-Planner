@@ -172,9 +172,9 @@ function renderEventLocationRow(evt, type){
       <div class="zone-row-meta">
         <a class="event-loc-maps-link" href="${mapsDeepLink(loc.lat, loc.lng)}" target="_blank" rel="noopener">${t('eventLocations.openInMaps')}</a>
         <span class="cp-row-icon-actions">
-          <button type="button" class="cp-icon-btn" onclick="flyToEventLocation('${type}')" title="${t('zones.flyToTitle')}">🎯</button>
-          ${linkedCp ? `<button type="button" class="cp-icon-btn" onclick="unlinkHqFromCheckpoint()" title="${t('eventLocations.unlink')}">🔗</button>` : ''}
-          <button type="button" class="cp-icon-btn" onclick="removeEventLocationFromSidebar('${type}')" title="${t('common.delete')}">🗑</button>
+          <button type="button" class="cp-icon-btn" onclick="flyToEventLocation('${type}')" title="${t('zones.flyToTitle')}" aria-label="${t('zones.flyToTitle')}">🎯</button>
+          ${linkedCp ? `<button type="button" class="cp-icon-btn" onclick="unlinkHqFromCheckpoint()" title="${t('eventLocations.unlink')}" aria-label="${t('eventLocations.unlink')}">🔗</button>` : ''}
+          <button type="button" class="cp-icon-btn" onclick="removeEventLocationFromSidebar('${type}')" title="${t('common.delete')}" aria-label="${t('common.delete')}">🗑</button>
         </span>
       </div>
     </div>`;

@@ -271,8 +271,8 @@ function renderZoneRow(z){
           ? `<label class="zone-radius-field">${t('zones.radiusLabel')} <input type="number" min="10" step="10" value="${z.radiusMeters}" onchange="onZoneRadiusChange('${z.id}', this.value)"> m</label>`
           : `<span class="zone-row-meta-text">${t('zones.pointCount', {count: z.points.length})}</span>`}
         <span class="cp-row-icon-actions">
-          <button type="button" class="cp-icon-btn" onclick="flyToZone('${z.id}')" title="${t('zones.flyToTitle')}">🎯</button>
-          <button type="button" class="cp-icon-btn" onclick="deleteZoneFromSidebar('${z.id}')" title="${t('common.delete')}">🗑</button>
+          <button type="button" class="cp-icon-btn" onclick="flyToZone('${z.id}')" title="${t('zones.flyToTitle')}" aria-label="${t('zones.flyToTitle')}">🎯</button>
+          <button type="button" class="cp-icon-btn" onclick="deleteZoneFromSidebar('${z.id}')" title="${t('common.delete')}" aria-label="${t('common.delete')}">🗑</button>
         </span>
       </div>
       ${z.type === 'circle' ? `
