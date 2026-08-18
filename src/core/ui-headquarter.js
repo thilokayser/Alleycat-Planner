@@ -217,6 +217,7 @@ async function init(){
   if(!(await initStorageBackend())) return;
   await loadAppSettings();
   applyAppSettings();
+  await loadCustomLanguagePacks();
   applyStaticTranslations();
   await loadCustomCheckpointTypes();
   await loadEventsIndex();
@@ -594,6 +595,33 @@ function renderSettings(){
       <h3>${t('settings.iconPackHeading')}</h3>
       <div class="settings-section-desc">${t('settings.iconPackDesc')}</div>
       <div class="option-grid">${iconCards}</div>
+    </div>
+    <div class="settings-section">
+      <h3>${t('settings.languageHeading')}</h3>
+      <div class="settings-section-desc">${t('settings.languageDesc')}</div>
+      <div class="option-grid">
+        ${availableLanguages().map(code => `
+          <button class="option-card ${getCurrentLanguage() === code ? 'active' : ''}" onclick="setLanguage('${code}')">
+            <span class="option-card-label">${escapeHtml(languagePackDisplayName(code))}</span>
+            ${code !== 'de' ? `<span class="option-card-desc">${t('settings.languagePackCustomBadge')}</span>` : ''}
+          </button>
+        `).join('')}
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+        <input type="file" id="import-language-pack-file" accept="application/json,.json" style="display:none;" onchange="onLanguagePackFileChange(this)">
+        <button class="btn btn-sm" onclick="document.getElementById('import-language-pack-file').click()">${t('settings.languagePackImport')}</button>
+        <button class="btn btn-sm" onclick="exportLanguagePackTemplate()">${t('settings.languagePackExportTemplate')}</button>
+      </div>
+      ${availableLanguages().filter(c => c !== 'de').length ? `
+        <div style="margin-top:10px; display:flex; flex-direction:column; gap:4px;">
+          ${availableLanguages().filter(c => c !== 'de').map(code => `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+              <span class="settings-hint">${escapeHtml(languagePackDisplayName(code))} (${code})</span>
+              <button type="button" class="cp-icon-btn" onclick="deleteLanguagePack('${code}')" title="${t('common.delete')}" aria-label="${t('common.delete')}">🗑</button>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
     </div>
     <div class="settings-section">
       <h3>${t('settings.unitsHeading')}</h3>

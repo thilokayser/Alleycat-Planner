@@ -463,6 +463,14 @@ const translations = {
       themeDesc: 'Verändert die Farbpalette der gesamten App.',
       iconPackHeading: 'Icon-Pack',
       iconPackDesc: 'Bestimmt, wie Checkpoint-Typen auf der Karte und in der Legende dargestellt werden. Font Awesome und Material Symbols werden bei Auswahl von einem CDN nachgeladen.',
+      languageHeading: 'Sprache',
+      languageDesc: 'Geräte-lokal wie Theme und Icon-Pack. Community-Sprachpakete als JSON hochladen — Dateiname muss dem Schema "alleycat-i18n-XX.json" folgen (z. B. alleycat-i18n-es.json), XX wird als Sprachcode übernommen. Fehlende Textstellen fallen automatisch auf Deutsch zurück.',
+      languagePackImport: 'Sprachpaket importieren',
+      languagePackExportTemplate: 'Vorlage exportieren',
+      languagePackCustomBadge: 'Community',
+      languagePackNameError: 'Dateiname muss dem Schema "alleycat-i18n-XX.json" folgen (z. B. alleycat-i18n-es.json).',
+      languagePackParseError: 'Datei konnte nicht als Sprachpaket gelesen werden (ungültiges JSON).',
+      languagePackDeleteConfirm: 'Dieses Sprachpaket wirklich löschen?',
       unitsHeading: 'Einheiten',
       unitsDesc: 'Betrifft angezeigte Streckendistanzen und Uhrzeiten — geräte-lokal wie Theme und Icon-Pack.',
       unitsDistanceSubheading: 'Distanz',
@@ -868,6 +876,64 @@ const translations = {
     }
   }
 };
+/* ---------------- community language packs (Spec 20.3) ----------------
+   Lets a local crew translate the UI without touching code: upload a JSON
+   file shaped exactly like `translations.de` above (same nested namespace/
+   key structure — missing keys are fine, t()'s existing per-key fallback
+   to `translations.de` already handles a partial translation). Language
+   code comes from the filename convention the spec itself specifies
+   (`alleycat-i18n-es.json` -> "es"), not a metadata field inside the JSON,
+   so export and re-import round-trip through the same convention. Merged
+   into the in-memory `translations` object at runtime (mirrors how
+   `checkpointTypes:custom` merges into CHECKPOINT_TYPES in checkpoint.js)
+   and persisted device-locally under `i18n:customPacks` — separate from
+   the `alleycat:lang` selection itself, which was already its own
+   standalone localStorage key before this step. */
+async function loadCustomLanguagePacks(){
+  try{
+    const res = await storageGet('i18n:customPacks');
+    const packs = res ? JSON.parse(res.value) : {};
+    Object.keys(packs).forEach(lang => { translations[lang] = packs[lang]; });
+  }catch(e){ /* keep de only */ }
+}
+async function saveCustomLanguagePacks(){
+  const packs = {};
+  Object.keys(translations).forEach(lang => { if(lang !== 'de') packs[lang] = translations[lang]; });
+  await storageSet('i18n:customPacks', JSON.stringify(packs));
+}
+function availableLanguages(){
+  return Object.keys(translations);
+}
+function languagePackDisplayName(code){
+  const dict = translations[code];
+  return (dict && dict._meta && dict._meta.name) || code.toUpperCase();
+}
+function exportLanguagePackTemplate(){
+  downloadJSON(translations.de, 'alleycat-i18n-template.json');
+}
+async function onLanguagePackFileChange(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  input.value = '';
+  const match = file.name.match(/alleycat-i18n-([a-z]{2,3})\.json$/i);
+  if(!match){ alert(t('settings.languagePackNameError')); return; }
+  const code = match[1].toLowerCase();
+  let json;
+  try{
+    json = JSON.parse(await file.text());
+  }catch(e){ json = null; }
+  if(!json || typeof json !== 'object' || Array.isArray(json)){ alert(t('settings.languagePackParseError')); return; }
+  translations[code] = json;
+  await saveCustomLanguagePacks();
+  render();
+}
+function deleteLanguagePack(code){
+  if(code === 'de' || !confirm(t('settings.languagePackDeleteConfirm'))) return;
+  delete translations[code];
+  saveCustomLanguagePacks();
+  if(getCurrentLanguage() === code) setLanguage('de');
+  else render();
+}
 function getCurrentLanguage(){
   try{ return localStorage.getItem('alleycat:lang') || 'de'; }
   catch(e){ return 'de'; }

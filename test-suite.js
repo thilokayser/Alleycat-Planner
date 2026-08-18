@@ -2181,6 +2181,71 @@ async function runAlleycatTestSuite(){
       && settingsHtmlCoord.includes(t('settings.coordFormatUtmLabel')) && settingsHtmlCoord.includes(t('settings.coordFormatMgrsLabel')));
   }
 
+  /* 4b) Paket 5 Teil A, Schritt 4 (letzter Teil-A-Schritt): Community-
+     Sprachpakete — JSON-Import/Export in i18n.js (Spec 20.3). Sprachcode
+     kommt aus dem Dateinamen (alleycat-i18n-XX.json), nicht aus einem
+     Metadaten-Feld — Export/Re-Import laufen über dieselbe Konvention.
+     Testsprache "xx" gewählt, um keine echte Sprache zu kollidieren; wird
+     am Ende wieder vollständig entfernt (auch aus dem Storage). */
+  {
+    checkEqual('getCurrentLanguage() startet bei "de"', getCurrentLanguage(), 'de');
+    check('availableLanguages() enthält zunächst "de"', availableLanguages().includes('de'));
+    checkEqual('t() liefert deutschen Text als Baseline', t('common.save'), 'Speichern');
+
+    const langCountBefore = availableLanguages().length;
+    const packFile = new File([JSON.stringify({common: {save: 'TESTSAVE'}}, null, 2)], 'alleycat-i18n-xx.json', {type: 'application/json'});
+    await onLanguagePackFileChange({value: '', files: [packFile]});
+    check('onLanguagePackFileChange fügt die Sprache aus dem Dateinamen hinzu', availableLanguages().includes('xx'));
+    checkEqual('Neue Sprache hat genau einen zusätzlichen Eintrag', availableLanguages().length, langCountBefore + 1);
+    checkEqual('Hochgeladener Wert landet unverändert in translations', translations.xx.common.save, 'TESTSAVE');
+
+    const langBefore = getCurrentLanguage();
+    setLanguage('xx');
+    checkEqual('setLanguage wechselt die aktive Sprache', getCurrentLanguage(), 'xx');
+    checkEqual('t() nutzt jetzt das Community-Sprachpaket', t('common.save'), 'TESTSAVE');
+    checkEqual('t() fällt bei fehlendem Schlüssel im Sprachpaket auf Deutsch zurück', t('common.cancel'), 'Abbrechen');
+
+    const origAlertLang = window.alert;
+    let langAlertMsg = null;
+    window.alert = (msg) => { langAlertMsg = msg; };
+
+    const badNameFile = new File(['{}'], 'wrong-name.json', {type: 'application/json'});
+    await onLanguagePackFileChange({value: '', files: [badNameFile]});
+    checkEqual('Dateiname ohne "alleycat-i18n-XX.json"-Schema wird abgelehnt', langAlertMsg, t('settings.languagePackNameError'));
+    checkEqual('Falscher Dateiname legt keine neue Sprache an', availableLanguages().length, langCountBefore + 1);
+
+    langAlertMsg = null;
+    const badJsonFile = new File(['{not valid json'], 'alleycat-i18n-yy.json', {type: 'application/json'});
+    await onLanguagePackFileChange({value: '', files: [badJsonFile]});
+    checkEqual('Ungültiges JSON wird abgelehnt', langAlertMsg, t('settings.languagePackParseError'));
+    check('Ungültiges JSON legt keine Sprache "yy" an', !availableLanguages().includes('yy'));
+    window.alert = origAlertLang;
+
+    const origConfirmLang = window.confirm;
+    window.confirm = () => true;
+    deleteLanguagePack('de');
+    check('deleteLanguagePack("de") ist ein No-op (eingebaute Sprache bleibt)', availableLanguages().includes('de'));
+    deleteLanguagePack('xx');
+    check('deleteLanguagePack entfernt das Community-Paket wieder', !availableLanguages().includes('xx'));
+    checkEqual('Löschen der aktiven Sprache schaltet zurück auf Deutsch', getCurrentLanguage(), 'de');
+    window.confirm = origConfirmLang;
+
+    setLanguage(langBefore);
+    checkEqual('Ausgangssprache wiederhergestellt', getCurrentLanguage(), langBefore);
+    checkEqual('availableLanguages() wieder auf dem Ausgangsstand', availableLanguages().length, langCountBefore);
+
+    const settingsHtmlLang = (() => {
+      const viewBeforeSettings = state.view;
+      state.view = 'settings';
+      render();
+      const html = document.getElementById('view-settings').innerHTML;
+      state.view = viewBeforeSettings;
+      render();
+      return html;
+    })();
+    check('Settings zeigt die "Sprache"-Sektion mit Import/Export-Buttons', settingsHtmlLang.includes(t('settings.languageHeading')) && settingsHtmlLang.includes(t('settings.languagePackImport')) && settingsHtmlLang.includes(t('settings.languagePackExportTemplate')));
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();
