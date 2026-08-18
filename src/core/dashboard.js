@@ -35,7 +35,8 @@ function withEventDefaults(evt){
     actionLog: [],
     featureFlags: {categories: true, gameModes: true},
     zones: [],
-    eventLocations: []
+    eventLocations: [],
+    orgaPins: []
   }, evt);
   merged.pdfBlocks = (merged.pdfBlocks || []).map(withPdfBlockDefaults);
   merged.gameModes = (merged.gameModes || []).map(withGameModeDefaults);

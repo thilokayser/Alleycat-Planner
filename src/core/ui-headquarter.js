@@ -63,9 +63,11 @@ let state = {
   showRouteEstimateOnMap: false,
   showProximityBuffers: false,
   eventSettingsPanelOpen: false,
+  orgaPinsPanelOpen: false,
+  mapContextMenu: null,
 };
 let pdfPreviewDoc = null;
-let map, markersLayer, zonesLayer, eventLocationsLayer, routeLine, routeEstimateLine, proximityBufferLayer, cpMarkers = {};
+let map, markersLayer, zonesLayer, eventLocationsLayer, orgaPinsLayer, routeLine, routeEstimateLine, proximityBufferLayer, cpMarkers = {};
 let qrScanStream = null;
 let qrScanRAF = null;
 let liveCountdownInterval = null;
@@ -245,7 +247,19 @@ async function openEditor(id){
   registerEventSounds(state.currentEvent);
   state.loading = false;
   render();
-  setTimeout(() => { initMap(); initSidebarResize(); applySidebarWidth(); applyEditorSidebarCollapsed(); applyMobileMapCollapsed(); }, 30);
+  /* Guarded on state.view, same reasoning as the sidebar-collapse/mobile-map
+     invalidateSize() gotcha already documented in CLAUDE.md: this is a
+     deferred macrotask, so if the user navigates away from the editor
+     before it fires, initMap()'s own unconditional invalidateSize() would
+     cache a 0x0 size against a display:none container — poisoning every
+     later map.flyTo() with "Invalid LatLng (NaN, NaN)". This call site had
+     the same unguarded structure as the ones already fixed; noticed and
+     closed while investigating an unrelated map-flyTo test flake (which
+     turned out to be a stale browser-tab viewport, not this). */
+  setTimeout(() => {
+    if(state.view !== 'editor') return;
+    initMap(); initSidebarResize(); applySidebarWidth(); applyEditorSidebarCollapsed(); applyMobileMapCollapsed();
+  }, 30);
 }
 function openOverview(){
   state.view = 'overview';
@@ -290,6 +304,7 @@ function isTypingTarget(el){
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
 }
 function handleGlobalEscape(){
+  if(state.mapContextMenu){ hideMapContextMenu(); return true; }
   if(state.pdfPreviewOpen){ closePdfPreview(); return true; }
   if(state.socialShareOpen){ closeSocialShareCard(); return true; }
   if(state.commandPaletteOpen){ closeCommandPalette(); return true; }

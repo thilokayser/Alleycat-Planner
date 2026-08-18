@@ -118,7 +118,12 @@ const translations = {
       collapseSidebar: 'Sidebar einklappen',
       expandSidebar: 'Sidebar wieder anzeigen',
       showMap: '▾ Karte anzeigen',
-      hideMap: '▴ Karte einklappen'
+      hideMap: '▴ Karte einklappen',
+      contextMenuAddCheckpoint: '+ Checkpoint hier anlegen',
+      contextMenuSetHq: '🏠 HQ hierher setzen',
+      contextMenuSetAfterparty: '🎉 Afterparty definieren',
+      contextMenuAddOrgaPin: '📌 Orga-Notiz anheften',
+      contextMenuSearchHere: '🔍 Adresse / Ort suchen'
     },
     zones: {
       heading: 'Zonen',
@@ -164,6 +169,19 @@ const translations = {
       switchHqConfirm: 'Der Checkpoint „{name}“ ist aktuell als Headquarter markiert. Stattdessen diesen als Headquarter setzen?',
       overwriteFreeHqConfirm: 'Es gibt bereits einen frei platzierten Headquarter-Marker. Diesen durch den Checkpoint ersetzen?',
       unknownCheckpoint: '(unbekannter Checkpoint)'
+    },
+    orgaPins: {
+      heading: 'Orga-Pins',
+      hint: 'Rein interne Planungsmarker (Baustellen, gefährliche Kreuzungen, Sammelpunkte) — werden nie auf Fahrer-Manifesten oder im Beamer angezeigt.',
+      titlePlaceholder: 'Titel',
+      notesPlaceholder: 'Notiz (optional)',
+      typeWarning: 'Warnung',
+      typeDanger: 'Gefahr',
+      typeNote: 'Notiz',
+      typeInfo: 'Info',
+      unnamed: 'Orga-Pin',
+      noneYet: 'Noch keine Orga-Pins — per Rechtsklick auf der Karte anlegen.',
+      deleteConfirm: 'Diesen Orga-Pin wirklich löschen?'
     },
     logistics: {
       heading: 'Logistik',

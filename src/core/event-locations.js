@@ -193,3 +193,38 @@ function renderEventLocationsPanel(evt){
     </div>
   `;
 }
+
+/* ---------------- orga pins: data model ----------------
+   Purely internal planning markers (Baustellen, gefährliche Kreuzungen,
+   Sammelpunkte) per Spec 18.4 — array-based like zones.js (any number of
+   pins, unlike the single-per-type HQ/Afterparty above), but small enough
+   to live alongside the other "special map object" data here rather than
+   its own module. Never rendered on rider-facing exports or the beamer —
+   there's deliberately no per-pin visibility flag for that (the spec's own
+   `visible_on_hq_only` field would always be true in practice, since pins
+   are categorically HQ-only; a flag that never varies is dead config). */
+function withOrgaPinDefaults(p){
+  return Object.assign({
+    id: uid('pin'),
+    type: 'note', // 'warning' | 'danger' | 'note' | 'info'
+    title: '',
+    notes: '',
+    lat: null,
+    lng: null
+  }, p);
+}
+function addOrgaPin(evt, pin){
+  evt.orgaPins = evt.orgaPins || [];
+  const p = withOrgaPinDefaults(pin);
+  evt.orgaPins.push(p);
+  return p;
+}
+function getOrgaPin(evt, id){
+  return (evt.orgaPins || []).find(p => p.id === id) || null;
+}
+function removeOrgaPin(evt, id){
+  evt.orgaPins = (evt.orgaPins || []).filter(p => p.id !== id);
+}
+function orgaPinIcon(type){
+  return {warning: '⚠️', danger: '🚫', note: '📌', info: 'ℹ️'}[type] || '📌';
+}

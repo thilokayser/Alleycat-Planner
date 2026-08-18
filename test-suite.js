@@ -1806,6 +1806,111 @@ async function runAlleycatTestSuite(){
     redrawMarkers();
   }
 
+  /* 3v) Paket 4 Teil B, Schritt 4: Orga-Pins (event-locations.js) + Karten-
+     Rechtsklick-Kontextmenü (map.js). Läuft komplett auf dem echten `evt`
+     (echte Karte bereits initialisiert), stellt aber jeden Seiteneffekt
+     danach exakt zurück — Abschnitt 4 gleich im Anschluss prüft u. a. eine
+     feste Checkpoint-Anzahl (`CHECKPOINT_TYPES.length`) und
+     `eventLocations[0]` als die freistehende HQ-Location; beides darf durch
+     diesen Test nicht verschoben werden. */
+  {
+    checkEqual('withOrgaPinDefaults: type "note" als Default', withOrgaPinDefaults({}).type, 'note');
+    const pin = addOrgaPin(evt, {lat: 50.9, lng: 6.9, type: 'danger', title: 'Baustelle'});
+    check('addOrgaPin fügt den Pin zu evt.orgaPins hinzu', getOrgaPin(evt, pin.id) === pin);
+    checkEqual('orgaPinIcon liefert das Symbol je Typ', orgaPinIcon('danger'), '🚫');
+    checkEqual('orgaPinIcon: unbekannter Typ fällt auf die Pin-Nadel zurück', orgaPinIcon('xyz'), '📌');
+
+    redrawOrgaPins();
+    checkEqual('redrawOrgaPins zeichnet einen Marker pro Pin', orgaPinsLayer.getLayers().length, 1);
+
+    const viewBeforePin = state.view;
+    state.view = 'editor';
+    render();
+    selectOrgaPin(pin.id);
+    check('selectOrgaPin öffnet das Orga-Pins-Panel', state.orgaPinsPanelOpen);
+    check('Ausgewählte Orga-Pin-Zeile ist im DOM vorhanden', !!document.querySelector(`.orga-pin-row[data-pin-id="${pin.id}"]`));
+    state.orgaPinsPanelOpen = false;
+    state.eventSettingsPanelOpen = false;
+
+    removeOrgaPin(evt, pin.id);
+    checkEqual('removeOrgaPin entfernt den Pin wieder', getOrgaPin(evt, pin.id), null);
+    redrawOrgaPins();
+    state.view = viewBeforePin;
+    render();
+
+    /* Rechtsklick-Kontextmenü: onMapContextMenu() nimmt ein Leaflet-Event
+       entgegen (containerPoint/latlng/originalEvent), hier von Hand nachgebaut
+       wie an anderen Stellen der Suite bereits für Leaflet.draw-Events. */
+    let preventDefaultCalled = false;
+    const fakeCtxEvent = {containerPoint: {x: 120, y: 80}, latlng: {lat: 50.93, lng: 6.94}, originalEvent: {preventDefault: () => { preventDefaultCalled = true; }}};
+    onMapContextMenu(fakeCtxEvent);
+    check('onMapContextMenu unterdrückt das native Browser-Kontextmenü', preventDefaultCalled);
+    check('onMapContextMenu setzt state.mapContextMenu', !!state.mapContextMenu && state.mapContextMenu.lat === 50.93);
+    const menuEl = document.getElementById('map-context-menu');
+    check('Kontextmenü zeigt alle 5 Aktionen an', menuEl.style.display === 'block'
+      && menuEl.innerHTML.includes(t('map.contextMenuAddCheckpoint'))
+      && menuEl.innerHTML.includes(t('map.contextMenuSetHq'))
+      && menuEl.innerHTML.includes(t('map.contextMenuSetAfterparty'))
+      && menuEl.innerHTML.includes(t('map.contextMenuAddOrgaPin'))
+      && menuEl.innerHTML.includes(t('map.contextMenuSearchHere')));
+
+    hideMapContextMenu();
+    checkEqual('hideMapContextMenu leert state.mapContextMenu wieder', state.mapContextMenu, null);
+    checkEqual('Kontextmenü-Element ist danach unsichtbar', menuEl.style.display, 'none');
+
+    onMapContextMenu(fakeCtxEvent);
+    document.body.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+    checkEqual('Klick außerhalb schließt das Kontextmenü (document-Listener)', state.mapContextMenu, null);
+
+    onMapContextMenu(fakeCtxEvent);
+    document.body.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
+    checkEqual('Esc schließt das Kontextmenü (höchste Priorität in handleGlobalEscape)', state.mapContextMenu, null);
+
+    /* Jede Aktion einzeln: state.mapContextMenu wird pro Aktion frisch gesetzt,
+       da jede Aktion selbst zuerst hideMapContextMenu() aufruft. */
+    const cpCountBefore = evt.checkpoints.length;
+    state.mapContextMenu = {x: 0, y: 0, lat: 50.91, lng: 6.91};
+    contextMenuAddCheckpoint();
+    checkEqual('"Checkpoint hier anlegen" fügt einen Checkpoint an den Klick-Koordinaten hinzu', evt.checkpoints.length, cpCountBefore + 1);
+    const addedCp = evt.checkpoints[evt.checkpoints.length - 1];
+    check('Neuer Checkpoint liegt an den Kontextmenü-Koordinaten', addedCp.lat === 50.91 && addedCp.lng === 6.91);
+    evt.checkpoints.pop(); // exakte Checkpoint-Anzahl für Abschnitt 4 wiederherstellen
+    state.editingId = null;
+
+    const origHq = getEventLocation(evt, 'headquarters');
+    const origHqLat = origHq.lat, origHqLng = origHq.lng;
+    state.mapContextMenu = {x: 0, y: 0, lat: 50.92, lng: 6.92};
+    contextMenuSetHq();
+    checkEqual('"HQ hierher setzen" verschiebt die bestehende freistehende HQ-Location', getEventLocation(evt, 'headquarters').lat, 50.92);
+    checkEqual('HQ bleibt die einzige Location (kein zweiter Eintrag)', evt.eventLocations.length, 1);
+    origHq.lat = origHqLat; origHq.lng = origHqLng; // Koordinaten für Abschnitt 4 wiederherstellen
+
+    check('Vor dem Test noch keine Afterparty gesetzt', !getEventLocation(evt, 'afterparty'));
+    state.mapContextMenu = {x: 0, y: 0, lat: 50.94, lng: 6.94};
+    contextMenuSetAfterparty();
+    const newAfterparty = getEventLocation(evt, 'afterparty');
+    check('"Afterparty definieren" legt eine Afterparty-Location an den Koordinaten an', !!newAfterparty && newAfterparty.lat === 50.94);
+    removeEventLocation(evt, 'afterparty'); // Ausgangszustand für Abschnitt 4 wiederherstellen
+
+    const pinCountBefore = (evt.orgaPins || []).length;
+    state.mapContextMenu = {x: 0, y: 0, lat: 50.95, lng: 6.95};
+    contextMenuAddOrgaPin();
+    checkEqual('"Orga-Notiz anheften" legt sofort einen Pin an den Koordinaten an', evt.orgaPins.length, pinCountBefore + 1);
+    const newPin = evt.orgaPins[evt.orgaPins.length - 1];
+    check('Neuer Orga-Pin liegt an den Kontextmenü-Koordinaten', newPin.lat === 50.95 && newPin.lng === 6.95);
+    check('"Orga-Notiz anheften" öffnet das Orga-Pins-Panel zur Bearbeitung', state.orgaPinsPanelOpen);
+    removeOrgaPin(evt, newPin.id); // Ausgangszustand (leer) für Abschnitt 4 wiederherstellen
+    state.orgaPinsPanelOpen = false;
+    state.eventSettingsPanelOpen = false;
+    redrawOrgaPins();
+
+    state.mapSearchOpen = false;
+    state.mapContextMenu = {x: 0, y: 0, lat: 50.9, lng: 6.9};
+    contextMenuSearchHere();
+    check('"Adresse / Ort suchen" öffnet die Kartensuche', state.mapSearchOpen);
+    toggleMapSearch(false);
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();

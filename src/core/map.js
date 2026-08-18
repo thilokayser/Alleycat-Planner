@@ -12,7 +12,14 @@ function initMap(){
     markersLayer = L.layerGroup().addTo(map);
     zonesLayer = L.featureGroup().addTo(map);
     eventLocationsLayer = L.layerGroup().addTo(map);
+    orgaPinsLayer = L.layerGroup().addTo(map);
     map.on('click', onMapClick);
+    map.on('contextmenu', onMapContextMenu);
+    document.addEventListener('click', (e) => {
+      if(!state.mapContextMenu) return;
+      const menuEl = document.getElementById('map-context-menu');
+      if(menuEl && !menuEl.contains(e.target)) hideMapContextMenu();
+    });
     initZoneDrawControl();
   } else {
     map.invalidateSize();
@@ -26,6 +33,7 @@ function initMap(){
   redrawMarkers();
   redrawZones();
   redrawEventLocations();
+  redrawOrgaPins();
   redrawRouteEstimate();
   redrawProximityBuffers();
   fitToCheckpoints();
@@ -348,6 +356,173 @@ function redrawEventLocations(){
   });
 }
 
+/* ---------------- orga pins: map markers + sidebar panel ----------------
+   Data model lives in event-locations.js (withOrgaPinDefaults/addOrgaPin/
+   removeOrgaPin), same split as zones/event-locations above. Deliberately
+   HQ-map only — no beamer.js touch-point exists or is planned, per Spec
+   18.4's "niemals in der Beamer-Ansicht". */
+function redrawOrgaPins(){
+  if(!orgaPinsLayer || !state.currentEvent) return;
+  orgaPinsLayer.clearLayers();
+  (state.currentEvent.orgaPins || []).forEach(pin => {
+    if(!Number.isFinite(pin.lat) || !Number.isFinite(pin.lng)) return;
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="orga-pin-marker orga-pin-marker-${pin.type}">${orgaPinIcon(pin.type)}</div>`,
+      iconSize: [26, 26], iconAnchor: [13, 13]
+    });
+    const marker = L.marker([pin.lat, pin.lng], {icon, draggable: true});
+    marker.bindTooltip(pin.title || t('orgaPins.unnamed'), {direction: 'top', offset: [0, -14], className: 'zone-tooltip'});
+    marker.on('click', () => selectOrgaPin(pin.id));
+    marker.on('dragend', (ev) => {
+      const pos = ev.target.getLatLng();
+      pin.lat = pos.lat; pin.lng = pos.lng;
+      debouncedSave();
+    });
+    marker.addTo(orgaPinsLayer);
+  });
+}
+function toggleOrgaPinsPanel(){
+  state.orgaPinsPanelOpen = !state.orgaPinsPanelOpen;
+  renderSidebar();
+}
+function selectOrgaPin(id){
+  /* renderOrgaPinsPanel() is nested inside the collapsible "Event-
+     Einstellungen" drawer (checkpoint.js) — both must be open or the row
+     never reaches the DOM for scrollIntoView() to find. */
+  state.eventSettingsPanelOpen = true;
+  state.orgaPinsPanelOpen = true;
+  renderSidebar();
+  const row = document.querySelector(`.orga-pin-row[data-pin-id="${id}"]`);
+  if(row) row.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+function onOrgaPinFieldChange(id, field, value){
+  const pin = getOrgaPin(state.currentEvent, id);
+  if(!pin) return;
+  pin[field] = value;
+  debouncedSave();
+  if(field === 'type' || field === 'title') redrawOrgaPins();
+}
+function deleteOrgaPinFromSidebar(id){
+  if(!confirm(t('orgaPins.deleteConfirm'))) return;
+  removeOrgaPin(state.currentEvent, id);
+  debouncedSave();
+  redrawOrgaPins();
+  renderSidebar();
+}
+function flyToOrgaPin(id){
+  const pin = getOrgaPin(state.currentEvent, id);
+  if(!pin || !Number.isFinite(pin.lat) || !map) return;
+  map.flyTo([pin.lat, pin.lng], Math.max(map.getZoom(), 15), {duration: 0.6});
+}
+function renderOrgaPinRow(pin){
+  return `
+    <div class="zone-row orga-pin-row" data-pin-id="${pin.id}">
+      <div class="zone-row-top">
+        <span class="event-loc-icon">${orgaPinIcon(pin.type)}</span>
+        <input type="text" class="zone-name-input" value="${escapeHtml(pin.title)}" placeholder="${t('orgaPins.titlePlaceholder')}" oninput="onOrgaPinFieldChange('${pin.id}', 'title', this.value)">
+        <select onchange="onOrgaPinFieldChange('${pin.id}', 'type', this.value)">
+          <option value="warning" ${pin.type === 'warning' ? 'selected' : ''}>${t('orgaPins.typeWarning')}</option>
+          <option value="danger" ${pin.type === 'danger' ? 'selected' : ''}>${t('orgaPins.typeDanger')}</option>
+          <option value="note" ${pin.type === 'note' ? 'selected' : ''}>${t('orgaPins.typeNote')}</option>
+          <option value="info" ${pin.type === 'info' ? 'selected' : ''}>${t('orgaPins.typeInfo')}</option>
+        </select>
+      </div>
+      <textarea class="event-loc-notes" placeholder="${t('orgaPins.notesPlaceholder')}" oninput="onOrgaPinFieldChange('${pin.id}', 'notes', this.value)">${escapeHtml(pin.notes || '')}</textarea>
+      <div class="zone-row-meta">
+        <span class="cp-row-icon-actions">
+          <button type="button" class="cp-icon-btn" onclick="flyToOrgaPin('${pin.id}')" title="${t('zones.flyToTitle')}" aria-label="${t('zones.flyToTitle')}">🎯</button>
+          <button type="button" class="cp-icon-btn" onclick="deleteOrgaPinFromSidebar('${pin.id}')" title="${t('common.delete')}" aria-label="${t('common.delete')}">🗑</button>
+        </span>
+      </div>
+    </div>
+  `;
+}
+function renderOrgaPinsPanel(evt){
+  const pins = evt.orgaPins || [];
+  return `
+    <div class="settings-section">
+      <button class="settings-toggle" onclick="toggleOrgaPinsPanel()">${state.orgaPinsPanelOpen ? '▾' : '▸'} ${t('orgaPins.heading')}</button>
+      ${state.orgaPinsPanelOpen ? `
+        <div class="settings-body">
+          <div class="settings-hint">${t('orgaPins.hint')}</div>
+          <div class="zone-list">${pins.length ? pins.map(renderOrgaPinRow).join('') : `<div class="riders-hint" style="padding:0;">${t('orgaPins.noneYet')}</div>`}</div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+/* ---------------- map right-click context menu ----------------
+   Spec 18.4: a small quick-action menu at the right-clicked point instead
+   of Leaflet.draw's plugin-based contextmenu — this app already avoids
+   adding Leaflet plugins beyond the one dependency exception documented
+   for Leaflet.draw (PROJEKT-UEBERSICHT.md §9), and `L.Map` already fires a
+   plain browser-native 'contextmenu' event we can just build a small
+   floating menu from directly. Desktop-only by design (no long-press
+   equivalent) — this is a planning tool used before race day, not
+   something organizers need mid-event on a phone. */
+function onMapContextMenu(e){
+  if(!state.currentEvent) return;
+  e.originalEvent.preventDefault();
+  state.mapContextMenu = {x: e.containerPoint.x, y: e.containerPoint.y, lat: e.latlng.lat, lng: e.latlng.lng};
+  renderMapContextMenuDom();
+}
+function hideMapContextMenu(){
+  state.mapContextMenu = null;
+  renderMapContextMenuDom();
+}
+function renderMapContextMenuDom(){
+  const el = document.getElementById('map-context-menu');
+  if(!el) return;
+  const ctx = state.mapContextMenu;
+  if(!ctx){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.left = ctx.x + 'px';
+  el.style.top = ctx.y + 'px';
+  el.style.display = 'block';
+  const locked = isCpLocked(state.currentEvent);
+  el.innerHTML = `
+    <button type="button" ${locked ? 'disabled' : ''} onclick="contextMenuAddCheckpoint()">${t('map.contextMenuAddCheckpoint')}</button>
+    <button type="button" onclick="contextMenuSetHq()">${t('map.contextMenuSetHq')}</button>
+    <button type="button" onclick="contextMenuSetAfterparty()">${t('map.contextMenuSetAfterparty')}</button>
+    <button type="button" onclick="contextMenuAddOrgaPin()">${t('map.contextMenuAddOrgaPin')}</button>
+    <button type="button" onclick="contextMenuSearchHere()">${t('map.contextMenuSearchHere')}</button>
+  `;
+}
+function contextMenuAddCheckpoint(){
+  const ctx = state.mapContextMenu;
+  if(!ctx) return;
+  hideMapContextMenu();
+  addCheckpointAt(ctx.lat, ctx.lng);
+}
+function contextMenuSetHq(){
+  const ctx = state.mapContextMenu;
+  if(!ctx) return;
+  hideMapContextMenu();
+  const loc = placeEventLocationAt(state.currentEvent, 'headquarters', ctx.lat, ctx.lng);
+  if(loc){ debouncedSave(); redrawEventLocations(); renderSidebar(); }
+}
+function contextMenuSetAfterparty(){
+  const ctx = state.mapContextMenu;
+  if(!ctx) return;
+  hideMapContextMenu();
+  const loc = placeEventLocationAt(state.currentEvent, 'afterparty', ctx.lat, ctx.lng);
+  if(loc){ debouncedSave(); redrawEventLocations(); renderSidebar(); }
+}
+function contextMenuAddOrgaPin(){
+  const ctx = state.mapContextMenu;
+  if(!ctx) return;
+  hideMapContextMenu();
+  const pin = addOrgaPin(state.currentEvent, {lat: ctx.lat, lng: ctx.lng});
+  debouncedSave();
+  redrawOrgaPins();
+  selectOrgaPin(pin.id);
+}
+function contextMenuSearchHere(){
+  hideMapContextMenu();
+  toggleMapSearch(true);
+}
+
 /* ---------------- hover sync: sidebar row <-> map marker ---------------- */
 function setCpRowHoverSync(cpId, on){
   const row = document.querySelector(`.cp-row[data-cp-id="${cpId}"]`);
@@ -510,12 +685,18 @@ function onMapClick(e){
     return;
   }
   if(!state.addMode || !state.currentEvent || isCpLocked(state.currentEvent)) return;
+  addCheckpointAt(e.latlng.lat, e.latlng.lng);
+}
+/* Shared by the add-mode map click above and the right-click context menu's
+   "Checkpoint hier anlegen" action below — same checkpoint object shape
+   either way, only the trigger differs. */
+function addCheckpointAt(lat, lng){
+  if(!state.currentEvent || isCpLocked(state.currentEvent)) return null;
   const order = state.currentEvent.checkpoints.length + 1;
   const cp = {
     id: uid('cp'),
     order,
-    lat: e.latlng.lat,
-    lng: e.latlng.lng,
+    lat, lng,
     name: t('map.defaultCheckpointName', {order}),
     clue: '',
     mandatory: true,
@@ -531,6 +712,7 @@ function onMapClick(e){
   state.editingId = cp.id;
   renderSidebar();
   redrawMarkers();
+  return cp;
 }
 
 function redrawMarkers(){
