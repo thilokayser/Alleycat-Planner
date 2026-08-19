@@ -155,11 +155,11 @@ async function runAlleycatTestSuite(){
   {
     openRiders();
     await wait(20);
-    /* Kategorien-Panel ist seit Paket 4 (Fahrer-Seite im Manifest-Anpassen-Look)
-       standardmäßig eingeklappt — ohne diesen Klick existiert #newcatgroup-name
-       weiter unten nicht im DOM, genau wie ein echter Nutzer erst "Kategorien"
-       aufklappen müsste, bevor das Formular erreichbar ist. */
-    toggleCategoriesPanel();
+    /* Seit Paket 11 (Fahrer-Sidebar) ist "Kategorien" ein eigener Sidebar-
+       Screen statt eines aufklappbaren Panels — ohne diesen Wechsel existiert
+       #newcatgroup-name weiter unten nicht im DOM, genau wie ein echter
+       Nutzer erst zu "Kategorien" navigieren müsste. */
+    selectRidersSection('categories');
     addCategoryPreset('drivetrain');
     addCategoryPreset('gender');
     checkEqual('2 Kategorie-Presets hinzugefügt', evt.categoryGroups.length, 2);
@@ -1529,10 +1529,10 @@ async function runAlleycatTestSuite(){
     check('toggleFeature schaltet Event-Scope-Feature um', !isFeatureEnabled('categories', evt));
     checkEqual('Event-Scope-Toggle landet in evt.featureFlags', evt.featureFlags.categories, false);
     openRiders();
-    check('Deaktivierte Kategorien blenden die Kategorien-Sektion in der Fahrerliste aus', !document.getElementById('view-riders').innerHTML.includes('rider-categories-section'));
+    check('Deaktivierte Kategorien blenden den Kategorien-Sidebar-Punkt in der Fahrerliste aus', !ridersNavGroups(evt).some(g => g.items.some(i => i.id === 'categories')));
     toggleFeature('categories');
     openRiders();
-    check('Kategorien-Sektion erscheint nach Reaktivierung wieder', document.getElementById('view-riders').innerHTML.includes('rider-categories-section'));
+    check('Kategorien-Sidebar-Punkt erscheint nach Reaktivierung wieder', ridersNavGroups(evt).some(g => g.items.some(i => i.id === 'categories')));
 
     toggleFeature('game_modes');
     openOverview();
@@ -2635,11 +2635,15 @@ async function runAlleycatTestSuite(){
     checkEqual('selectSettingsSection setzt die aktive Sektion', state.settingsSection, 'theme');
     check('selectSettingsSection öffnet die mobile Detail-Ansicht', state.settingsMobileDetailOpen);
     checkEqual('selectSettingsSection persistiert die Wahl in localStorage', localStorage.getItem('alleycat:settingsSection'), 'theme');
-    /* .settings-content statt des gesamten #view-settings, da die Sidebar
-       selbst auch einen Nav-Eintrag "Checkpoint-Typen" listet — dessen
-       Label ist wortgleich mit der Sektions-Überschrift und würde die
-       Content-Only-Prüfung sonst falsch bestehen lassen. */
-    let settingsContentHtml = document.querySelector('.settings-content').innerHTML;
+    /* #view-settings .settings-content statt eines bloßen .settings-content-
+       Selektors, seit Paket 11 (Fahrer-Sidebar) dieselbe Klasse auch auf
+       #view-riders verwendet — ein ungescopter Selector würde je nach
+       DOM-Reihenfolge die falsche Seite treffen. Zusätzlich .settings-content
+       statt des gesamten #view-settings, da die Sidebar selbst auch einen
+       Nav-Eintrag "Checkpoint-Typen" listet — dessen Label ist wortgleich mit
+       der Sektions-Überschrift und würde die Content-Only-Prüfung sonst
+       falsch bestehen lassen. */
+    let settingsContentHtml = document.querySelector('#view-settings .settings-content').innerHTML;
     check('Aktive Sektion (Design) ist im Content-Bereich', settingsContentHtml.includes(t('settings.themeHeading')));
     check('Inaktive Sektion (Checkpoint-Typen) ist NICHT im Content-Bereich (nur ein Screen gleichzeitig gerendert)', !settingsContentHtml.includes(t('settings.checkpointTypesDesc')));
 
@@ -2647,7 +2651,7 @@ async function runAlleycatTestSuite(){
     check('closeSettingsMobileDetail schließt die mobile Detail-Ansicht wieder', !state.settingsMobileDetailOpen);
 
     selectSettingsSection('checkpointTypes');
-    settingsContentHtml = document.querySelector('.settings-content').innerHTML;
+    settingsContentHtml = document.querySelector('#view-settings .settings-content').innerHTML;
     check('Wechsel zu Checkpoint-Typen zeigt deren Inhalt', settingsContentHtml.includes(t('settings.checkpointTypesDesc')));
     check('Wechsel zu Checkpoint-Typen entfernt den vorherigen Design-Inhalt aus dem Content-Bereich', !settingsContentHtml.includes(t('settings.themeDesc')));
 
@@ -2662,6 +2666,66 @@ async function runAlleycatTestSuite(){
     state.settingsSection = sectionBeforeNav;
     state.settingsMobileDetailOpen = mobileDetailBeforeNav;
     if(sectionBeforeNav) saveSettingsSectionPref(sectionBeforeNav); else localStorage.removeItem('alleycat:settingsSection');
+    render();
+  }
+
+  /* 4f) Paket 11: Fahrer-Sidebar-Redesign — gleiches "volles Settings-Muster"
+     wie Paket 9, aber mit einem dominanten Standardabschnitt (Roster) statt
+     einer gemerkten Auswahl: openRiders() setzt state.ridersSection deshalb
+     bei jedem Aufruf explizit zurück, statt wie settingsSection persistiert
+     zu werden. Neu in diesem Paket: Roster-Suche + Sortierung/Gruppierung. */
+  {
+    const allRidersNavIds = ridersNavGroups(evt).flatMap(g => g.items.map(i => i.id));
+    checkEqual('ridersNavGroups hat 2 Gruppen (Roster/Konfiguration)', ridersNavGroups(evt).length, 2);
+    checkEqual('ridersNavGroups listet 5 Screens (Kategorien-Feature aktiv)', allRidersNavIds.length, 5);
+    checkEqual('Alle Riders-Nav-IDs sind eindeutig', new Set(allRidersNavIds).size, allRidersNavIds.length);
+
+    const viewBeforeRidersNav = state.view;
+    const sectionBeforeRidersNav = state.ridersSection;
+    const mobileDetailBeforeRidersNav = state.ridersMobileDetailOpen;
+    const searchBeforeRidersNav = state.riderRosterSearch;
+    const sortBeforeRidersNav = state.riderSortBy;
+
+    selectRidersSection('teams');
+    openRiders();
+    checkEqual('openRiders() setzt die Sektion IMMER auf "roster" zurück (kein Merken wie bei Settings)', state.ridersSection, 'roster');
+    checkEqual('openRiders() startet auf Mobile im Listen-Modus', state.ridersMobileDetailOpen, false);
+
+    selectRidersSection('teams');
+    checkEqual('selectRidersSection setzt die aktive Sektion', state.ridersSection, 'teams');
+    check('selectRidersSection öffnet die mobile Detail-Ansicht', state.ridersMobileDetailOpen);
+    let ridersContentHtml = document.querySelector('#view-riders .settings-content').innerHTML;
+    check('Aktive Sektion (Teams) ist im Content-Bereich', ridersContentHtml.includes(t('rider.teamsDesc')));
+    check('Inaktive Sektion (Kartendesign) ist NICHT im Content-Bereich', !ridersContentHtml.includes(t('rider.cardDesignDesc')));
+
+    closeRidersMobileDetail();
+    check('closeRidersMobileDetail schließt die mobile Detail-Ansicht wieder', !state.ridersMobileDetailOpen);
+
+    selectRidersSection('roster');
+    const namedRider = evt.riders.find(r => r.name) || evt.riders[0];
+    onRiderRosterSearchInput(namedRider.name || String(namedRider.bib));
+    check('Roster-Suche filtert auf den Namen', filteredRosterRiders(evt).every(r => (r.name || '').toLowerCase().includes((namedRider.name || String(namedRider.bib)).toLowerCase())));
+    onRiderRosterSearchInput(String(namedRider.bib));
+    check('Roster-Suche filtert auch nach Startnummer', filteredRosterRiders(evt).some(r => r.bib === namedRider.bib));
+    onRiderRosterSearchInput('');
+
+    onRiderSortByChange('team');
+    renderRiders();
+    check('Sortierung "Team" gruppiert das Grid mit Team-Überschriften', document.querySelectorAll('#view-riders .rider-group-heading').length > 0);
+    onRiderSortByChange('bib');
+    renderRiders();
+    check('Sortierung "Startnummer" zeigt ein flaches Grid ohne Gruppen-Überschriften', document.querySelectorAll('#view-riders .rider-group-heading').length === 0);
+
+    check('Kategorien-Feature ist an dieser Stelle aktiv (Voraussetzung für den folgenden Deep-Link-Check)', isFeatureEnabled('categories', evt));
+    jumpToFeatureConfig('category-settings');
+    checkEqual('jumpToFeatureConfig("category-settings") landet auf der Fahrer-Ansicht', state.view, 'riders');
+    checkEqual('jumpToFeatureConfig("category-settings") wählt die Kategorien-Sektion', state.ridersSection, 'categories');
+
+    state.view = viewBeforeRidersNav;
+    state.ridersSection = sectionBeforeRidersNav;
+    state.ridersMobileDetailOpen = mobileDetailBeforeRidersNav;
+    state.riderRosterSearch = searchBeforeRidersNav;
+    state.riderSortBy = sortBeforeRidersNav;
     render();
   }
 

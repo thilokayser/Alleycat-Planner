@@ -31,6 +31,7 @@ Die beiden Übergabedokumente wurden nacheinander geschrieben und nummerieren di
 | 8 | Paket-Abholung/-Zustellung | nicht Teil der Übergabe-Doks | S | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
 | 9 | Settings-Sidebar-Redesign | nicht Teil der Übergabe-Doks | M | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
 | 10 | Auto-Backup an/ausschaltbar | nicht Teil der Übergabe-Doks | S | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
+| 11 | Fahrer-Sidebar-Redesign | nicht Teil der Übergabe-Doks | M | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
 | — | *Idee, zurückgestellt:* Offline-Gerätesync (früher Paket 8) | Phase 22 komplett | L (unsicher) | ⚠️ Kamera/QR-Grundlage (jsQR) bereits vorhanden, Stream-Protokoll komplett offen — **kein aktives Arbeitspaket**, wandert zu den "vertagten Ideen" wie Kopfgeld-Modus/Service-Worker in der ursprünglichen Übergabe |
 
 Aufwand-Skala: S = klein (wenige, isolierte Änderungen), M = mittel (ein neues Modul oder mehrere verteilte Änderungen), L = groß (neues Modul + Umbau bestehender Kernlogik), XL = sehr groß (mehrere neue Module + Migration bestehender, produktiver Daten).
@@ -198,6 +199,19 @@ Ad-hoc-Nutzerwunsch (19.08.2026): Auto-Backup lief bisher immer automatisch mit,
 - [x] Toggle-Switch in der Datensicherheit-Sektion (wiederverwendet dieselbe `.toggle-switch`-Komponente wie die Feature-Registry); das Intervall-Feld wird nur angezeigt, wenn aktiviert (19.08.2026)
 
 **Umsetzung (19.08.2026):** 777/777 Tests (+6). Der manuelle "Jetzt sichern"-Button bleibt bewusst unabhängig vom Schalter immer verfügbar — der Schalter steuert nur den automatischen Intervall-Download, nicht die manuelle Aktion. Bestehende Nutzer mit einer schon gespeicherten `appSettings`-Blob ohne dieses Feld bekommen automatisch den neuen Default (`false`) über den bestehenden `Object.assign(default, gespeichert)`-Merge in `loadAppSettings()` — kein Migrations-Code nötig.
+
+### Paket 11 — Fahrer-Sidebar-Redesign (nicht Teil der ursprünglichen Übergabe-Dokumente)
+
+Ad-hoc-UX-Wunsch (19.08.2026), direkte Fortsetzung von Paket 9: die Fahrer-Seite hatte denselben "alles stapelt sich vertikal"-Charakter wie die alte Settings-Seite — 8+ Buttons in einer Toolbar-Zeile, bis zu drei aufklappbare Panels (Teams/Kategorien/Kartendesign) darüber gestapelt, der eigentliche Fahrer-Roster erst ganz unten. Anders als bei Settings entschied sich der Nutzer hier explizit für das **volle Settings-Muster** (Sidebar ersetzt den kompletten Content, "Fahrerliste" ist nur ein Punkt von mehreren) statt einer Master-Detail-Variante mit dauerhaft sichtbarem Roster — plus zwei zusätzliche UX-Verbesserungen (Suche, Sortierung/Gruppierung), die er bei derselben Abfrage vorschlug.
+
+- [x] Sidebar mit 2 Gruppen/5 Einträgen: **Roster** (Fahrerliste, CSV-Import), **Konfiguration** (Teams, Kategorien — nur wenn Feature aktiv, Kartendesign) (19.08.2026)
+- [x] `openRiders()` setzt die Sektion bei jedem Aufruf auf `'roster'` zurück — bewusst **kein** "letzten Abschnitt merken" wie bei Settings: die Fahrerliste ist der mit Abstand dominante Grund, warum diese Seite überhaupt besucht wird, ein zufälliges Landen auf "Kartendesign" von der letzten Sitzung wäre schlechtere UX, nicht bessere (19.08.2026)
+- [x] Identisches Mobile-Drill-down wie Settings (gleicher `SIDEBAR_BREAKPOINT`, gleiche `.settings-layout`/`.settings-sidebar`/`.settings-content`/`.settings-mobile-*`-Klassen wiederverwendet statt neu erfunden — rein strukturelle Klassen ohne Settings-spezifische Kopplung) (19.08.2026)
+- [x] `jumpToFeatureConfig('category-settings')` navigiert jetzt direkt zur Kategorien-Sektion (`selectRidersSection('categories')`) statt nur ein `categoriesPanelOpen`-Flag zu setzen (19.08.2026)
+- [x] Roster-Suche (Name oder Startnummer, live-Filter) (19.08.2026)
+- [x] Sortierung/Gruppierung: Startnummer (Standard) / Name / Team — bei "Team" echte Gruppierung mit Überschriften (`.rider-group-heading`, analog zum bestehenden Checkpoint-Gruppierungsmuster), nicht nur eine andere Sortierreihenfolge. Gruppierung nach Kategorie bewusst nicht angeboten — ein Event kann mehrere unabhängige Kategorie-Gruppen haben (Antrieb, Gender, …), "nach Kategorie gruppieren" hätte keine eindeutige Achse (19.08.2026)
+
+**Umsetzung (19.08.2026):** 794/794 Tests (+17, davon 2 bestehende Settings-Tests repariert — sie nutzten einen ungescopten `document.querySelector('.settings-content')`, der durch die Wiederverwendung derselben Klasse auf der Fahrer-Seite plötzlich mehrdeutig wurde und je nach DOM-Reihenfolge die falsche Seite traf; gefixt durch Scoping auf `#view-settings .settings-content`). Suche/Sortierung wirken bewusst auch auf das, was gedruckt wird (`#print-root` umschließt genau das gefilterte/sortierte/gruppierte Grid) — "drucke was du siehst" entspricht dem Verhalten, das man von einer gefilterten Tabelle erwartet, und Team-Gruppen-Überschriften mitzudrucken ist ein Feature (leichteres physisches Sortieren am Renntag), kein Bug. Die Undo-Log-Anzeige (`renderActionLogPanel`) bleibt bewusst nur im Roster-Abschnitt, nicht auf jeder Sektion dupliziert.
 
 ---
 

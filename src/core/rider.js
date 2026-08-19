@@ -48,17 +48,68 @@ function onRiderEmergencyInput(bib, value){
   r.emergencyContact = value;
   debouncedSave();
 }
-function toggleTeamsPanel(){
-  state.teamsPanelOpen = !state.teamsPanelOpen;
-  renderRiders();
+/* ---------------- riders: sidebar navigation (Paket 11) ----------------
+   Same "full Settings pattern" as the Settings-Hub redesign — a sidebar
+   replaces the old row of collapsible-panel toggle buttons, right pane
+   shows only the active screen. Unlike Settings, this page has one clearly
+   dominant section (the roster itself), so — deliberately different from
+   Settings' "remember last section" — openRiders() always resets back to
+   'roster' rather than persisting the choice; jumpToFeatureConfig's
+   category deep-link overrides that default explicitly via
+   selectRidersSection() right after. categoriesEnabled is per-event, so
+   this can't be a static top-level const like SETTINGS_NAV_GROUPS. */
+function ridersNavGroups(evt){
+  const categoriesEnabled = isFeatureEnabled('categories', evt);
+  return [
+    {id: 'roster', label: () => t('rider.navGroupRoster'), items: [
+      {id: 'roster', icon: '🚴', label: () => t('rider.navRoster')},
+      {id: 'bulkImport', icon: '📋', label: () => t('rider.navBulkImport')}
+    ]},
+    {id: 'config', label: () => t('rider.navGroupConfig'), items: [
+      {id: 'teams', icon: '👥', label: () => t('rider.teamsHeading')},
+      ...(categoriesEnabled ? [{id: 'categories', icon: '🎫', label: () => t('category.heading')}] : []),
+      {id: 'cardDesign', icon: '🎴', label: () => t('rider.cardDesignToggle')}
+    ]}
+  ];
 }
-function toggleCategoriesPanel(){
-  state.categoriesPanelOpen = !state.categoriesPanelOpen;
-  renderRiders();
+function ridersNavItem(evt, id){
+  for(const group of ridersNavGroups(evt)){
+    const item = group.items.find(i => i.id === id);
+    if(item) return item;
+  }
+  return null;
 }
-function toggleCardDesignPanel(){
-  state.cardDesignPanelOpen = !state.cardDesignPanelOpen;
-  renderRiders();
+function selectRidersSection(id){
+  state.ridersSection = id;
+  state.ridersMobileDetailOpen = true;
+  if(id === 'bulkImport' && !state.bulkImportOpen) toggleBulkImportPanel();
+  render();
+}
+function closeRidersMobileDetail(){
+  state.ridersMobileDetailOpen = false;
+  render();
+}
+function renderRidersSidebar(evt){
+  const groups = ridersNavGroups(evt);
+  return `
+    <nav class="settings-sidebar">
+      <div class="settings-sidebar-head">
+        <h2>${t('ui.navRiders')}</h2>
+        <p>${t('rider.sidebarIntro')}</p>
+      </div>
+      ${groups.map(group => `
+        <div class="settings-nav-group">
+          <div class="settings-nav-group-label">${group.label()}</div>
+          ${group.items.map(item => `
+            <button type="button" class="settings-nav-item ${state.ridersSection === item.id ? 'active' : ''}" onclick="selectRidersSection('${item.id}')">
+              <span class="settings-nav-icon">${item.icon}</span>
+              <span>${item.label()}</span>
+            </button>
+          `).join('')}
+        </div>
+      `).join('')}
+    </nav>
+  `;
 }
 function deleteRider(bib){
   const evt = state.currentEvent;
@@ -93,18 +144,11 @@ function renderQrDataUrl(text, sizePx){
 }
 
 /* ---------------- render: riders ---------------- */
-function renderRiders(){
-  const el = document.getElementById('view-riders');
-  const evt = state.currentEvent;
-  if(!evt){
-    el.innerHTML = `<div class="loading-row">${t('rider.noEventSelected')}</div>`;
-    return;
-  }
-  const riders = evt.riders || [];
+function renderRiderCardsHtml(evt, riders){
   const teams = evt.teams || [];
   const categoriesEnabled = isFeatureEnabled('categories', evt);
   const groups = (evt.categoryGroups || []).slice().sort((a,b) => a.sortOrder - b.sortOrder);
-  const cards = riders.map(r => `
+  return riders.map(r => `
     <div class="rider-card">
       <button type="button" class="rider-delete-btn" title="${t('rider.deleteTitle')}" onclick="deleteRider(${r.bib})">&times;</button>
       <div class="rider-qr" id="qr-${r.bib}"></div>
@@ -131,7 +175,119 @@ function renderRiders(){
       <input type="text" class="rider-emergency-input" placeholder="${t('rider.emergencyPlaceholder')}" value="${escapeHtml(r.emergencyContact || '')}" oninput="onRiderEmergencyInput(${r.bib}, this.value)">
     </div>
   `).join('');
-
+}
+/* ---------------- riders: roster search + sort/group (Paket 11) ----------------
+   Applies to what's rendered AND what gets printed (#print-root wraps
+   whatever renderRiderRosterGrid() returns) — deliberate: "print what's on
+   screen" matches how a filtered/sorted table print is expected to behave
+   elsewhere, and grouped-by-team headings printing too is a feature (easier
+   physical sorting), not a bug. Grouping by category is intentionally not
+   offered — an event can have multiple independent category groups (Antrieb,
+   Gender, ...), so "group by category" has no single unambiguous axis. */
+function filteredRosterRiders(evt){
+  const q = (state.riderRosterSearch || '').trim().toLowerCase();
+  const riders = evt.riders || [];
+  if(!q) return riders.slice();
+  return riders.filter(r => (r.name || '').toLowerCase().includes(q) || String(r.bib).includes(q));
+}
+function onRiderRosterSearchInput(value){
+  state.riderRosterSearch = value;
+  renderRiders();
+}
+function onRiderSortByChange(value){
+  state.riderSortBy = value;
+  renderRiders();
+}
+function renderRiderRosterGrid(evt){
+  const filtered = filteredRosterRiders(evt);
+  if(!filtered.length){
+    return `<div class="riders-hint">${t('rider.searchNoResults', {query: state.riderRosterSearch})}</div>`;
+  }
+  if(state.riderSortBy === 'team'){
+    const teams = evt.teams || [];
+    const blocks = teams.map(tm => ({tm, members: filtered.filter(r => r.teamId === tm.id)})).filter(g => g.members.length).map(g => `
+      <div class="rider-group-heading">${escapeHtml(g.tm.name)} <span class="rider-group-count">${g.members.length}</span></div>
+      <div class="rider-grid">${renderRiderCardsHtml(evt, g.members)}</div>
+    `);
+    const withoutTeam = filtered.filter(r => !r.teamId || !teams.some(tm => tm.id === r.teamId));
+    if(withoutTeam.length) blocks.push(`
+      <div class="rider-group-heading">${t('rider.noTeam')} <span class="rider-group-count">${withoutTeam.length}</span></div>
+      <div class="rider-grid">${renderRiderCardsHtml(evt, withoutTeam)}</div>
+    `);
+    return blocks.join('');
+  }
+  const sorted = filtered.slice().sort((a, b) => state.riderSortBy === 'name'
+    ? (a.name || '').localeCompare(b.name || '', 'de')
+    : a.bib - b.bib);
+  return `<div class="rider-grid">${renderRiderCardsHtml(evt, sorted)}</div>`;
+}
+function renderRidersSectionRoster(evt){
+  const riders = evt.riders || [];
+  const toolbar = `
+    <div class="riders-toolbar">
+      <div class="riders-count-field">
+        <div>
+          <label>${t('rider.expectedRidersLabel')}</label>
+          <input type="text" inputmode="numeric" value="${evt.expectedRiders || 0}" oninput="onExpectedRidersInput(this.value)">
+        </div>
+        <button class="btn" onclick="generateRiderSlots()">${t('rider.generateSlots')}</button>
+      </div>
+      ${riders.length ? `
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="window.print()">${t('rider.printBibs')}</button>
+          <button class="btn" onclick="exportRidersPDF()" ${state.riderSheetGenerating ? 'disabled' : ''}>${state.riderSheetGenerating ? t('common.generating') : t('rider.bibsPdf')}</button>
+          <button class="btn btn-ghost" onclick="printSpokeCardsPDF()" ${state.spokeCardsGenerating ? 'disabled' : ''}>${state.spokeCardsGenerating ? t('common.generating') : t('rider.printSpokecards')}</button>
+          <button class="btn btn-primary" onclick="exportSpokeCardsPDF()" ${state.spokeCardsGenerating ? 'disabled' : ''}>${state.spokeCardsGenerating ? t('rider.generatingSpokecards') : t('rider.spokecardsPdf')}</button>
+        </div>
+      ` : ''}
+    </div>
+    ${riders.length ? `
+      <div class="riders-search-sort-row">
+        <input type="text" class="riders-search-input" placeholder="${t('rider.searchPlaceholder')}" value="${escapeHtml(state.riderRosterSearch || '')}" oninput="onRiderRosterSearchInput(this.value)">
+        <label>${t('rider.sortByLabel')}</label>
+        <select onchange="onRiderSortByChange(this.value)">
+          <option value="bib" ${state.riderSortBy !== 'name' && state.riderSortBy !== 'team' ? 'selected' : ''}>${t('rider.sortByBib')}</option>
+          <option value="name" ${state.riderSortBy === 'name' ? 'selected' : ''}>${t('rider.sortByName')}</option>
+          <option value="team" ${state.riderSortBy === 'team' ? 'selected' : ''}>${t('rider.sortByTeam')}</option>
+        </select>
+      </div>
+    ` : ''}
+    ${renderActionLogPanel(evt)}
+    ${riders.length ? `<div class="riders-hint">${t('rider.spokecardHint')} ${t('pdfBlocks.spokecardsHint')} <a href="#" onclick="event.preventDefault(); openManifest(); state.pdfBlocksPanelOpen = true; render();">${t('pdfBlocks.toggleButton')}</a></div>` : ''}
+    ${state.printPopupBlocked ? `<div class="riders-hint warn">${t('rider.printPopupBlocked')}</div>` : ''}
+  `;
+  if(riders.length === 0){
+    return `${toolbar}<div style="max-width:520px; margin:20px auto;">${emptyStateHtml({
+      icon: '🚴',
+      title: t('rider.emptyTitle'),
+      description: t('rider.emptyHint'),
+      primaryAction: {label: t('rider.emptyStatePrimary'), onclick: "document.querySelector('.riders-count-field input').focus()"},
+      secondaryAction: {label: t('bulkImport.openButton'), onclick: "selectRidersSection('bulkImport')"}
+    })}</div>`;
+  }
+  return `
+    ${toolbar}
+    <div id="print-root">
+      <div class="rider-sheet-head">
+        <h2>${escapeHtml(evt.name || t('common.unnamedEvent'))}</h2>
+        <div class="stamp-tag">${t('rider.bibsStamp')}</div>
+      </div>
+      ${renderRiderRosterGrid(evt)}
+    </div>
+  `;
+}
+function renderRidersSectionBulkImport(evt){
+  return `
+    <div class="settings-section">
+      <h3>${t('rider.navBulkImport')}</h3>
+      <div class="settings-section-desc">${t('bulkImport.uploadHint')}</div>
+      ${renderBulkImportPanel()}
+    </div>
+  `;
+}
+function renderRidersSectionTeams(evt){
+  const riders = evt.riders || [];
+  const teams = evt.teams || [];
   const teamRows = teams.map(tm => `
     <div class="type-row">
       <input type="color" class="team-color-input" value="${escapeHtml(tm.color)}" onchange="setTeamColor('${tm.id}', this.value)" title="${t('rider.teamColorTitle')}">
@@ -160,7 +316,24 @@ function renderRiders(){
       </div>
     </div>
   ` : `<button class="btn" onclick="toggleNewTeamForm()">${t('rider.newTeam')}</button>`;
-
+  return `
+    <div class="settings-section">
+      <h3>${t('rider.teamsHeading')}</h3>
+      <div class="settings-section-desc">${t('rider.teamsDesc')}</div>
+      <div class="team-scoring-mode-row">
+        <label>${t('rider.teamScoringModeLabel')}</label>
+        <select onchange="onTeamScoringModeChange(this.value)">
+          <option value="bestTime" ${evt.teamScoringMode !== 'allMustFinish' ? 'selected' : ''}>${t('rider.teamScoringBestTime')}</option>
+          <option value="allMustFinish" ${evt.teamScoringMode === 'allMustFinish' ? 'selected' : ''}>${t('rider.teamScoringAllMustFinish')}</option>
+        </select>
+      </div>
+      <div class="type-list">${teamRows || `<div class="riders-hint" style="padding:0;">${t('rider.noTeamsYet')}</div>`}</div>
+      ${newTeamForm}
+    </div>
+  `;
+}
+function renderRidersSectionCategories(evt){
+  const groups = (evt.categoryGroups || []).slice().sort((a,b) => a.sortOrder - b.sortOrder);
   const availablePresets = CATEGORY_PRESETS.filter(p => !groups.some(g => g.name === p.name));
   const categoryGroupRows = groups.map(g => `
     <div class="type-row category-group-row">
@@ -206,99 +379,72 @@ function renderRiders(){
       <button class="btn" onclick="toggleNewCategoryGroupForm()">${t('category.newGroup')}</button>
     </div>
   `;
-
-  el.innerHTML = `
-    <div class="riders-toolbar">
-      <div class="riders-count-field">
-        <div>
-          <label>${t('rider.expectedRidersLabel')}</label>
-          <input type="text" inputmode="numeric" value="${evt.expectedRiders || 0}" oninput="onExpectedRidersInput(this.value)">
+  return `
+    <div class="settings-section">
+      <h3>${t('category.heading')}</h3>
+      <div class="settings-section-desc">${t('featureRegistry.categoriesDesc')}</div>
+      <div class="type-list">${categoryGroupRows || `<div class="riders-hint" style="padding:0;">${t('category.noGroupsYet')}</div>`}</div>
+      ${newCategoryGroupForm}
+      ${groups.length ? `
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+          <input type="file" id="import-categories-file" accept="application/json,.json" style="display:none;" onchange="onImportCategoriesFile(this)">
+          <button class="btn btn-sm" onclick="document.getElementById('import-categories-file').click()">${t('category.importJson')}</button>
+          <button class="btn btn-sm" onclick="exportCategoriesJSON()">${t('category.exportJson')}</button>
         </div>
-        <button class="btn" onclick="generateRiderSlots()">${t('rider.generateSlots')}</button>
-        <button class="btn btn-ghost" onclick="toggleBulkImportPanel()">${state.bulkImportOpen ? t('common.cancel') : t('bulkImport.openButton')}</button>
-      </div>
-      ${riders.length ? `
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-ghost" onclick="window.print()">${t('rider.printBibs')}</button>
-          <button class="btn" onclick="exportRidersPDF()" ${state.riderSheetGenerating ? 'disabled' : ''}>${state.riderSheetGenerating ? t('common.generating') : t('rider.bibsPdf')}</button>
-          <button class="btn btn-ghost" onclick="printSpokeCardsPDF()" ${state.spokeCardsGenerating ? 'disabled' : ''}>${state.spokeCardsGenerating ? t('common.generating') : t('rider.printSpokecards')}</button>
-          <button class="btn btn-primary" onclick="exportSpokeCardsPDF()" ${state.spokeCardsGenerating ? 'disabled' : ''}>${state.spokeCardsGenerating ? t('rider.generatingSpokecards') : t('rider.spokecardsPdf')}</button>
+      ` : `
+        <div style="margin-top:12px;">
+          <input type="file" id="import-categories-file" accept="application/json,.json" style="display:none;" onchange="onImportCategoriesFile(this)">
+          <button class="btn btn-sm" onclick="document.getElementById('import-categories-file').click()">${t('category.importJson')}</button>
         </div>
-      ` : ''}
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn" onclick="toggleTeamsPanel()">${state.teamsPanelOpen ? '▾' : '▸'} ${t('rider.teamsHeading')}</button>
-        ${categoriesEnabled ? `<button class="btn" onclick="toggleCategoriesPanel()">${state.categoriesPanelOpen ? '▾' : '▸'} ${t('category.heading')}</button>` : ''}
-        <button class="btn" onclick="toggleCardDesignPanel()">${state.cardDesignPanelOpen ? '▾' : '▸'} ${t('rider.cardDesignToggle')}</button>
-      </div>
+      `}
     </div>
-    ${renderBulkImportPanel()}
-    ${renderActionLogPanel(evt)}
-    ${riders.length ? `<div class="riders-hint">${t('rider.spokecardHint')} ${t('pdfBlocks.spokecardsHint')} <a href="#" onclick="event.preventDefault(); openManifest(); state.pdfBlocksPanelOpen = true; render();">${t('pdfBlocks.toggleButton')}</a></div>` : ''}
-    ${state.printPopupBlocked ? `<div class="riders-hint warn">${t('rider.printPopupBlocked')}</div>` : ''}
-    ${state.teamsPanelOpen ? `
-    <div class="settings-section" style="margin:0 0 22px;">
-      <div class="team-scoring-mode-row">
-        <label>${t('rider.teamScoringModeLabel')}</label>
-        <select onchange="onTeamScoringModeChange(this.value)">
-          <option value="bestTime" ${evt.teamScoringMode !== 'allMustFinish' ? 'selected' : ''}>${t('rider.teamScoringBestTime')}</option>
-          <option value="allMustFinish" ${evt.teamScoringMode === 'allMustFinish' ? 'selected' : ''}>${t('rider.teamScoringAllMustFinish')}</option>
-        </select>
-      </div>
-      <div class="type-list">${teamRows || `<div class="riders-hint" style="padding:0;">${t('rider.noTeamsYet')}</div>`}</div>
-      ${newTeamForm}
-    </div>
-    ` : ''}
-    ${categoriesEnabled ? `
-    <div id="rider-categories-section">
-      ${state.categoriesPanelOpen ? `
-      <div class="settings-section" style="margin:0 0 22px;">
-        <div class="type-list">${categoryGroupRows || `<div class="riders-hint" style="padding:0;">${t('category.noGroupsYet')}</div>`}</div>
-        ${newCategoryGroupForm}
-        ${groups.length ? `
-          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
-            <input type="file" id="import-categories-file" accept="application/json,.json" style="display:none;" onchange="onImportCategoriesFile(this)">
-            <button class="btn btn-sm" onclick="document.getElementById('import-categories-file').click()">${t('category.importJson')}</button>
-            <button class="btn btn-sm" onclick="exportCategoriesJSON()">${t('category.exportJson')}</button>
-          </div>
-        ` : `
-          <div style="margin-top:12px;">
-            <input type="file" id="import-categories-file" accept="application/json,.json" style="display:none;" onchange="onImportCategoriesFile(this)">
-            <button class="btn btn-sm" onclick="document.getElementById('import-categories-file').click()">${t('category.importJson')}</button>
-          </div>
-        `}
-      </div>
-      ` : ''}
-    </div>
-    ` : ''}
-    ${state.cardDesignPanelOpen ? `
-    <div class="spokecard-design">
-      <label>${t('rider.cardDesignLabel')}</label>
-      <div class="spokecard-design-row">
-        ${evt.spokeCardImage ? `<img class="spokecard-design-preview" src="${evt.spokeCardImage}" alt="${t('rider.cardDesignPreviewAlt')}">` : ''}
-        <input type="file" accept="image/*" onchange="onSpokeCardImageUpload(this)">
-        ${evt.spokeCardImage ? `<button class="btn btn-ghost btn-sm" onclick="clearSpokeCardImage()">${t('common.remove')}</button>` : ''}
-      </div>
-      <div class="riders-hint" style="margin:6px 0 0;">${t('rider.cardDesignHint')}</div>
-    </div>
-    ` : ''}
-    ${riders.length === 0 ? `<div style="max-width:520px; margin:20px auto;">${emptyStateHtml({
-      icon: '🚴',
-      title: t('rider.emptyTitle'),
-      description: t('rider.emptyHint'),
-      primaryAction: {label: t('rider.emptyStatePrimary'), onclick: "document.querySelector('.riders-count-field input').focus()"},
-      secondaryAction: {label: t('bulkImport.openButton'), onclick: 'toggleBulkImportPanel()'}
-    })}</div>` : `
-      <div id="print-root">
-        <div class="rider-sheet-head">
-          <h2>${escapeHtml(evt.name || t('common.unnamedEvent'))}</h2>
-          <div class="stamp-tag">${t('rider.bibsStamp')}</div>
-        </div>
-        <div class="rider-grid">${cards}</div>
-      </div>
-    `}
   `;
-
-  riders.forEach(r => {
+}
+function renderRidersSectionCardDesign(evt){
+  return `
+    <div class="settings-section">
+      <h3>${t('rider.cardDesignToggle')}</h3>
+      <div class="settings-section-desc">${t('rider.cardDesignDesc')}</div>
+      <div class="spokecard-design">
+        <label>${t('rider.cardDesignLabel')}</label>
+        <div class="spokecard-design-row">
+          ${evt.spokeCardImage ? `<img class="spokecard-design-preview" src="${evt.spokeCardImage}" alt="${t('rider.cardDesignPreviewAlt')}">` : ''}
+          <input type="file" accept="image/*" onchange="onSpokeCardImageUpload(this)">
+          ${evt.spokeCardImage ? `<button class="btn btn-ghost btn-sm" onclick="clearSpokeCardImage()">${t('common.remove')}</button>` : ''}
+        </div>
+        <div class="riders-hint" style="margin:6px 0 0;">${t('rider.cardDesignHint')}</div>
+      </div>
+    </div>
+  `;
+}
+function ridersSectionContent(evt, id){
+  switch(id){
+    case 'bulkImport': return renderRidersSectionBulkImport(evt);
+    case 'teams': return renderRidersSectionTeams(evt);
+    case 'categories': return renderRidersSectionCategories(evt);
+    case 'cardDesign': return renderRidersSectionCardDesign(evt);
+    case 'roster':
+    default: return renderRidersSectionRoster(evt);
+  }
+}
+function renderRiders(){
+  const el = document.getElementById('view-riders');
+  const evt = state.currentEvent;
+  if(!evt){
+    el.innerHTML = `<div class="loading-row">${t('rider.noEventSelected')}</div>`;
+    return;
+  }
+  if(!ridersNavItem(evt, state.ridersSection)) state.ridersSection = 'roster';
+  el.innerHTML = `
+    <div class="settings-layout ${state.ridersMobileDetailOpen ? 'settings-mobile-detail' : 'settings-mobile-list'}">
+      ${renderRidersSidebar(evt)}
+      <div class="settings-content">
+        <button type="button" class="settings-mobile-back" onclick="closeRidersMobileDetail()">${t('rider.backToList')}</button>
+        ${ridersSectionContent(evt, state.ridersSection)}
+      </div>
+    </div>
+  `;
+  (evt.riders || []).forEach(r => {
     const container = document.getElementById('qr-' + r.bib);
     if(container && window.QRCode){
       container.innerHTML = '';

@@ -807,7 +807,13 @@
   .loading-row{padding:60px; text-align:center; color:var(--steel); font-family:'JetBrains Mono',monospace;}
 
   /* ---------- Riders ---------- */
-  #view-riders{flex-direction:column; overflow:auto; background:var(--asphalt); padding:36px 40px;}
+  /* Sidebar/content layout reuses .settings-layout/.settings-sidebar/
+     .settings-content/.settings-nav-*/.settings-mobile-* verbatim from the
+     Settings-Hub redesign (Paket 9) — purely structural classes (flex
+     layout + CSS-var colors), nothing Settings-specific baked in, so
+     reusing them here for the Riders sidebar (Paket 11) needs zero new
+     layout/mobile-breakpoint CSS. */
+  #view-riders{flex-direction:row; overflow:hidden; background:var(--asphalt); padding:0;}
   .riders-toolbar{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px; margin-bottom:22px;}
   .riders-count-field{display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap;}
   .riders-count-field label{display:block; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;}
@@ -817,6 +823,25 @@
   }
   .riders-hint{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--steel); line-height:1.5; max-width:680px; margin:-6px 0 20px;}
   .riders-hint.warn{color:var(--hivis); font-weight:700;}
+  .riders-search-sort-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;}
+  .riders-search-input{
+    flex:1; min-width:200px; max-width:320px; font-family:'Inter',sans-serif; font-size:13px; padding:8px 10px;
+    border:1px solid var(--asphalt-3); background:var(--asphalt-2); color:var(--chalk); border-radius:3px;
+  }
+  .riders-search-sort-row label{font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel);}
+  .riders-search-sort-row select{
+    font-family:'Inter',sans-serif; font-size:13px; padding:7px 9px;
+    border:1px solid var(--asphalt-3); background:var(--asphalt-2); color:var(--chalk); border-radius:3px;
+  }
+  .rider-group-heading{
+    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:0.03em; font-size:13px;
+    color:var(--chalk); display:flex; align-items:center; gap:8px; margin:20px 0 10px;
+  }
+  .rider-group-heading:first-child{margin-top:0;}
+  .rider-group-count{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--steel); background:var(--asphalt-3);
+    border-radius:8px; padding:1px 7px;
+  }
   .spokecard-design{
     background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:4px;
     padding:14px 16px; margin-bottom:22px; max-width:680px;
@@ -1528,7 +1553,6 @@
   @media (max-width: 520px){
     #view-dashboard{padding:22px 18px;}
     #view-overview{padding:22px 18px;}
-    #view-riders{padding:22px 18px;}
     #view-leaderboard{padding:18px 16px;}
     .dash-head h2{font-size:24px;}
     .waybill{padding:24px 20px 20px;}

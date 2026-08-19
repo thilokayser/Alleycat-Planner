@@ -51,9 +51,10 @@ let state = {
   pdfPreviewOpen: false,
   pdfPreviewFilename: '',
   socialShareOpen: false,
-  teamsPanelOpen: false,
-  categoriesPanelOpen: false,
-  cardDesignPanelOpen: false,
+  ridersSection: 'roster',
+  ridersMobileDetailOpen: false,
+  riderRosterSearch: '',
+  riderSortBy: 'bib',
   zonesPanelOpen: false,
   eventLocationsPanelOpen: false,
   locationPlacementMode: null,
@@ -280,6 +281,8 @@ function openManifest(){
 }
 function openRiders(){
   state.view = 'riders';
+  state.ridersSection = 'roster';
+  state.ridersMobileDetailOpen = false;
   render();
 }
 function openCheckin(){
