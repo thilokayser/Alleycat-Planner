@@ -24,8 +24,8 @@ Die beiden Übergabedokumente wurden nacheinander geschrieben und nummerieren di
 | **1** | **Schnelle Effizienz-Gewinne** | Phase 19 komplett | M | ✅ abgeschlossen (17.08.2026) |
 | 2 | Ordnung vor mehr Features | Phase 16 komplett | M–L | ✅ abgeschlossen (17.08.2026) |
 | 3 | Backend-Fundament | Phase 14 komplett | M | ⚠️ fast abgeschlossen (17.08.2026) — nur der reale Testlauf auf `hasencore.de` fehlt noch (braucht deinen Zugriff) |
-| 4 | Großes Karten-Programm | Phase 15 + Phase 18 zusammengelegt | XL | ⚠️ Battle Royale existiert in alter Form (Phase 11), Rest offen |
-| 5 | Export & Lokalisierung | Phase 17 + Phase 20 zusammengelegt | L | ❌ vollständig offen |
+| 4 | Großes Karten-Programm | Phase 15 + Phase 18 zusammengelegt | XL | ✅ abgeschlossen (18.08.2026) — Teil A + Teil B beide fertig |
+| 5 | Export & Lokalisierung | Phase 17 + Phase 20 zusammengelegt | L | ✅ abgeschlossen (19.08.2026) — Teil A + Teil B beide fertig; `pdf_page_format` (A4/US Letter, war fälschlich unter Teil B eingeordnet) bewusst offen gelassen, siehe eigener Punkt unten |
 | 6 | Spezielle Rennformate | Phase 21 komplett | M–L | ⚠️ teilweise (19.08.2026) — nur `clue_sheet`; Cargo-Modul und Trackbike-Attribute wurden auf Nutzerwunsch nach dem Bauen wieder entfernt |
 | 7 | Beamer-Erweiterungen | Phase 23 komplett | S–M | ❌ übersprungen (19.08.2026), auf Nutzerwunsch |
 | 8 | Paket-Abholung/-Zustellung | nicht Teil der Übergabe-Doks | S | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
@@ -229,4 +229,4 @@ Vorerst nur Idee, kein aktives Arbeitspaket — Entscheidung vom 17.08.2026. Ein
 
 ## 5. Offene Rückfrage
 
-**Kapazität für Parallel-Spuren:** Paket 3 (Backend) berührt keine Datei, die die anderen Pakete anfassen — lohnt es sich, es wirklich parallel zu Paket 1/2 zu bauen, oder bleibt strikt sequenziell (ein Paket nach dem anderen) einfacher zu verfolgen? Bisher unentschieden, aber nicht blockierend für den Start von Paket 1.
+**Kapazität für Parallel-Spuren:** Paket 3 (Backend) berührt keine Datei, die die anderen Pakete anfassen — lohnt es sich, es wirklich parallel zu Paket 1/2 zu bauen, oder bleibt strikt sequenziell (ein Paket nach dem anderen) einfacher zu verfolgen? *Durch die Praxis beantwortet (19.08.2026): alle Pakete wurden strikt sequenziell gebaut, ohne dass eine Parallel-Spur je gebraucht wurde — kein offener Punkt mehr.*
