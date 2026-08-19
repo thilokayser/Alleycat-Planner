@@ -46,7 +46,7 @@ function jumpToFeatureConfig(screen){
   if(!screen) return;
   const targets = {
     'sound-settings': {open: () => openOverview(), anchor: 'overview-beamer-section'},
-    'offline-settings': {open: () => openSettings(), anchor: 'offline-readiness-section'},
+    'offline-settings': {open: () => { openSettings(); selectSettingsSection('dataSafety'); }, anchor: 'offline-readiness-section'},
     'category-settings': {open: () => { openRiders(); state.categoriesPanelOpen = true; }, anchor: 'rider-categories-section'},
     'game-modes-settings': {open: () => { openOverview(); state.gameModesSectionOpen = true; }, anchor: 'overview-gamemodes-section'}
   };

@@ -1525,6 +1525,7 @@ async function runAlleycatTestSuite(){
     state.featureRegistrySearch = '';
 
     openSettings();
+    selectSettingsSection('features');
     check('Settings-Hub rendert die Feature-Übersicht', document.getElementById('view-settings').innerHTML.includes('feature-registry-section'));
     check('Settings-Hub zeigt einen Toggle-Switch pro sichtbarem Feature', document.querySelectorAll('.feature-row .toggle-switch').length >= 5);
     closeSettings();
@@ -2311,10 +2312,13 @@ async function runAlleycatTestSuite(){
 
     const settingsHtml = (() => {
       const viewBeforeSettings = state.view;
+      const sectionBeforeSettings = state.settingsSection;
       state.view = 'settings';
+      state.settingsSection = 'units';
       render();
       const html = document.getElementById('view-settings').innerHTML;
       state.view = viewBeforeSettings;
+      state.settingsSection = sectionBeforeSettings;
       render();
       return html;
     })();
@@ -2368,10 +2372,13 @@ async function runAlleycatTestSuite(){
 
     const settingsHtmlCoord = (() => {
       const viewBeforeSettings = state.view;
+      const sectionBeforeSettings = state.settingsSection;
       state.view = 'settings';
+      state.settingsSection = 'units';
       render();
       const html = document.getElementById('view-settings').innerHTML;
       state.view = viewBeforeSettings;
+      state.settingsSection = sectionBeforeSettings;
       render();
       return html;
     })();
@@ -2435,10 +2442,13 @@ async function runAlleycatTestSuite(){
 
     const settingsHtmlLang = (() => {
       const viewBeforeSettings = state.view;
+      const sectionBeforeSettings = state.settingsSection;
       state.view = 'settings';
+      state.settingsSection = 'language';
       render();
       const html = document.getElementById('view-settings').innerHTML;
       state.view = viewBeforeSettings;
+      state.settingsSection = sectionBeforeSettings;
       render();
       return html;
     })();
@@ -2564,6 +2574,61 @@ async function runAlleycatTestSuite(){
     testRider.checkpointOrderOverrides = (testRider.checkpointOrderOverrides || []).filter(o => o.checkpointId !== dropoffCp.id);
     state.checkinActiveBib = null;
     renderCheckin();
+  }
+
+  /* 4e) Paket 9: Settings-Sidebar-Redesign — Sidebar-Navigation mit Gruppen
+     statt einer langen Scroll-Seite (Obsidian-artig). Nur der aktive
+     Settings-Screen landet im DOM, nicht mehr alle Sektionen gleichzeitig —
+     daher hier explizit über selectSettingsSection() navigieren statt wie
+     vorher direkt im HTML nach jeder Überschrift zu suchen. */
+  {
+    const allNavIds = SETTINGS_NAV_GROUPS.flatMap(g => g.items.map(i => i.id));
+    checkEqual('SETTINGS_NAV_GROUPS hat 3 Gruppen', SETTINGS_NAV_GROUPS.length, 3);
+    checkEqual('SETTINGS_NAV_GROUPS listet 7 Screens', allNavIds.length, 7);
+    checkEqual('Alle Nav-IDs sind eindeutig', new Set(allNavIds).size, allNavIds.length);
+
+    const viewBeforeNav = state.view;
+    const sectionBeforeNav = state.settingsSection;
+    const mobileDetailBeforeNav = state.settingsMobileDetailOpen;
+
+    localStorage.removeItem('alleycat:settingsSection');
+    state.settingsSection = null;
+    openSettings();
+    checkEqual('openSettings() ohne gespeicherte Präferenz landet auf dem ersten Nav-Punkt', state.settingsSection, SETTINGS_NAV_GROUPS[0].items[0].id);
+    checkEqual('openSettings() startet auf Mobile im Listen-Modus (nicht sofort im Detail)', state.settingsMobileDetailOpen, false);
+
+    selectSettingsSection('theme');
+    checkEqual('selectSettingsSection setzt die aktive Sektion', state.settingsSection, 'theme');
+    check('selectSettingsSection öffnet die mobile Detail-Ansicht', state.settingsMobileDetailOpen);
+    checkEqual('selectSettingsSection persistiert die Wahl in localStorage', localStorage.getItem('alleycat:settingsSection'), 'theme');
+    /* .settings-content statt des gesamten #view-settings, da die Sidebar
+       selbst auch einen Nav-Eintrag "Checkpoint-Typen" listet — dessen
+       Label ist wortgleich mit der Sektions-Überschrift und würde die
+       Content-Only-Prüfung sonst falsch bestehen lassen. */
+    let settingsContentHtml = document.querySelector('.settings-content').innerHTML;
+    check('Aktive Sektion (Design) ist im Content-Bereich', settingsContentHtml.includes(t('settings.themeHeading')));
+    check('Inaktive Sektion (Checkpoint-Typen) ist NICHT im Content-Bereich (nur ein Screen gleichzeitig gerendert)', !settingsContentHtml.includes(t('settings.checkpointTypesDesc')));
+
+    closeSettingsMobileDetail();
+    check('closeSettingsMobileDetail schließt die mobile Detail-Ansicht wieder', !state.settingsMobileDetailOpen);
+
+    selectSettingsSection('checkpointTypes');
+    settingsContentHtml = document.querySelector('.settings-content').innerHTML;
+    check('Wechsel zu Checkpoint-Typen zeigt deren Inhalt', settingsContentHtml.includes(t('settings.checkpointTypesDesc')));
+    check('Wechsel zu Checkpoint-Typen entfernt den vorherigen Design-Inhalt aus dem Content-Bereich', !settingsContentHtml.includes(t('settings.themeDesc')));
+
+    toggleFeature('offline_map_cache');
+    jumpToFeatureConfig('offline-settings');
+    checkEqual('jumpToFeatureConfig("offline-settings") navigiert in die Settings', state.view, 'settings');
+    checkEqual('jumpToFeatureConfig("offline-settings") wählt die Datensicherheit-Sektion', state.settingsSection, 'dataSafety');
+    check('Datensicherheit-Sektion zeigt die Offline-Bereitschaft (Deep-Link-Ziel)', document.getElementById('offline-readiness-section') !== null);
+    toggleFeature('offline_map_cache');
+
+    state.view = viewBeforeNav;
+    state.settingsSection = sectionBeforeNav;
+    state.settingsMobileDetailOpen = mobileDetailBeforeNav;
+    if(sectionBeforeNav) saveSettingsSectionPref(sectionBeforeNav); else localStorage.removeItem('alleycat:settingsSection');
+    render();
   }
 
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */

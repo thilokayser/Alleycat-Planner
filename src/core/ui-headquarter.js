@@ -68,6 +68,8 @@ let state = {
   geoImportPanelOpen: false,
   geoImportLayers: [], // session-only ("temporär") imported layers — see geo-import.js
   cluePreviewMode: false,
+  settingsSection: null,
+  settingsMobileDetailOpen: false,
 };
 let pdfPreviewDoc = null;
 let map, markersLayer, zonesLayer, eventLocationsLayer, orgaPinsLayer, importedGeoLayer, routeLine, routeEstimateLine, proximityBufferLayer, cpMarkers = {};
@@ -412,10 +414,27 @@ function setCoordFormat(fmt){
 function openSettings(){
   state.settingsReturnView = state.view;
   state.view = 'settings';
+  state.settingsMobileDetailOpen = false;
   render();
 }
 function closeSettings(){
   state.view = state.settingsReturnView || 'dashboard';
+  render();
+}
+function loadSettingsSectionPref(){
+  try{ return localStorage.getItem('alleycat:settingsSection'); }catch(e){ return null; }
+}
+function saveSettingsSectionPref(id){
+  try{ localStorage.setItem('alleycat:settingsSection', id); }catch(e){}
+}
+function selectSettingsSection(id){
+  state.settingsSection = id;
+  state.settingsMobileDetailOpen = true;
+  saveSettingsSectionPref(id);
+  render();
+}
+function closeSettingsMobileDetail(){
+  state.settingsMobileDetailOpen = false;
   render();
 }
 
@@ -502,18 +521,56 @@ const THEMES = {
   dracula: {label: t('settings.themeDraculaLabel'), desc: t('settings.themeDraculaDesc'), swatch: ['#282a36', '#2b2d3a', '#ff79c6', '#bd93f9']},
   outdoor: {label: t('settings.themeOutdoorLabel'), desc: t('settings.themeOutdoorDesc'), swatch: ['#ffffff', '#000000', '#ffcc00', '#b30000']}
 };
-function renderSettings(){
-  Object.entries(ICON_PACKS).forEach(([key, p]) => {
-    if(!p.cdn) return;
-    const linkId = 'icon-pack-preview-cdn-' + key;
-    if(document.getElementById(linkId)) return;
-    const link = document.createElement('link');
-    link.id = linkId;
-    link.rel = 'stylesheet';
-    link.href = p.cdn;
-    document.head.appendChild(link);
-  });
-  const el = document.getElementById('view-settings');
+/* Sidebar-Navigation (Paket 9): Gruppen+Reihenfolge fest, keine Registrierung
+   von außen nötig (anders als FEATURE_REGISTRY) — es gibt hier nur die 7
+   fest verdrahteten Settings-Screens, kein dynamisches Hinzufügen. label()
+   als Funktion (nicht als am Modul-Ladezeitpunkt ausgewerteter String) aus
+   demselben Grund wie bei FEATURE_REGISTRY-Einträgen: ein später geladenes
+   Community-Sprachpaket muss den Text bei jedem render() neu übersetzen. */
+const SETTINGS_NAV_GROUPS = [
+  {id: 'general', label: () => t('settings.groupGeneral'), items: [
+    {id: 'features', icon: '🧩', label: () => t('settings.navFeatures')},
+    {id: 'theme', icon: '🎨', label: () => t('settings.navTheme')},
+    {id: 'iconpack', icon: '🖼', label: () => t('settings.navIconPack')},
+    {id: 'language', icon: '🌐', label: () => t('settings.navLanguage')},
+    {id: 'units', icon: '📏', label: () => t('settings.navUnits')}
+  ]},
+  {id: 'event', label: () => t('settings.groupEvent'), items: [
+    {id: 'checkpointTypes', icon: '📍', label: () => t('settings.navCheckpointTypes')}
+  ]},
+  {id: 'data', label: () => t('settings.groupData'), items: [
+    {id: 'dataSafety', icon: '💾', label: () => t('settings.navDataSafety')}
+  ]}
+];
+function settingsNavItem(id){
+  for(const group of SETTINGS_NAV_GROUPS){
+    const item = group.items.find(i => i.id === id);
+    if(item) return item;
+  }
+  return null;
+}
+function renderSettingsSidebar(){
+  return `
+    <nav class="settings-sidebar">
+      <div class="settings-sidebar-head">
+        <h2>${t('settings.title')}</h2>
+        <p>${t('settings.intro')}</p>
+      </div>
+      ${SETTINGS_NAV_GROUPS.map(group => `
+        <div class="settings-nav-group">
+          <div class="settings-nav-group-label">${group.label()}</div>
+          ${group.items.map(item => `
+            <button type="button" class="settings-nav-item ${state.settingsSection === item.id ? 'active' : ''}" onclick="selectSettingsSection('${item.id}')">
+              <span class="settings-nav-icon">${item.icon}</span>
+              <span>${item.label()}</span>
+            </button>
+          `).join('')}
+        </div>
+      `).join('')}
+    </nav>
+  `;
+}
+function renderSettingsSectionTheme(){
   const themeCards = Object.entries(THEMES).map(([key, th]) => `
     <button class="option-card ${state.appSettings.theme === key ? 'active' : ''}" onclick="setTheme('${key}')">
       <span class="option-swatch">${th.swatch.map(c => `<span style="background:${c}"></span>`).join('')}</span>
@@ -521,6 +578,15 @@ function renderSettings(){
       <span class="option-card-desc">${th.desc}</span>
     </button>
   `).join('');
+  return `
+    <div class="settings-section">
+      <h3>${t('settings.themeHeading')}</h3>
+      <div class="settings-section-desc">${t('settings.themeDesc')}</div>
+      <div class="option-grid">${themeCards}</div>
+    </div>
+  `;
+}
+function renderSettingsSectionIconPack(){
   const iconCards = Object.entries(ICON_PACKS).map(([key, p]) => `
     <button class="option-card ${state.appSettings.iconPack === key ? 'active' : ''}" onclick="setIconPack('${key}')">
       <span class="icon-preview-row">${['qr', 'photo', 'item', 'custom', 'challenge'].map(k => p.render(k)).join('')}</span>
@@ -528,6 +594,85 @@ function renderSettings(){
       <span class="option-card-desc">${p.desc}</span>
     </button>
   `).join('');
+  return `
+    <div class="settings-section">
+      <h3>${t('settings.iconPackHeading')}</h3>
+      <div class="settings-section-desc">${t('settings.iconPackDesc')}</div>
+      <div class="option-grid">${iconCards}</div>
+    </div>
+  `;
+}
+function renderSettingsSectionLanguage(){
+  return `
+    <div class="settings-section">
+      <h3>${t('settings.languageHeading')}</h3>
+      <div class="settings-section-desc">${t('settings.languageDesc')}</div>
+      <div class="option-grid">
+        ${availableLanguages().map(code => `
+          <button class="option-card ${getCurrentLanguage() === code ? 'active' : ''}" onclick="setLanguage('${code}')">
+            <span class="option-card-label">${escapeHtml(languagePackDisplayName(code))}</span>
+            ${code !== 'de' ? `<span class="option-card-desc">${t('settings.languagePackCustomBadge')}</span>` : ''}
+          </button>
+        `).join('')}
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+        <input type="file" id="import-language-pack-file" accept="application/json,.json" style="display:none;" onchange="onLanguagePackFileChange(this)">
+        <button class="btn btn-sm" onclick="document.getElementById('import-language-pack-file').click()">${t('settings.languagePackImport')}</button>
+        <button class="btn btn-sm" onclick="exportLanguagePackTemplate()">${t('settings.languagePackExportTemplate')}</button>
+      </div>
+      ${availableLanguages().filter(c => c !== 'de').length ? `
+        <div style="margin-top:10px; display:flex; flex-direction:column; gap:4px;">
+          ${availableLanguages().filter(c => c !== 'de').map(code => `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+              <span class="settings-hint">${escapeHtml(languagePackDisplayName(code))} (${code})</span>
+              <button type="button" class="cp-icon-btn" onclick="deleteLanguagePack('${code}')" title="${t('common.delete')}" aria-label="${t('common.delete')}">🗑</button>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+function renderSettingsSectionUnits(){
+  return `
+    <div class="settings-section">
+      <h3>${t('settings.unitsHeading')}</h3>
+      <div class="settings-section-desc">${t('settings.unitsDesc')}</div>
+      <div class="settings-subheading">${t('settings.unitsDistanceSubheading')}</div>
+      <div class="option-grid">
+        <button class="option-card ${state.appSettings.distanceUnit !== 'imperial' ? 'active' : ''}" onclick="setDistanceUnit('metric')">
+          <span class="option-card-label">${t('settings.unitsMetricLabel')}</span>
+          <span class="option-card-desc">${t('settings.unitsMetricDesc')}</span>
+        </button>
+        <button class="option-card ${state.appSettings.distanceUnit === 'imperial' ? 'active' : ''}" onclick="setDistanceUnit('imperial')">
+          <span class="option-card-label">${t('settings.unitsImperialLabel')}</span>
+          <span class="option-card-desc">${t('settings.unitsImperialDesc')}</span>
+        </button>
+      </div>
+      <div class="settings-subheading">${t('settings.unitsTimeSubheading')}</div>
+      <div class="option-grid">
+        <button class="option-card ${state.appSettings.timeFormat !== '12h' ? 'active' : ''}" onclick="setTimeFormat('24h')">
+          <span class="option-card-label">${t('settings.timeFormat24hLabel')}</span>
+          <span class="option-card-desc">${t('settings.timeFormat24hDesc')}</span>
+        </button>
+        <button class="option-card ${state.appSettings.timeFormat === '12h' ? 'active' : ''}" onclick="setTimeFormat('12h')">
+          <span class="option-card-label">${t('settings.timeFormat12hLabel')}</span>
+          <span class="option-card-desc">${t('settings.timeFormat12hDesc')}</span>
+        </button>
+      </div>
+      <div class="settings-subheading">${t('settings.unitsCoordSubheading')}</div>
+      <div class="option-grid">
+        ${['decimal', 'dms', 'utm', 'mgrs'].map(fmt => `
+          <button class="option-card ${(state.appSettings.coordFormat || 'decimal') === fmt ? 'active' : ''}" onclick="setCoordFormat('${fmt}')">
+            <span class="option-card-label">${t('settings.coordFormat' + fmt.charAt(0).toUpperCase() + fmt.slice(1) + 'Label')}</span>
+            <span class="option-card-desc">${formatCoordinatesAs(fmt, 50.9375, 6.9603)}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+function renderSettingsSectionCheckpointTypes(){
   const typeRows = CHECKPOINT_TYPES.map(ct => {
     const isBuiltin = BUILTIN_CHECKPOINT_TYPE_KEYS.includes(ct.key);
     const meta = ct.isScored ? t('settings.scoredMeta', {max: ct.scoreMax}) : ct.hasCustomQuestion ? t('settings.customQuestionMeta') : t('settings.checkboxMeta');
@@ -578,95 +723,52 @@ function renderSettings(){
       </div>
     </div>
   ` : `<button class="btn" onclick="toggleNewTypeForm()">${t('settings.newType')}</button>`;
-  el.innerHTML = `
-    <div class="dash-head">
-      <div>
-        <h2>${t('settings.title')}</h2>
-        <p>${t('settings.intro')}</p>
-      </div>
-    </div>
-    ${renderFeatureRegistrySection()}
-    <div class="settings-section">
-      <h3>${t('settings.themeHeading')}</h3>
-      <div class="settings-section-desc">${t('settings.themeDesc')}</div>
-      <div class="option-grid">${themeCards}</div>
-    </div>
-    <div class="settings-section">
-      <h3>${t('settings.iconPackHeading')}</h3>
-      <div class="settings-section-desc">${t('settings.iconPackDesc')}</div>
-      <div class="option-grid">${iconCards}</div>
-    </div>
-    <div class="settings-section">
-      <h3>${t('settings.languageHeading')}</h3>
-      <div class="settings-section-desc">${t('settings.languageDesc')}</div>
-      <div class="option-grid">
-        ${availableLanguages().map(code => `
-          <button class="option-card ${getCurrentLanguage() === code ? 'active' : ''}" onclick="setLanguage('${code}')">
-            <span class="option-card-label">${escapeHtml(languagePackDisplayName(code))}</span>
-            ${code !== 'de' ? `<span class="option-card-desc">${t('settings.languagePackCustomBadge')}</span>` : ''}
-          </button>
-        `).join('')}
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
-        <input type="file" id="import-language-pack-file" accept="application/json,.json" style="display:none;" onchange="onLanguagePackFileChange(this)">
-        <button class="btn btn-sm" onclick="document.getElementById('import-language-pack-file').click()">${t('settings.languagePackImport')}</button>
-        <button class="btn btn-sm" onclick="exportLanguagePackTemplate()">${t('settings.languagePackExportTemplate')}</button>
-      </div>
-      ${availableLanguages().filter(c => c !== 'de').length ? `
-        <div style="margin-top:10px; display:flex; flex-direction:column; gap:4px;">
-          ${availableLanguages().filter(c => c !== 'de').map(code => `
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-              <span class="settings-hint">${escapeHtml(languagePackDisplayName(code))} (${code})</span>
-              <button type="button" class="cp-icon-btn" onclick="deleteLanguagePack('${code}')" title="${t('common.delete')}" aria-label="${t('common.delete')}">🗑</button>
-            </div>
-          `).join('')}
-        </div>
-      ` : ''}
-    </div>
-    <div class="settings-section">
-      <h3>${t('settings.unitsHeading')}</h3>
-      <div class="settings-section-desc">${t('settings.unitsDesc')}</div>
-      <div class="settings-subheading">${t('settings.unitsDistanceSubheading')}</div>
-      <div class="option-grid">
-        <button class="option-card ${state.appSettings.distanceUnit !== 'imperial' ? 'active' : ''}" onclick="setDistanceUnit('metric')">
-          <span class="option-card-label">${t('settings.unitsMetricLabel')}</span>
-          <span class="option-card-desc">${t('settings.unitsMetricDesc')}</span>
-        </button>
-        <button class="option-card ${state.appSettings.distanceUnit === 'imperial' ? 'active' : ''}" onclick="setDistanceUnit('imperial')">
-          <span class="option-card-label">${t('settings.unitsImperialLabel')}</span>
-          <span class="option-card-desc">${t('settings.unitsImperialDesc')}</span>
-        </button>
-      </div>
-      <div class="settings-subheading">${t('settings.unitsTimeSubheading')}</div>
-      <div class="option-grid">
-        <button class="option-card ${state.appSettings.timeFormat !== '12h' ? 'active' : ''}" onclick="setTimeFormat('24h')">
-          <span class="option-card-label">${t('settings.timeFormat24hLabel')}</span>
-          <span class="option-card-desc">${t('settings.timeFormat24hDesc')}</span>
-        </button>
-        <button class="option-card ${state.appSettings.timeFormat === '12h' ? 'active' : ''}" onclick="setTimeFormat('12h')">
-          <span class="option-card-label">${t('settings.timeFormat12hLabel')}</span>
-          <span class="option-card-desc">${t('settings.timeFormat12hDesc')}</span>
-        </button>
-      </div>
-      <div class="settings-subheading">${t('settings.unitsCoordSubheading')}</div>
-      <div class="option-grid">
-        ${['decimal', 'dms', 'utm', 'mgrs'].map(fmt => `
-          <button class="option-card ${(state.appSettings.coordFormat || 'decimal') === fmt ? 'active' : ''}" onclick="setCoordFormat('${fmt}')">
-            <span class="option-card-label">${t('settings.coordFormat' + fmt.charAt(0).toUpperCase() + fmt.slice(1) + 'Label')}</span>
-            <span class="option-card-desc">${formatCoordinatesAs(fmt, 50.9375, 6.9603)}</span>
-          </button>
-        `).join('')}
-      </div>
-    </div>
+  return `
     <div class="settings-section">
       <h3>${t('settings.checkpointTypesHeading')}</h3>
       <div class="settings-section-desc">${t('settings.checkpointTypesDesc')}</div>
       <div class="type-list">${typeRows}</div>
       ${newTypeForm}
     </div>
-    ${renderDataSafetySection()}
   `;
-  refreshStorageEstimate();
-  if(isFeatureEnabled('offline_map_cache')) refreshTileCacheTotal();
+}
+function settingsSectionContent(id){
+  switch(id){
+    case 'theme': return renderSettingsSectionTheme();
+    case 'iconpack': return renderSettingsSectionIconPack();
+    case 'language': return renderSettingsSectionLanguage();
+    case 'units': return renderSettingsSectionUnits();
+    case 'checkpointTypes': return renderSettingsSectionCheckpointTypes();
+    case 'dataSafety': return renderDataSafetySection();
+    case 'features':
+    default: return renderFeatureRegistrySection();
+  }
+}
+function renderSettings(){
+  Object.entries(ICON_PACKS).forEach(([key, p]) => {
+    if(!p.cdn) return;
+    const linkId = 'icon-pack-preview-cdn-' + key;
+    if(document.getElementById(linkId)) return;
+    const link = document.createElement('link');
+    link.id = linkId;
+    link.rel = 'stylesheet';
+    link.href = p.cdn;
+    document.head.appendChild(link);
+  });
+  if(!settingsNavItem(state.settingsSection)) state.settingsSection = loadSettingsSectionPref() || SETTINGS_NAV_GROUPS[0].items[0].id;
+  const el = document.getElementById('view-settings');
+  el.innerHTML = `
+    <div class="settings-layout ${state.settingsMobileDetailOpen ? 'settings-mobile-detail' : 'settings-mobile-list'}">
+      ${renderSettingsSidebar()}
+      <div class="settings-content">
+        <button type="button" class="settings-mobile-back" onclick="closeSettingsMobileDetail()">${t('settings.backToList')}</button>
+        ${settingsSectionContent(state.settingsSection)}
+      </div>
+    </div>
+  `;
+  if(state.settingsSection === 'dataSafety'){
+    refreshStorageEstimate();
+    if(isFeatureEnabled('offline_map_cache')) refreshTileCacheTotal();
+  }
 }
 

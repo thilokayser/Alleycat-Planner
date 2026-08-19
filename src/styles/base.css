@@ -109,7 +109,30 @@
   .btn-toggle.active{background:var(--hivis); border-color:var(--hivis); color:var(--ink);}
 
   /* ---------- Settings ---------- */
-  #view-settings{flex-direction:column; overflow:auto; padding:36px 40px;}
+  #view-settings{flex-direction:row; overflow:hidden; padding:0;}
+  .settings-layout{display:flex; width:100%; height:100%; min-height:0;}
+  .settings-sidebar{
+    width:250px; flex-shrink:0; overflow-y:auto; padding:24px 12px;
+    background:var(--asphalt-2); border-right:1px solid var(--asphalt-3);
+  }
+  .settings-sidebar-head{padding:0 10px 18px;}
+  .settings-sidebar-head h2{font-size:19px; color:var(--chalk);}
+  .settings-sidebar-head p{color:var(--steel); font-family:'JetBrains Mono',monospace; font-size:10.5px; margin-top:6px; line-height:1.5;}
+  .settings-nav-group{margin-bottom:16px;}
+  .settings-nav-group-label{
+    font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--steel); padding:0 10px 6px;
+  }
+  .settings-nav-item{
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+    padding:9px 10px; border-radius:4px; border:none; border-left:3px solid transparent;
+    background:transparent; color:var(--chalk); font:inherit; font-size:13.5px; cursor:pointer;
+  }
+  .settings-nav-item:hover{background:var(--asphalt-3);}
+  .settings-nav-item.active{background:var(--asphalt-3); border-left-color:var(--hivis); color:var(--hivis-2);}
+  .settings-nav-icon{font-size:15px; width:18px; text-align:center; flex-shrink:0;}
+  .settings-content{flex:1; min-width:0; overflow-y:auto; padding:36px 40px;}
+  .settings-mobile-back{display:none;}
   .settings-section{margin-bottom:32px;}
   .settings-section h3{font-size:16px; color:var(--chalk); margin-bottom:4px;}
   .settings-section-desc{color:var(--steel); font-family:'JetBrains Mono',monospace; font-size:11.5px; margin-bottom:16px; max-width:640px; line-height:1.5;}
@@ -1429,6 +1452,20 @@
     #view-editor.mobile-map-collapsed .sidebar{height:auto; flex:1;}
     #view-checkin{flex-direction:column;}
     .checkin-side{width:100%; max-height:38vh; border-left:none; border-top:1px solid var(--asphalt-3);}
+
+    /* Settings-Sidebar (Paket 9): unter dem Breakpoint Drill-down statt
+       nebeneinander — Liste ODER Detail, nie beides, gesteuert über die
+       settings-mobile-list/-detail-Klasse (state.settingsMobileDetailOpen). */
+    .settings-layout{flex-direction:column;}
+    .settings-sidebar{width:100%; border-right:none; border-bottom:1px solid var(--asphalt-3);}
+    .settings-mobile-list .settings-content{display:none;}
+    .settings-mobile-detail .settings-sidebar{display:none;}
+    .settings-content{padding:20px 18px;}
+    .settings-mobile-back{
+      display:inline-flex; align-items:center; gap:4px; margin-bottom:16px;
+      background:none; border:none; color:var(--hivis-2); cursor:pointer; padding:0;
+      font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:0.03em; font-size:13px; font-weight:600;
+    }
   }
 
   @media (max-width: 700px){
@@ -1585,3 +1622,4 @@
   :root[data-theme="outdoor"] .toggle-switch{width:48px; height:28px;}
   :root[data-theme="outdoor"] .toggle-switch-track::before{width:22px; height:22px;}
   :root[data-theme="outdoor"] .toggle-switch input:checked + .toggle-switch-track::before{transform:translateX(20px);}
+  :root[data-theme="outdoor"] .settings-nav-item{min-height:44px; font-size:14.5px;}
