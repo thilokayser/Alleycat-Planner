@@ -35,7 +35,6 @@ function confirmRiderAtFinish(){
   rider.finishTime = toLocalDateTimeInputValue(new Date());
   rider.raceStatus = '';
   evaluateRules(state.currentEvent, 'on_finish', {rider});
-  if(isFeatureEnabled('cargo_module', state.currentEvent)) applyCargoBonusPoints(state.currentEvent, rider);
   pushEventLog(state.currentEvent, 'rider_finished', t('gameModes.tickerFinished', {name: escapeHtml(rider.name || ('#' + rider.bib))}), rider.bib);
   debouncedSave();
   renderCheckin();
@@ -60,7 +59,6 @@ function unconfirmRiderAtFinish(){
   const previousFinishTime = rider.finishTime;
   rider.finishTime = '';
   removeLedgerEntries(state.currentEvent, p => p.riderBib === bib && p.source === 'sequence_match');
-  if(isFeatureEnabled('cargo_module', state.currentEvent)) removeLedgerEntries(state.currentEvent, p => p.riderBib === bib && p.source === 'cargo');
   debouncedSave();
   renderCheckin();
   showToast({
@@ -71,7 +69,6 @@ function unconfirmRiderAtFinish(){
       if(!r) return;
       r.finishTime = previousFinishTime;
       evaluateRules(state.currentEvent, 'on_finish', {rider: r});
-      if(isFeatureEnabled('cargo_module', state.currentEvent)) applyCargoBonusPoints(state.currentEvent, r);
       debouncedSave();
       renderCheckin();
     }
@@ -389,7 +386,6 @@ function renderCheckin(){
     }).join('');
     const mandatoryCps = visibleCps.filter(c => c.mandatory);
     const missingMandatory = mandatoryCps.filter(cp => !isCpSatisfiedForRider(rider, cp));
-    const cargoSummary = isFeatureEnabled('cargo_module', evt) ? computeCargoDeliverySummary(evt, rider) : null;
     const curfew = computeCurfewResult(evt, rider.finishTime);
     let curfewBlock = '';
     if(curfew){
@@ -458,18 +454,6 @@ function renderCheckin(){
         `}
         ${evt.checkpoints.length === 0 ? `<div class="cp-list-empty">${t('checkin.noCheckpointsInEvent')}</div>` : `<div class="checkin-cp-list">${cpRows}</div>`}
         ${mandatoryBlock}
-        ${cargoSummary && cargoSummary.items.length ? `
-        <div class="checkin-cargo-section">
-          <label>${t('raceFormats.cargoSectionHeading')}</label>
-          ${cargoSummary.items.map(i => `
-            <label class="checkbox-row">
-              <input type="checkbox" ${i.delivered ? 'checked' : ''} onchange="onCargoDeliveryToggle(${rider.bib}, '${i.cpId}', this.checked)">
-              ${escapeHtml(i.item.name || i.cpName || t('checkpoint.noName'))} (${i.item.weightKg}kg, ${i.item.bonusPoints} ${t('raceFormats.pointsAbbrev')})
-            </label>
-          `).join('')}
-          <div class="checkin-cargo-summary ${cargoSummary.overCapacity ? 'warn' : ''}">${t('raceFormats.cargoSummaryLine', {weight: cargoSummary.totalWeightKg, capacity: rider.cargoCapacityKg || 0, points: cargoSummary.totalBonusPoints})}</div>
-        </div>
-        ` : ''}
       </div>
     `;
   }

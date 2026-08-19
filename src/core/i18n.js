@@ -763,25 +763,6 @@ const translations = {
       clueSheetStampsLabel: 'Leeres Stempelfeld pro Checkpoint drucken',
       clueSheetLegend: 'Koordinaten-Chiffre: jede Ziffer um {shift} erhöht (mod 10) — zum Entschlüsseln {shift} abziehen.'
     },
-    raceFormats: {
-      cargoItemCheckboxLabel: 'Frachtgut an diesem Checkpoint',
-      cargoItemNamePlaceholder: 'Bezeichnung (z. B. Sack Mehl)',
-      cargoWeightLabel: 'Gewicht (kg)',
-      cargoVolumeLabel: 'Volumen (Einheiten)',
-      cargoBonusPointsLabel: 'Bonuspunkte',
-      cargoCapacityLabel: 'Frachtkapazität (kg)',
-      cargoSectionHeading: 'Fracht',
-      cargoSummaryLine: '{weight} kg von {capacity} kg geliefert · {points} Bonuspunkte',
-      cargoLedgerReason: 'Fracht geliefert: {name}',
-      pointsAbbrev: 'Pkt.',
-      gearRatioPlaceholder: 'Übersetzung (z. B. 48x17 / 2.82)',
-      brakelessLabel: 'Bremsenlos',
-      workbikeLabel: 'Lastenrad',
-      fastestBrakelessBadge: '⚡ Bremsenlos-Rekord',
-      fastestBrakelessTitle: 'Schnellster Fahrer ohne Bremse',
-      bestWorkbikeBadge: '📦 Lastenrad-Rekord',
-      bestWorkbikeTitle: 'Schnellstes Lastenrad'
-    },
     gameModes: {
       type: {
         time_window: 'Zeitfenster-CPs',
@@ -921,11 +902,7 @@ const translations = {
       categoriesName: 'Kategorien',
       categoriesDesc: 'Frei definierbare Kategorie-Gruppen pro Fahrer (z. B. Antrieb, Gender).',
       gameModesName: 'Spielmodi',
-      gameModesDesc: 'Zeitfenster, Bonus-CPs, Battle Royale, Joker und weitere optionale Rennformate.',
-      cargoModuleName: 'Cargo-Modus',
-      cargoModuleDesc: 'Frachtgut-Definitionen an Checkpoints, Frachtkapazität pro Fahrer, Bonuspunkte im Ziel-Check-in für gelieferte Fracht.',
-      trackbikeName: 'Trackbike-Attribute',
-      trackbikeDesc: 'Übersetzung, Bremsenlos, Lastenrad — zusätzliche Fahrer-Eigenschaften mit Leaderboard-Filter und Rekord-Badges.'
+      gameModesDesc: 'Zeitfenster, Bonus-CPs, Battle Royale, Joker und weitere optionale Rennformate.'
     },
     socialShare: {
       createButton: '🎉 Ergebnis-Karte erstellen',
