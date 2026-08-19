@@ -11,3 +11,4 @@ dist/
 .impeccable/
 .agents/
 .claude/
+skills-lock.json

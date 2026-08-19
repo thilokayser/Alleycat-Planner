@@ -1,6 +1,6 @@
 # Alleycat Dispatch — Projektübersicht
 
-*Stand: 17.08.2026. Gedacht als Grundlage für ein Brainstorming (z. B. mit Claude Chat), um daraus einen neuen Phasenplan abzuleiten. Kein technisches Referenzdokument für Coding-Sessions — das ist [`CLAUDE.md`](CLAUDE.md).*
+*Stand: 17.08.2026. Gedacht als Grundlage für ein Brainstorming (z. B. mit Claude Chat), um daraus einen neuen Phasenplan abzuleiten. Kein technisches Referenzdokument für Coding-Sessions — das ist [`CLAUDE.md`](../../CLAUDE.md). Archiviert (19.08.2026): überholter Brainstorming-Snapshot, die aktive Roadmap ist [`../alleycat-dispatch-roadmap-14-23.md`](../alleycat-dispatch-roadmap-14-23.md).*
 
 ---
 

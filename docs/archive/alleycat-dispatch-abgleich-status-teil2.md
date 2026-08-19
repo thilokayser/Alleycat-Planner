@@ -2,6 +2,8 @@
 
 Stand: 17.08.2026. Ergänzt [alleycat-dispatch-abgleich-status.md](alleycat-dispatch-abgleich-status.md) (Phasen 0–17) um den Abgleich der zweiten Übergabe. Direkt gegen `src/core/`, `src/styles/`, `templates/` geprüft.
 
+*Archiviert (19.08.2026): Snapshot vom 17.08. — für den aktuellen Stand siehe [`../alleycat-dispatch-roadmap-14-23.md`](../alleycat-dispatch-roadmap-14-23.md).*
+
 ## Kurzfassung
 
 Von den sechs neuen Phasen ist ebenfalls **keine** umgesetzt. Zwei Stellen im Code sind aber bereits nah an Teilanforderungen aus Phase 19 dran — der Rest (18, 20, 21, 22, 23) ist vollständiger Neubau ohne Vorarbeit.

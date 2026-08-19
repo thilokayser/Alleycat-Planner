@@ -1,6 +1,6 @@
 # Alleycat Dispatch — Roadmap Phasen 14–23
 
-Stand: 17.08.2026. Fasst die zehn offenen Phasen aus `alleycat-dispatch-feature-uebergabe_1.md` (14–17) und `ubergabe2.md` (18–23) neu zusammen — nicht mehr in der ursprünglichen Dokument-Reihenfolge, sondern semantisch gruppiert und nach Aufwand/Abhängigkeit sortiert. Baut direkt auf [alleycat-dispatch-abgleich-status.md](alleycat-dispatch-abgleich-status.md) und [alleycat-dispatch-abgleich-status-teil2.md](alleycat-dispatch-abgleich-status-teil2.md) auf (dort steht der Zeile-für-Zeile-Code-Abgleich, hier die Planung darauf).
+Stand: 17.08.2026. Fasst die zehn offenen Phasen aus [`handover/alleycat-dispatch-feature-uebergabe_1.md`](handover/alleycat-dispatch-feature-uebergabe_1.md) (14–17) und [`handover/ubergabe2.md`](handover/ubergabe2.md) (18–23) neu zusammen — nicht mehr in der ursprünglichen Dokument-Reihenfolge, sondern semantisch gruppiert und nach Aufwand/Abhängigkeit sortiert. Baut direkt auf [archive/alleycat-dispatch-abgleich-status.md](archive/alleycat-dispatch-abgleich-status.md) und [archive/alleycat-dispatch-abgleich-status-teil2.md](archive/alleycat-dispatch-abgleich-status-teil2.md) auf (dort steht der Zeile-für-Zeile-Code-Abgleich, hier die Planung darauf).
 
 ---
 

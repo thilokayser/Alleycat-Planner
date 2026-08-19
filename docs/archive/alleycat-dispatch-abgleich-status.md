@@ -1,6 +1,8 @@
 # Abgleich: Feature-Übergabe vs. tatsächlicher Code-Stand
 
-Stand: 17.08.2026 — Abgleich von `alleycat-dispatch-feature-uebergabe_1.md` gegen den aktuellen Code in `src/` und `php-backend/` (nicht gegen die Doku-Aussagen selbst, sondern direkt gegen den Quellcode geprüft).
+Stand: 17.08.2026 — Abgleich von `handover/alleycat-dispatch-feature-uebergabe_1.md` gegen den aktuellen Code in `src/` und `php-backend/` (nicht gegen die Doku-Aussagen selbst, sondern direkt gegen den Quellcode geprüft).
+
+*Archiviert (19.08.2026): Snapshot vom 17.08. — für den aktuellen Stand siehe [`../alleycat-dispatch-roadmap-14-23.md`](../alleycat-dispatch-roadmap-14-23.md).*
 
 ## Kurzfassung
 

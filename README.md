@@ -56,9 +56,10 @@ Beide Varianten prüfen zusätzlich zuerst, ob `window.storage` verfügbar ist (
 
 ## Weitere Dateien
 
-- [`koeln-alleycat-beispiel.json`](koeln-alleycat-beispiel.json) — Beispiel-Event zum Reinschauen/Importieren
-- [`kölner_kurier-alleycat-manifest.pdf`](kölner_kurier-alleycat-manifest.pdf) — Beispiel-Export eines Manifests
+- [`examples/koeln-alleycat-beispiel.json`](examples/koeln-alleycat-beispiel.json) — Beispiel-Event zum Reinschauen/Importieren
+- [`examples/kölner_kurier-alleycat-manifest.pdf`](examples/kölner_kurier-alleycat-manifest.pdf) — Beispiel-Export eines Manifests
 - [`test-suite.js`](test-suite.js) — End-to-End-Testsuite; Inhalt in die Browser-Konsole eines laufenden `dist/`-Builds einfügen und `runAlleycatTestSuite()` aufrufen. Läuft unverändert gegen beide Varianten.
+- [`docs/`](docs/) — Roadmap ([`docs/alleycat-dispatch-roadmap-14-23.md`](docs/alleycat-dispatch-roadmap-14-23.md)) sowie Spezifikations- und Archiv-Dokumente aus der Projektplanung.
 
 ## Entwicklung
 
