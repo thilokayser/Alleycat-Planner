@@ -2483,6 +2483,89 @@ async function runAlleycatTestSuite(){
     render();
   }
 
+  /* 4d) Paket-Abholung/-Zustellung: zwei verknüpfte Checkpoint-Typen
+     (Fahrer holt an A ab, muss an B zustellen). Läuft komplett auf zwei
+     eigens angelegten, am Ende wieder entfernten Test-Checkpoints statt auf
+     den von CHECKPOINT_TYPES.forEach oben mit-erzeugten "CP ABHOLUNG"/
+     "CP ZUSTELLUNG" — die bleiben bewusst unverknüpft, damit
+     evt.checkpoints.length für die CHECKPOINT_TYPES.length-Assertionen in
+     Abschnitt 4 unverändert bleibt. Ruft bewusst NICHT openEditor() auf,
+     siehe Begründung in 3m — stattdessen direkt state.view/render(). */
+  {
+    check('CHECKPOINT_TYPES enthält "pickup"', CHECKPOINT_TYPES.some(ct => ct.key === 'pickup'));
+    check('CHECKPOINT_TYPES enthält "dropoff"', CHECKPOINT_TYPES.some(ct => ct.key === 'dropoff'));
+    checkEqual('pickup ist nicht gewertet', getCheckpointType('pickup').isScored, false);
+    checkEqual('dropoff ist nicht gewertet', getCheckpointType('dropoff').isScored, false);
+    checkEqual('withCheckpointDefaults setzt pairedDropoffCpId auf leer', withCheckpointDefaults({}).pairedDropoffCpId, '');
+
+    const pickupCp = withCheckpointDefaults({id: uid('cp'), order: 900, lat: 51, lng: 9, name: 'Testabholung', type: 'pickup'});
+    const dropoffCp = withCheckpointDefaults({id: uid('cp'), order: 901, lat: 51.1, lng: 9.1, name: 'Testzustellung', type: 'dropoff'});
+    evt.checkpoints.push(pickupCp, dropoffCp);
+
+    checkEqual('pickupForDropoff findet ohne Verknüpfung nichts', pickupForDropoff(evt, dropoffCp.id), null);
+    onEditPairedDropoff(pickupCp.id, dropoffCp.id);
+    checkEqual('onEditPairedDropoff setzt pairedDropoffCpId', pickupCp.pairedDropoffCpId, dropoffCp.id);
+    const foundPickup = pickupForDropoff(evt, dropoffCp.id);
+    check('pickupForDropoff findet den verknüpften Abholung-Checkpoint', !!foundPickup && foundPickup.id === pickupCp.id);
+
+    /* Ziel-Check-in-Gate: Zustellung ohne bestätigte Abholung.
+       riders[3] (DNF aus 3c) wird hier nur als isolierter Test-Fahrer
+       wiederverwendet — completed/checkpointOrderOverrides werden am Ende
+       wieder bereinigt, raceStatus bleibt unberührt. */
+    const testRider = evt.riders[3];
+    testRider.completed = (testRider.completed || []).filter(id => id !== pickupCp.id && id !== dropoffCp.id);
+    activateCheckinRider(testRider.bib);
+
+    const origConfirmPkg = window.confirm;
+    let confirmMsg = null;
+    window.confirm = (msg) => { confirmMsg = msg; return false; };
+    onCheckinToggleCheckpoint(dropoffCp.id, true);
+    check('checkPickupBeforeDropoff fragt nach, wenn Abholung fehlt', !!confirmMsg && confirmMsg.includes(pickupCp.name));
+    check('Bei Ablehnung bleibt Zustellung offen', !(testRider.completed || []).includes(dropoffCp.id));
+
+    window.confirm = () => true;
+    confirmMsg = null;
+    onCheckinToggleCheckpoint(dropoffCp.id, true);
+    check('Bei Bestätigung wird Zustellung trotzdem markiert', (testRider.completed || []).includes(dropoffCp.id));
+    check('Override wird geloggt', (testRider.checkpointOrderOverrides || []).some(o => o.checkpointId === dropoffCp.id));
+    onCheckinToggleCheckpoint(dropoffCp.id, false);
+
+    confirmMsg = null;
+    onCheckinToggleCheckpoint(pickupCp.id, true);
+    check('Abholung selbst braucht keine Bestätigung', confirmMsg === null);
+    onCheckinToggleCheckpoint(dropoffCp.id, true);
+    check('Zustellung nach erledigter Abholung ohne Rückfrage möglich', confirmMsg === null && (testRider.completed || []).includes(dropoffCp.id));
+    window.confirm = origConfirmPkg;
+
+    /* Check-in-Karte: Status-Hinweise */
+    renderCheckin();
+    await wait(20);
+    check('Zustellung zeigt "Abholung erledigt"-Badge', document.body.innerHTML.includes(t('checkin.pickupDoneBadge')));
+    check('Abholung zeigt Ziel-Hinweis auf die Zustellung', document.body.innerHTML.includes(t('checkin.pickupHint', {name: dropoffCp.name})));
+
+    /* Sidebar-Badges (Karten-Editor) */
+    state.view = 'editor';
+    render();
+    await wait(20);
+    check('Abholung-Zeile zeigt Zustell-Badge', document.body.innerHTML.includes(t('checkpoint.pickupBadge', {name: dropoffCp.name})));
+    check('Zustellung-Zeile zeigt Abholung-Badge', document.body.innerHTML.includes(t('checkpoint.dropoffBadge', {name: pickupCp.name})));
+
+    /* Löschen der Zustellung entfernt die Verknüpfung beim Abholung-Checkpoint (kein Dangling Reference) */
+    const origConfirmDel = window.confirm;
+    window.confirm = () => true;
+    confirmDeleteCp(dropoffCp.id);
+    window.confirm = origConfirmDel;
+    checkEqual('Löschen des Zustell-Checkpoints entfernt die Verknüpfung beim Abholung-Checkpoint', pickupCp.pairedDropoffCpId, '');
+
+    /* Aufräumen */
+    evt.checkpoints = evt.checkpoints.filter(c => c.id !== pickupCp.id && c.id !== dropoffCp.id);
+    evt.checkpoints.forEach((c, i) => { c.order = i + 1; });
+    testRider.completed = (testRider.completed || []).filter(id => id !== pickupCp.id && id !== dropoffCp.id);
+    testRider.checkpointOrderOverrides = (testRider.checkpointOrderOverrides || []).filter(o => o.checkpointId !== dropoffCp.id);
+    state.checkinActiveBib = null;
+    renderCheckin();
+  }
+
   /* 4) Speichern + aus dem Storage-Backend zurücklesen (backend-agnostisch) */
   await saveCurrentEvent();
   await saveEventsIndex();

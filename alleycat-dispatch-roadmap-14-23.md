@@ -27,7 +27,8 @@ Die beiden Übergabedokumente wurden nacheinander geschrieben und nummerieren di
 | 4 | Großes Karten-Programm | Phase 15 + Phase 18 zusammengelegt | XL | ⚠️ Battle Royale existiert in alter Form (Phase 11), Rest offen |
 | 5 | Export & Lokalisierung | Phase 17 + Phase 20 zusammengelegt | L | ❌ vollständig offen |
 | 6 | Spezielle Rennformate | Phase 21 komplett | M–L | ⚠️ teilweise (19.08.2026) — nur `clue_sheet`; Cargo-Modul und Trackbike-Attribute wurden auf Nutzerwunsch nach dem Bauen wieder entfernt |
-| 7 | Beamer-Erweiterungen | Phase 23 komplett | S–M | ⚠️ Event-Ticker-Infrastruktur (Phase 12) bereits vorhanden, nur nicht vertont |
+| 7 | Beamer-Erweiterungen | Phase 23 komplett | S–M | ❌ übersprungen (19.08.2026), auf Nutzerwunsch |
+| 8 | Paket-Abholung/-Zustellung | nicht Teil der Übergabe-Doks | S | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
 | — | *Idee, zurückgestellt:* Offline-Gerätesync (früher Paket 8) | Phase 22 komplett | L (unsicher) | ⚠️ Kamera/QR-Grundlage (jsQR) bereits vorhanden, Stream-Protokoll komplett offen — **kein aktives Arbeitspaket**, wandert zu den "vertagten Ideen" wie Kopfgeld-Modus/Service-Worker in der ursprünglichen Übergabe |
 
 Aufwand-Skala: S = klein (wenige, isolierte Änderungen), M = mittel (ein neues Modul oder mehrere verteilte Änderungen), L = groß (neues Modul + Umbau bestehender Kernlogik), XL = sehr groß (mehrere neue Module + Migration bestehender, produktiver Daten).
@@ -158,9 +159,22 @@ Details siehe [CLAUDE.md](CLAUDE.md), Abschnitt "Paket 2 (Phase 16): Feature-Reg
 
 ### Paket 7 — Beamer-Erweiterungen (Phase 23)
 
-- [x] Event-Ticker-Infrastruktur bereits vorhanden (`pushEventLog()`, Phase 12) — liefert die Ereignisse, die vertont werden sollen
-- [ ] `speechSynthesis`-Integration: Beamer-Settings-Toggle, Stimme/Lautstärke/Geschwindigkeit einstellbar
-- [ ] `SpeechRecognition`-Integration: Voice-Check-in im Ziel-Marshal-Flow ("Startnummer 42 Ziel")
+**Übersprungen (19.08.2026), auf Nutzerwunsch — kein Bedarf.** Nicht gebaut, aus der aktiven Roadmap raus.
+
+- [ ] ~~Event-Ticker-Infrastruktur bereits vorhanden (`pushEventLog()`, Phase 12) — liefert die Ereignisse, die vertont werden sollen~~
+- [ ] ~~`speechSynthesis`-Integration: Beamer-Settings-Toggle, Stimme/Lautstärke/Geschwindigkeit einstellbar~~
+- [ ] ~~`SpeechRecognition`-Integration: Voice-Check-in im Ziel-Marshal-Flow ("Startnummer 42 Ziel")~~
+
+### Paket 8 — Paket-Abholung/-Zustellung (nicht Teil der ursprünglichen Übergabe-Dokumente)
+
+Ad-hoc-Feature-Wunsch (19.08.2026, nach Paket 7 übersprungen): zwei neue, verknüpfte Checkpoint-Typen, damit eine Route eine Kurier-Aufgabe abbilden kann — Fahrer holt an Checkpoint A ein Paket ab und muss es an Checkpoint B zustellen.
+
+- [x] Zwei neue `CHECKPOINT_TYPES`-Einträge: `pickup` (📤 Paket-Abholung) und `dropoff` (📥 Paket-Zustellung) (19.08.2026)
+- [x] Verknüpfung (`cp.pairedDropoffCpId`, gesetzt am Abholung-Checkpoint) + Karten-Editor-UI (Dropdown am Abholung-CP, Read-only-Anzeige am Zustell-CP, Sidebar-Badges in beide Richtungen) (19.08.2026)
+- [x] Ziel-Check-in-Gate: Zustellung ohne bestätigte Abholung fragt nach (Confirm+Override-Muster wie beim bestehenden `checkpointOrderMode:'fest'`), plus Status-Hinweise pro Checkpoint-Zeile ("Abholung noch offen"/"Abholung erledigt"/Ziel-Hinweis am Abholung-CP) (19.08.2026)
+- [x] Aufräumen bei Löschung: Löschen des Zustell-Checkpoints entfernt die Verknüpfung beim Abholung-Checkpoint automatisch (kein Dangling Reference) (19.08.2026)
+
+**Umsetzung (19.08.2026):** 755/755 Tests (+21). Bewusst **kein** eigenes Cargo-Datenmodell (Gewicht/Volumen/Bonuspunkte, Kapazitäts-Tracking) — das war exakt das gerade erst wieder entfernte Cargo-Modul aus Paket 6. Diesmal minimal gehalten: zwei einfache, gepaarte Checkpoint-Typen nach demselben Muster wie die bestehenden 5 (`qr`/`photo`/`item`/`custom`/`challenge`) — kein neues Datenmodell außer der einen Verknüpfungs-ID, keine Feature-Registry-Gate (anders als Cargo/Trackbike: Checkpoint-Typen sind schon immer ungated wählbar, ein neuer Typ braucht keinen extra Ein/Aus-Schalter). Verknüpfung wird bewusst nur auf dem Abholung-Checkpoint gespeichert (`pairedDropoffCpId`), der Zustell-Checkpoint sucht rückwärts über `pickupForDropoff()` — vermeidet eine zweite, redundante Referenz, die aus dem Gleichschritt geraten könnte. Das Confirm-und-Override-Verhalten im Ziel-Check-in kopiert bewusst exakt das bestehende Muster von `checkOrderBeforeComplete()` (fest-Reihenfolge-Warnung) statt hart zu blockieren — ein Marshal kann eine vergessene Abholung am Zustell-Checkpoint nachträglich bestätigen, ohne technisch blockiert zu sein.
 
 ---
 

@@ -12,7 +12,8 @@ function withCheckpointDefaults(cp){
     locked: false,
     staff: [],
     gameHidden: false,
-    gameRevealPrerequisiteCpId: ''
+    gameRevealPrerequisiteCpId: '',
+    pairedDropoffCpId: ''
   }, cp);
 }
 function withCpStaffDefaults(s){
@@ -26,7 +27,9 @@ let CHECKPOINT_TYPES = [
   {key: 'photo', icon: '\ud83d\udcf7', shortLabel: 'FOTO', fullLabel: t('checkpoint.types.photo.full'), dropdownLabel: t('checkpoint.types.photo.dropdown'), referenceFieldLabel: t('checkpoint.types.photo.ref'), hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'},
   {key: 'item', icon: '\ud83d\udce6', shortLabel: 'ITEM', fullLabel: t('checkpoint.types.item.full'), dropdownLabel: t('checkpoint.types.item.dropdown'), referenceFieldLabel: t('checkpoint.types.item.ref'), hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'},
   {key: 'custom', icon: '\u2753', shortLabel: 'R\u00c4TSEL', fullLabel: t('checkpoint.types.custom.full'), dropdownLabel: t('checkpoint.types.custom.dropdown'), referenceFieldLabel: t('checkpoint.types.custom.ref'), hasCustomQuestion: true, isScored: false, scoreMax: 0, manifestCell: 'answer-line'},
-  {key: 'challenge', icon: '\ud83c\udfc6', shortLabel: 'CHALLENGE', fullLabel: t('checkpoint.types.challenge.full'), dropdownLabel: t('checkpoint.types.challenge.dropdown'), referenceFieldLabel: t('checkpoint.types.challenge.ref'), hasCustomQuestion: false, isScored: true, scoreMax: 10, manifestCell: 'score-line'}
+  {key: 'challenge', icon: '\ud83c\udfc6', shortLabel: 'CHALLENGE', fullLabel: t('checkpoint.types.challenge.full'), dropdownLabel: t('checkpoint.types.challenge.dropdown'), referenceFieldLabel: t('checkpoint.types.challenge.ref'), hasCustomQuestion: false, isScored: true, scoreMax: 10, manifestCell: 'score-line'},
+  {key: 'pickup', icon: '\ud83d\udce4', shortLabel: 'ABHOLUNG', fullLabel: t('checkpoint.types.pickup.full'), dropdownLabel: t('checkpoint.types.pickup.dropdown'), referenceFieldLabel: t('checkpoint.types.pickup.ref'), hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'},
+  {key: 'dropoff', icon: '\ud83d\udce5', shortLabel: 'ZUSTELLUNG', fullLabel: t('checkpoint.types.dropoff.full'), dropdownLabel: t('checkpoint.types.dropoff.dropdown'), referenceFieldLabel: t('checkpoint.types.dropoff.ref'), hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'}
 ];
 const BUILTIN_CHECKPOINT_TYPE_KEYS = CHECKPOINT_TYPES.map(t => t.key);
 function getCheckpointType(key){
@@ -263,6 +266,7 @@ function confirmDeleteCp(id){
   const cp = findCp(id);
   if(cp && (cp.locked || isCpLocked(state.currentEvent))) return;
   unlinkHqIfCheckpointDeleted(state.currentEvent, id);
+  unlinkPairedDropoffIfDeleted(state.currentEvent, id);
   state.currentEvent.checkpoints = state.currentEvent.checkpoints.filter(c => c.id !== id);
   state.currentEvent.checkpoints.forEach((c,i) => c.order = i+1);
   if(state.editingId === id) state.editingId = null;
@@ -337,6 +341,25 @@ function onEditGameRevealPrerequisite(id, value){
   const cp = findCp(id); if(!cp) return;
   cp.gameRevealPrerequisiteCpId = value;
   debouncedSave();
+}
+/* Paket 6: Paket-Abholung/-Zustellung — die Verknüpfung wird auf dem
+   Abholung-Checkpoint gespeichert (welcher Zustell-Checkpoint bekommt das
+   Paket), Zustell-Checkpoints zeigen sie nur lesend an (rückwärts über
+   pickupForDropoff() gesucht) statt eine zweite, redundante Referenz zu
+   pflegen — analog zum gameRevealPrerequisiteCpId-Muster oben. */
+function onEditPairedDropoff(id, value){
+  const cp = findCp(id); if(!cp) return;
+  cp.pairedDropoffCpId = value;
+  debouncedSave();
+  renderSidebar();
+}
+function pickupForDropoff(evt, dropoffCpId){
+  return (evt.checkpoints || []).find(c => c.type === 'pickup' && c.pairedDropoffCpId === dropoffCpId) || null;
+}
+function unlinkPairedDropoffIfDeleted(evt, deletedCpId){
+  (evt.checkpoints || []).forEach(c => {
+    if(c.pairedDropoffCpId === deletedCpId) c.pairedDropoffCpId = '';
+  });
 }
 function onEditLat(id, value){
   const cp = findCp(id); if(!cp) return;
@@ -581,6 +604,19 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
                 </div>
                 ` : ''}
                 ` : ''}
+                ${cp.type === 'pickup' ? `
+                <div>
+                  <label>${t('checkpoint.pairedDropoffLabel')}</label>
+                  <select onchange="onEditPairedDropoff('${cp.id}', this.value)">
+                    <option value="">${t('checkpoint.pairedDropoffNone')}</option>
+                    ${evt.checkpoints.filter(other => other.id !== cp.id && other.type === 'dropoff').map(other => `<option value="${other.id}" ${cp.pairedDropoffCpId === other.id ? 'selected' : ''}>${escapeHtml(other.name || t('checkpoint.noName'))}</option>`).join('')}
+                  </select>
+                </div>
+                ` : ''}
+                ${cp.type === 'dropoff' ? (() => {
+                  const pickup = pickupForDropoff(evt, cp.id);
+                  return `<div class="settings-hint">${pickup ? `${t('checkpoint.pairedPickupReadonlyLabel')}: ${escapeHtml(pickup.name || t('checkpoint.noName'))}` : t('checkpoint.pairedPickupNone')}</div>`;
+                })() : ''}
                 <div class="cp-staff-section">
                   <label>${t('checkpoint.staffHeading')}</label>
                   ${(cp.staff || []).map(s => `
@@ -632,6 +668,8 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
               ${isGameModeEnabled(evt, 'zone_active') && isCpClosedByZone(evt, cp) ? `<span class="cp-hidden-badge cp-closed-badge" title="${t('gameModes.zoneClosedBadgeTitle')}">${t('gameModes.zoneClosedBadge')}</span>` : ''}
               ${staffCount ? `<span class="cp-staff-badge" title="${t('checkpoint.staffHeading')}">${t('checkpoint.staffBadgeIcon')} ${staffCount}</span>` : ''}
               ${isCheckpointHq(evt, cp.id) ? `<span class="cp-staff-badge" title="${t('eventLocations.hqLabel')}">🏠 ${t('eventLocations.hqLabel')}</span>` : ''}
+              ${cp.type === 'pickup' && cp.pairedDropoffCpId && findCp(cp.pairedDropoffCpId) ? `<span class="cp-staff-badge" title="${t('checkpoint.pairedDropoffLabel')}">${t('checkpoint.pickupBadge', {name: findCp(cp.pairedDropoffCpId).name || t('checkpoint.noName')})}</span>` : ''}
+              ${cp.type === 'dropoff' && pickupForDropoff(evt, cp.id) ? `<span class="cp-staff-badge" title="${t('checkpoint.pairedPickupReadonlyLabel')}">${t('checkpoint.dropoffBadge', {name: pickupForDropoff(evt, cp.id).name || t('checkpoint.noName')})}</span>` : ''}
               <span class="cp-row-icon-actions">
                 <button type="button" class="cp-icon-btn" onclick="duplicateCheckpoint('${cp.id}')" title="${t('checkpoint.duplicate')}" aria-label="${t('checkpoint.duplicate')}" ${itemLocked ? 'disabled' : ''}>⧉</button>
                 <button type="button" class="cp-icon-btn" onclick="toggleCpLocked('${cp.id}')" title="${cp.locked ? t('checkpoint.unlock') : t('checkpoint.lock')}" aria-label="${cp.locked ? t('checkpoint.unlock') : t('checkpoint.lock')}" ${locked ? 'disabled' : ''}>${cp.locked ? '🔒' : '🔓'}</button>

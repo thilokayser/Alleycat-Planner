@@ -237,6 +237,25 @@ function checkOrderBeforeComplete(cpId){
   rider.checkpointOrderOverrides.push({checkpointId: cpId, at: toLocalDateTimeInputValue(new Date())});
   return true;
 }
+/* Paket 6: Paket-Zustellung ohne bestätigte Abholung — gleiches
+   Confirm-und-Override-Muster wie checkOrderBeforeComplete() (aus fest 3d),
+   bewusst kein hartes Blockieren, da ein Marshal am Zustell-Checkpoint die
+   Abholung z. B. wegen eines Geräteproblems am Abholung-Checkpoint auch
+   nachträglich bestätigen könnte. */
+function checkPickupBeforeDropoff(cpId){
+  const evt = state.currentEvent;
+  const rider = getActiveCheckinRider();
+  if(!evt || !rider) return true;
+  const cp = findCp(cpId);
+  if(!cp || cp.type !== 'dropoff') return true;
+  const pickup = pickupForDropoff(evt, cpId);
+  if(!pickup) return true;
+  if((rider.completed || []).includes(pickup.id)) return true;
+  if(!confirm(t('checkin.dropoffWithoutPickupConfirm', {name: pickup.name || t('checkpoint.noName')}))) return false;
+  rider.checkpointOrderOverrides = rider.checkpointOrderOverrides || [];
+  rider.checkpointOrderOverrides.push({checkpointId: cpId, at: toLocalDateTimeInputValue(new Date())});
+  return true;
+}
 function onCheckinToggleCheckpoint(cpId, checked){
   const rider = getActiveCheckinRider(); if(!rider) return;
   const evt = state.currentEvent;
@@ -244,6 +263,7 @@ function onCheckinToggleCheckpoint(cpId, checked){
   if(checked){
     if(!rider.completed.includes(cpId)){
       if(!checkOrderBeforeComplete(cpId)){ renderCheckin(); return; }
+      if(!checkPickupBeforeDropoff(cpId)){ renderCheckin(); return; }
       const cp = findCp(cpId);
       const timestamp = toLocalDateTimeInputValue(new Date());
       const ruleResult = evaluateRules(evt, 'on_checkin', {rider, checkpoint: cp, timestamp});
@@ -372,6 +392,17 @@ function renderCheckin(){
             </div>
           </div>`;
       }
+      let packageHtml = '';
+      if(cp.type === 'dropoff'){
+        const pickup = pickupForDropoff(evt, cp.id);
+        if(pickup){
+          const pickupDone = completed.includes(pickup.id);
+          packageHtml = `<div class="checkin-timewindow"><span class="tw-badge ${pickupDone ? 'ok' : 'warn'}">${pickupDone ? t('checkin.pickupDoneBadge') : t('checkin.pickupPendingBadge')}</span></div>`;
+        }
+      } else if(cp.type === 'pickup' && cp.pairedDropoffCpId){
+        const dropoff = findCp(cp.pairedDropoffCpId);
+        if(dropoff) packageHtml = `<div class="checkin-timewindow">${t('checkin.pickupHint', {name: dropoff.name || t('checkpoint.noName')})}</div>`;
+      }
       return `
         <div class="checkin-cp-row ${cp.mandatory ? '' : 'optional'}">
           <div class="checkin-cp-head">
@@ -382,6 +413,7 @@ function renderCheckin(){
           </div>
           ${controlsHtml}
           ${timeWindowHtml}
+          ${packageHtml}
         </div>`;
     }).join('');
     const mandatoryCps = visibleCps.filter(c => c.mandatory);
