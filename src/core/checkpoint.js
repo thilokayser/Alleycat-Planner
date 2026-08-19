@@ -457,6 +457,10 @@ function toggleSettings(){
   state.settingsOpen = !state.settingsOpen;
   renderSidebar();
 }
+function toggleEventDateSettings(){
+  state.eventDateSettingsOpen = !state.eventDateSettingsOpen;
+  renderSidebar();
+}
 function onStartModeChange(value){
   state.currentEvent.startMode = value;
   debouncedSave();
@@ -737,7 +741,6 @@ function renderSidebar(){
   el.innerHTML = `
     <div class="sidebar-head">
       <input type="text" class="event-title-input" value="${escapeHtml(evt.name)}" oninput="onEventNameInput(this.value)" placeholder="${t('checkpoint.eventNamePlaceholder')}">
-      <input type="date" class="event-date-input" value="${escapeHtml(evt.date || '')}" oninput="onEventDateInput(this.value)">
     </div>
     ${evt.status === 'running' ? `
       <div class="cp-lock-banner ${evt.cpLockOverride ? 'unlocked' : ''}">
@@ -803,6 +806,17 @@ function renderEventSettingsPanel(evt){
       <button class="settings-toggle" onclick="toggleEventSettingsPanel()">${state.eventSettingsPanelOpen ? '\u25be' : '\u25b8'} ${t('checkpoint.eventSettingsHeading')}</button>
       ${state.eventSettingsPanelOpen ? `
         <div class="settings-body">
+          <div class="settings-section">
+            <button class="settings-toggle" onclick="toggleEventDateSettings()">${state.eventDateSettingsOpen ? '\u25be' : '\u25b8'} ${t('checkpoint.eventDateHeading')}</button>
+            ${state.eventDateSettingsOpen ? `
+              <div class="settings-body">
+                <div>
+                  <label>${t('checkpoint.eventDateLabel')}</label>
+                  <input type="date" value="${escapeHtml(evt.date || '')}" oninput="onEventDateInput(this.value)">
+                </div>
+              </div>
+            ` : ''}
+          </div>
           <div class="settings-section">
             <button class="settings-toggle" onclick="toggleSettings()">${state.settingsOpen ? '\u25be' : '\u25b8'} ${t('checkpoint.startAndCurfew')}</button>
             ${state.settingsOpen ? `

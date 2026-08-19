@@ -59,12 +59,15 @@ function buildVariant(storageFile, templateFile, outputFile){
   const themesCss = read('src/styles/themes.css');
   const baseCss = read('src/styles/base.css');
   const template = read(`templates/${templateFile}`);
+  const enTranslations = JSON.parse(read('src/i18n/en.json'));
+  const enInjection = `translations.en = ${JSON.stringify(enTranslations).replace(/</g, '\\u003c')};`;
+  const coreWithBuiltinLangs = `${core}\n\n${enInjection}`;
 
   const output = template
     .replace('{{THEMES_CSS}}', themesCss)
     .replace('{{BASE_CSS}}', baseCss)
     .replace('{{STORAGE_JS}}', storage)
-    .replace('{{CORE_JS}}', core);
+    .replace('{{CORE_JS}}', coreWithBuiltinLangs);
 
   const distDir = path.join(__dirname, 'dist');
   if(!fs.existsSync(distDir)) fs.mkdirSync(distDir);

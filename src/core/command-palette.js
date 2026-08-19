@@ -71,7 +71,7 @@ function buildCommandPaletteItems(){
   const actionCat = t('commandPalette.catActions');
   Object.entries(THEMES).forEach(([key, th]) => {
     if(state.appSettings.theme === key) return;
-    items.push({category: actionCat, icon: '🎨', label: t('commandPalette.actionSwitchTheme', {name: th.label}), run: () => setTheme(key)});
+    items.push({category: actionCat, icon: '🎨', label: t('commandPalette.actionSwitchTheme', {name: th.label()}), run: () => setTheme(key)});
   });
   return items;
 }

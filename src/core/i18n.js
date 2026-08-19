@@ -1,6 +1,11 @@
 /* ---------------- i18n ----------------
-   Nur Vorbereitung: alle sichtbaren UI-Strings laufen über t(), aber
-   aktuell ist nur `de` befüllt — es gibt noch keine echte Übersetzung.
+   Alle sichtbaren UI-Strings laufen über t(). Deutsch (`de`, hier fest
+   im Quellcode) ist die Autorensprache — neue Strings entstehen zuerst
+   nur hier, die Übersetzung nach `src/i18n/en.json` wird bewusst separat
+   und auf Anforderung gepflegt, nicht automatisch bei jeder Änderung.
+   build.js liest diese Datei und hängt sie als `translations.en = {...}`
+   ans CORE_JS-Bundle an (siehe BUILTIN_LANGS unten) — beide Sprachen
+   sind damit fest Teil jedes gebauten dist/*.html, kein Laufzeit-Fetch.
    Sprache ist geräte-lokal (localStorage), nicht Teil des Event-/
    Server-Storage — in der Server-Variante sonst geräteübergreifend
    geteilt, was für eine UI-Spracheinstellung falsch wäre.
@@ -31,7 +36,11 @@ const translations = {
       deleteConfirm: 'Event inkl. aller Checkpoints wirklich löschen?',
       emptyTitle: 'Noch kein Event angelegt',
       emptyHint: 'Leg dein erstes Alleycat an, setz Checkpoints auf der Karte und generier daraus automatisch das Manifest.',
-      createFirstEvent: '+ Erstes Event anlegen'
+      createFirstEvent: '+ Erstes Event anlegen',
+      importSqlite: 'SQLite importieren',
+      importSqliteTitle: 'Komplette lokale Datenbank aus .sqlite-Datei laden (ersetzt alle Events)',
+      exportSqlite: 'SQLite exportieren',
+      exportSqliteTitle: 'Komplette lokale Datenbank als .sqlite-Datei sichern'
     },
     rider: {
       noEventSelected: 'Kein Event ausgewählt.',
@@ -127,6 +136,8 @@ const translations = {
       defaultCheckpointName: 'Checkpoint {order}',
       searching: 'Suche …',
       searchPlaceholder: 'Adresse oder Ort suchen…',
+      searchToggleTitle: 'Suche',
+      cluePreviewToggleTitle: 'Clue-Vorschau',
       sidebarResizeTitle: 'Ziehen, um die Sidebar zu vergrößern',
       routeLegend: 'Route (Reihenfolge)',
       collapseSidebar: 'Sidebar einklappen',
@@ -356,6 +367,8 @@ const translations = {
       moveDown: 'Nach unten',
       eventNamePlaceholder: 'Eventname',
       eventSettingsHeading: 'Event-Einstellungen',
+      eventDateHeading: 'Datum',
+      eventDateLabel: 'Event-Datum',
       startAndCurfew: 'Start &amp; Curfew',
       startModeLabel: 'Start-Modus',
       manualStartOption: 'Manueller Startknopf',
@@ -505,12 +518,13 @@ const translations = {
       iconPackHeading: 'Icon-Pack',
       iconPackDesc: 'Bestimmt, wie Checkpoint-Typen auf der Karte und in der Legende dargestellt werden. Font Awesome und Material Symbols werden bei Auswahl von einem CDN nachgeladen.',
       languageHeading: 'Sprache',
-      languageDesc: 'Geräte-lokal wie Theme und Icon-Pack. Community-Sprachpakete als JSON hochladen — Dateiname muss dem Schema "alleycat-i18n-XX.json" folgen (z. B. alleycat-i18n-es.json), XX wird als Sprachcode übernommen. Fehlende Textstellen fallen automatisch auf Deutsch zurück.',
+      languageDesc: 'Geräte-lokal wie Theme und Icon-Pack. Deutsch und English sind fest eingebaut. Zusätzlich Community-Sprachpakete als JSON hochladen — Dateiname muss dem Schema "alleycat-i18n-XX.json" folgen (z. B. alleycat-i18n-es.json), XX wird als Sprachcode übernommen. Fehlende Textstellen fallen automatisch auf Deutsch zurück.',
       languagePackImport: 'Sprachpaket importieren',
       languagePackExportTemplate: 'Vorlage exportieren',
       languagePackCustomBadge: 'Community',
       languagePackNameError: 'Dateiname muss dem Schema "alleycat-i18n-XX.json" folgen (z. B. alleycat-i18n-es.json).',
       languagePackParseError: 'Datei konnte nicht als Sprachpaket gelesen werden (ungültiges JSON).',
+      languagePackBuiltinError: 'Deutsch und English sind fest eingebaut und können nicht per Sprachpaket überschrieben werden.',
       languagePackDeleteConfirm: 'Dieses Sprachpaket wirklich löschen?',
       unitsHeading: 'Einheiten',
       unitsDesc: 'Betrifft angezeigte Streckendistanzen und Uhrzeiten — geräte-lokal wie Theme und Icon-Pack.',
@@ -948,6 +962,19 @@ const translations = {
       noFinishersYet: 'Noch keine Fahrer im Ziel.',
       downloadButton: 'Herunterladen',
       shareButton: 'Teilen'
+    },
+    phpSetup: {
+      subtitle: 'Server-Verbindung einrichten',
+      apiEndpointLabel: 'API-Endpunkt',
+      apiEndpointPlaceholder: 'https://deinedomain.tld/php-backend/api.php',
+      apiKeyLabel: 'API-Key',
+      apiKeyPlaceholder: 'von install.php kopiert',
+      connectButton: 'Verbinden',
+      installHint: 'Endpunkt und Key erhältst du nach dem Ausführen von {installPhp} im {phpBackend}-Ordner. Zum späteren Zurücksetzen diese Seite mit {resetParam} an der URL aufrufen.',
+      errorFieldsRequired: 'Bitte beide Felder ausfüllen.',
+      errorKeyRejected: 'API-Key wurde vom Server abgelehnt.',
+      errorServerStatus: 'Server antwortete mit Fehler {status}.',
+      errorConnectionFailed: 'Verbindung fehlgeschlagen: {message} (CORS/Endpunkt prüfen)'
     }
   }
 };
@@ -963,7 +990,12 @@ const translations = {
    `checkpointTypes:custom` merges into CHECKPOINT_TYPES in checkpoint.js)
    and persisted device-locally under `i18n:customPacks` — separate from
    the `alleycat:lang` selection itself, which was already its own
-   standalone localStorage key before this step. */
+   standalone localStorage key before this step.
+   `de` and `en` are BUILTIN_LANGS — baked into every dist/*.html by
+   build.js (see the header comment above), not uploadable/deletable/
+   overwritable through this community-pack flow. */
+const BUILTIN_LANGS = ['de', 'en'];
+const BUILTIN_LANG_NAMES = {de: 'Deutsch', en: 'English'};
 async function loadCustomLanguagePacks(){
   try{
     const res = await storageGet('i18n:customPacks');
@@ -973,7 +1005,7 @@ async function loadCustomLanguagePacks(){
 }
 async function saveCustomLanguagePacks(){
   const packs = {};
-  Object.keys(translations).forEach(lang => { if(lang !== 'de') packs[lang] = translations[lang]; });
+  Object.keys(translations).forEach(lang => { if(!BUILTIN_LANGS.includes(lang)) packs[lang] = translations[lang]; });
   await storageSet('i18n:customPacks', JSON.stringify(packs));
 }
 function availableLanguages(){
@@ -981,7 +1013,7 @@ function availableLanguages(){
 }
 function languagePackDisplayName(code){
   const dict = translations[code];
-  return (dict && dict._meta && dict._meta.name) || code.toUpperCase();
+  return BUILTIN_LANG_NAMES[code] || (dict && dict._meta && dict._meta.name) || code.toUpperCase();
 }
 function exportLanguagePackTemplate(){
   downloadJSON(translations.de, 'alleycat-i18n-template.json');
@@ -993,6 +1025,7 @@ async function onLanguagePackFileChange(input){
   const match = file.name.match(/alleycat-i18n-([a-z]{2,3})\.json$/i);
   if(!match){ alert(t('settings.languagePackNameError')); return; }
   const code = match[1].toLowerCase();
+  if(BUILTIN_LANGS.includes(code)){ alert(t('settings.languagePackBuiltinError')); return; }
   let json;
   try{
     json = JSON.parse(await file.text());
@@ -1003,7 +1036,7 @@ async function onLanguagePackFileChange(input){
   render();
 }
 function deleteLanguagePack(code){
-  if(code === 'de' || !confirm(t('settings.languagePackDeleteConfirm'))) return;
+  if(BUILTIN_LANGS.includes(code) || !confirm(t('settings.languagePackDeleteConfirm'))) return;
   delete translations[code];
   saveCustomLanguagePacks();
   if(getCurrentLanguage() === code) setLanguage('de');

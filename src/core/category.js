@@ -5,8 +5,8 @@
    (auch aus Presets übernommen) — laufen NIE durch t(), da sie danach vom
    Nutzer umbenannt werden können wie jeder andere Eingabewert.             */
 const CATEGORY_PRESETS = [
-  {key: 'drivetrain', name: t('category.presetDrivetrainName'), options: [t('category.presetFixed'), t('category.presetFree')]},
-  {key: 'gender', name: t('category.presetGenderName'), options: [t('category.presetOpen'), t('category.presetFlinta')]}
+  {key: 'drivetrain', name: () => t('category.presetDrivetrainName'), options: () => [t('category.presetFixed'), t('category.presetFree')]},
+  {key: 'gender', name: () => t('category.presetGenderName'), options: () => [t('category.presetOpen'), t('category.presetFlinta')]}
 ];
 function withCategoryGroupDefaults(g){
   return Object.assign({id: uid('catgrp'), name: '', options: [], sortOrder: 0}, g);
@@ -15,9 +15,10 @@ function addCategoryPreset(presetKey){
   const preset = CATEGORY_PRESETS.find(p => p.key === presetKey);
   const evt = state.currentEvent;
   if(!preset || !evt) return;
+  const name = preset.name();
   evt.categoryGroups = evt.categoryGroups || [];
-  if(evt.categoryGroups.some(g => g.name === preset.name)) return;
-  evt.categoryGroups.push(withCategoryGroupDefaults({name: preset.name, options: [...preset.options], sortOrder: evt.categoryGroups.length}));
+  if(evt.categoryGroups.some(g => g.name === name)) return;
+  evt.categoryGroups.push(withCategoryGroupDefaults({name, options: preset.options(), sortOrder: evt.categoryGroups.length}));
   debouncedSave();
   renderRiders();
 }

@@ -8,6 +8,7 @@ let state = {
   confirmDeleteCpId: null,
   confirmDeleteEventId: null,
   settingsOpen: false,
+  eventDateSettingsOpen: false,
   loading: true,
   storageOk: true,
   checkinBibInput: '',
@@ -206,6 +207,15 @@ function applyStaticTranslations(){
   if(settingsBtn) settingsBtn.title = t('settings.title');
   const searchInput = document.getElementById('map-search-input');
   if(searchInput) searchInput.placeholder = t('map.searchPlaceholder');
+  const mapSearchToggle = document.getElementById('map-search-toggle');
+  if(mapSearchToggle) mapSearchToggle.title = t('map.searchToggleTitle');
+  const cluePreviewToggle = document.getElementById('clue-preview-toggle');
+  if(cluePreviewToggle) cluePreviewToggle.title = t('map.cluePreviewToggleTitle');
+  const sidebarCollapseToggle = document.getElementById('sidebar-collapse-toggle');
+  if(sidebarCollapseToggle){
+    const collapsed = window.innerWidth > SIDEBAR_BREAKPOINT && isEditorSidebarCollapsed();
+    sidebarCollapseToggle.title = collapsed ? t('map.expandSidebar') : t('map.collapseSidebar');
+  }
   const resizeHandle = document.getElementById('sidebar-resize-handle');
   if(resizeHandle) resizeHandle.title = t('map.sidebarResizeTitle');
   const legendMandatory = document.getElementById('legend-mandatory');
@@ -221,7 +231,6 @@ async function init(){
   await loadAppSettings();
   applyAppSettings();
   await loadCustomLanguagePacks();
-  applyStaticTranslations();
   await loadCustomCheckpointTypes();
   await loadEventsIndex();
   await seedDemoEventIfNeeded();
@@ -355,17 +364,17 @@ function initGlobalShortcuts(){
 /* ---------------- app settings: theme + icon pack ---------------- */
 const ICON_PACKS = {
   emoji: {
-    label: t('ui.iconPackEmojiLabel'), desc: t('ui.iconPackEmojiDesc'), cdn: null,
+    label: () => t('ui.iconPackEmojiLabel'), desc: () => t('ui.iconPackEmojiDesc'), cdn: null,
     render: (key) => typeIcon(key)
   },
   fa: {
-    label: t('ui.iconPackFaLabel'), desc: t('ui.iconPackFaDesc'),
+    label: () => t('ui.iconPackFaLabel'), desc: () => t('ui.iconPackFaDesc'),
     cdn: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css',
     icons: {qr: 'fa-solid fa-qrcode', photo: 'fa-solid fa-camera', item: 'fa-solid fa-box', custom: 'fa-solid fa-circle-question', challenge: 'fa-solid fa-trophy'},
     render(key){ return `<i class="${this.icons[key] || 'fa-solid fa-location-dot'}"></i>`; }
   },
   material: {
-    label: t('ui.iconPackMaterialLabel'), desc: t('ui.iconPackMaterialDesc'),
+    label: () => t('ui.iconPackMaterialLabel'), desc: () => t('ui.iconPackMaterialDesc'),
     cdn: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,500,0,0&display=block',
     icons: {qr: 'qr_code_2', photo: 'photo_camera', item: 'inventory_2', custom: 'help', challenge: 'emoji_events'},
     render(key){ return `<span class="material-symbols-outlined">${this.icons[key] || 'place'}</span>`; }
@@ -454,6 +463,7 @@ function closeSettingsMobileDetail(){
 
 /* ---------------- render: root ---------------- */
 function render(){
+  applyStaticTranslations();
   renderTopbar();
   document.getElementById('view-dashboard').classList.toggle('active', state.view === 'dashboard');
   document.getElementById('view-overview').classList.toggle('active', state.view === 'overview');
@@ -475,20 +485,22 @@ function render(){
   syncWakeLockForView();
 }
 
-const NAV_ITEMS = [
-  {view: 'overview', label: t('ui.navOverview'), shortLabel: t('ui.navOverview'), onclick: () => 'openOverview()',
-    icon: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>'},
-  {view: 'editor', label: t('ui.navMap'), shortLabel: t('ui.navMap'), onclick: evtId => `openEditor('${evtId}')`,
-    icon: '<path d="M12 21s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>'},
-  {view: 'riders', label: t('ui.navRiders'), shortLabel: t('ui.navRiders'), onclick: () => 'openRiders()',
-    icon: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/>'},
-  {view: 'checkin', label: t('ui.navCheckin'), shortLabel: t('ui.navCheckinShort'), onclick: () => 'openCheckin()',
-    icon: '<path d="M6 3v18"/><path d="M6 4h12l-3 4 3 4H6"/>'},
-  {view: 'leaderboard', label: t('ui.navLeaderboard'), shortLabel: t('ui.navLeaderboardShort'), onclick: () => 'openLeaderboard()',
-    icon: '<path d="M7 4h10v3a5 5 0 0 1-10 0V4z"/><path d="M7 5H4.5A2.5 2.5 0 0 0 7 9.5"/><path d="M17 5h2.5A2.5 2.5 0 0 1 17 9.5"/><path d="M12 12v3.5"/><path d="M9.5 19.5h5"/><path d="M10.3 15.5h3.4l.6 4h-4.6z"/>'},
-  {view: 'manifest', label: t('ui.navManifest'), shortLabel: t('ui.navManifestShort'), onclick: () => 'openManifest()',
-    icon: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M9.5 12.5h5"/><path d="M9.5 16h5"/>'}
-];
+function getNavItems(){
+  return [
+    {view: 'overview', label: t('ui.navOverview'), shortLabel: t('ui.navOverview'), onclick: () => 'openOverview()',
+      icon: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>'},
+    {view: 'editor', label: t('ui.navMap'), shortLabel: t('ui.navMap'), onclick: evtId => `openEditor('${evtId}')`,
+      icon: '<path d="M12 21s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>'},
+    {view: 'riders', label: t('ui.navRiders'), shortLabel: t('ui.navRiders'), onclick: () => 'openRiders()',
+      icon: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/>'},
+    {view: 'checkin', label: t('ui.navCheckin'), shortLabel: t('ui.navCheckinShort'), onclick: () => 'openCheckin()',
+      icon: '<path d="M6 3v18"/><path d="M6 4h12l-3 4 3 4H6"/>'},
+    {view: 'leaderboard', label: t('ui.navLeaderboard'), shortLabel: t('ui.navLeaderboardShort'), onclick: () => 'openLeaderboard()',
+      icon: '<path d="M7 4h10v3a5 5 0 0 1-10 0V4z"/><path d="M7 5H4.5A2.5 2.5 0 0 0 7 9.5"/><path d="M17 5h2.5A2.5 2.5 0 0 1 17 9.5"/><path d="M12 12v3.5"/><path d="M9.5 19.5h5"/><path d="M10.3 15.5h3.4l.6 4h-4.6z"/>'},
+    {view: 'manifest', label: t('ui.navManifest'), shortLabel: t('ui.navManifestShort'), onclick: () => 'openManifest()',
+      icon: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M9.5 12.5h5"/><path d="M9.5 16h5"/>'}
+  ];
+}
 function renderTopbar(){
   const sub = document.getElementById('topbar-sub');
   const actions = document.getElementById('topbar-actions');
@@ -510,15 +522,16 @@ function renderTopbar(){
 
   sub.textContent = state.currentEvent.name || t('common.unnamedEvent');
   const evtId = state.currentEvent.id;
+  const navItems = getNavItems();
   const navBtn = item =>
     `<button class="btn ${state.view === item.view ? 'btn-primary' : ''}" onclick="${item.onclick(evtId)}">${item.label}</button>`;
   actions.innerHTML = `
     <button class="btn btn-ghost" onclick="goDashboard()">${t('ui.backToAllEvents')}</button>
     ${state.currentEvent.status === 'running' ? `<span class="running-hint">${t('dataSafety.keepTabOpenHint')}</span>` : ''}
     ${renderStatusControl(state.currentEvent)}
-    <span class="topbar-nav-buttons">${NAV_ITEMS.map(navBtn).join('')}</span>
+    <span class="topbar-nav-buttons">${navItems.map(navBtn).join('')}</span>
   `;
-  bottomNav.innerHTML = NAV_ITEMS.map(item => `
+  bottomNav.innerHTML = navItems.map(item => `
     <button class="bottom-nav-item ${state.view === item.view ? 'active' : ''}" onclick="${item.onclick(evtId)}">
       <svg viewBox="0 0 24 24">${item.icon}</svg>
       <span>${item.shortLabel}</span>
@@ -529,11 +542,11 @@ function renderTopbar(){
 
 /* ---------------- render: settings ---------------- */
 const THEMES = {
-  feldpost: {label: t('settings.themeFeldpostLabel'), desc: t('settings.themeFeldpostDesc'), swatch: ['#17191a', '#eee5cd', '#ff5f1f', '#b23a2e']},
-  hell: {label: t('settings.themeHellLabel'), desc: t('settings.themeHellDesc'), swatch: ['#f4f1ea', '#fffdf7', '#e0551c', '#b23a2e']},
-  dunkel: {label: t('settings.themeDunkelLabel'), desc: t('settings.themeDunkelDesc'), swatch: ['#121212', '#1e1e1e', '#5b8cff', '#e05a4e']},
-  dracula: {label: t('settings.themeDraculaLabel'), desc: t('settings.themeDraculaDesc'), swatch: ['#282a36', '#2b2d3a', '#ff79c6', '#bd93f9']},
-  outdoor: {label: t('settings.themeOutdoorLabel'), desc: t('settings.themeOutdoorDesc'), swatch: ['#ffffff', '#000000', '#ffcc00', '#b30000']}
+  feldpost: {label: () => t('settings.themeFeldpostLabel'), desc: () => t('settings.themeFeldpostDesc'), swatch: ['#17191a', '#eee5cd', '#ff5f1f', '#b23a2e']},
+  hell: {label: () => t('settings.themeHellLabel'), desc: () => t('settings.themeHellDesc'), swatch: ['#f4f1ea', '#fffdf7', '#e0551c', '#b23a2e']},
+  dunkel: {label: () => t('settings.themeDunkelLabel'), desc: () => t('settings.themeDunkelDesc'), swatch: ['#121212', '#1e1e1e', '#5b8cff', '#e05a4e']},
+  dracula: {label: () => t('settings.themeDraculaLabel'), desc: () => t('settings.themeDraculaDesc'), swatch: ['#282a36', '#2b2d3a', '#ff79c6', '#bd93f9']},
+  outdoor: {label: () => t('settings.themeOutdoorLabel'), desc: () => t('settings.themeOutdoorDesc'), swatch: ['#ffffff', '#000000', '#ffcc00', '#b30000']}
 };
 /* Sidebar-Navigation (Paket 9): Gruppen+Reihenfolge fest, keine Registrierung
    von außen nötig (anders als FEATURE_REGISTRY) — es gibt hier nur die 7
@@ -588,8 +601,8 @@ function renderSettingsSectionTheme(){
   const themeCards = Object.entries(THEMES).map(([key, th]) => `
     <button class="option-card ${state.appSettings.theme === key ? 'active' : ''}" onclick="setTheme('${key}')">
       <span class="option-swatch">${th.swatch.map(c => `<span style="background:${c}"></span>`).join('')}</span>
-      <span class="option-card-label">${th.label}</span>
-      <span class="option-card-desc">${th.desc}</span>
+      <span class="option-card-label">${th.label()}</span>
+      <span class="option-card-desc">${th.desc()}</span>
     </button>
   `).join('');
   return `
@@ -604,8 +617,8 @@ function renderSettingsSectionIconPack(){
   const iconCards = Object.entries(ICON_PACKS).map(([key, p]) => `
     <button class="option-card ${state.appSettings.iconPack === key ? 'active' : ''}" onclick="setIconPack('${key}')">
       <span class="icon-preview-row">${['qr', 'photo', 'item', 'custom', 'challenge'].map(k => p.render(k)).join('')}</span>
-      <span class="option-card-label">${p.label}</span>
-      <span class="option-card-desc">${p.desc}</span>
+      <span class="option-card-label">${p.label()}</span>
+      <span class="option-card-desc">${p.desc()}</span>
     </button>
   `).join('');
   return `
@@ -625,7 +638,7 @@ function renderSettingsSectionLanguage(){
         ${availableLanguages().map(code => `
           <button class="option-card ${getCurrentLanguage() === code ? 'active' : ''}" onclick="setLanguage('${code}')">
             <span class="option-card-label">${escapeHtml(languagePackDisplayName(code))}</span>
-            ${code !== 'de' ? `<span class="option-card-desc">${t('settings.languagePackCustomBadge')}</span>` : ''}
+            ${!BUILTIN_LANGS.includes(code) ? `<span class="option-card-desc">${t('settings.languagePackCustomBadge')}</span>` : ''}
           </button>
         `).join('')}
       </div>
@@ -634,9 +647,9 @@ function renderSettingsSectionLanguage(){
         <button class="btn btn-sm" onclick="document.getElementById('import-language-pack-file').click()">${t('settings.languagePackImport')}</button>
         <button class="btn btn-sm" onclick="exportLanguagePackTemplate()">${t('settings.languagePackExportTemplate')}</button>
       </div>
-      ${availableLanguages().filter(c => c !== 'de').length ? `
+      ${availableLanguages().filter(c => !BUILTIN_LANGS.includes(c)).length ? `
         <div style="margin-top:10px; display:flex; flex-direction:column; gap:4px;">
-          ${availableLanguages().filter(c => c !== 'de').map(code => `
+          ${availableLanguages().filter(c => !BUILTIN_LANGS.includes(c)).map(code => `
             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
               <span class="settings-hint">${escapeHtml(languagePackDisplayName(code))} (${code})</span>
               <button type="button" class="cp-icon-btn" onclick="deleteLanguagePack('${code}')" title="${t('common.delete')}" aria-label="${t('common.delete')}">🗑</button>

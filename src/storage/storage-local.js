@@ -138,8 +138,8 @@ function renderStorageDashboardExtras(){
   if(hasSharedStorage) return '';
   return `
     <input type="file" id="import-sqlite-file" accept="application/x-sqlite3,.sqlite,.db" style="display:none;" onchange="onImportSqliteFile(this)">
-    <button class="btn" onclick="document.getElementById('import-sqlite-file').click()" title="Komplette lokale Datenbank aus .sqlite-Datei laden (ersetzt alle Events)">SQLite importieren</button>
-    <button class="btn" onclick="exportSqliteFile()" title="Komplette lokale Datenbank als .sqlite-Datei sichern">SQLite exportieren</button>
+    <button class="btn" onclick="document.getElementById('import-sqlite-file').click()" title="${t('dashboard.importSqliteTitle')}">${t('dashboard.importSqlite')}</button>
+    <button class="btn" onclick="exportSqliteFile()" title="${t('dashboard.exportSqliteTitle')}">${t('dashboard.exportSqlite')}</button>
   `;
 }
 /* Seeds the fictional demo event (demo-event.js) exactly once, only into a

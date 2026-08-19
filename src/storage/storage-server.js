@@ -65,39 +65,39 @@ function renderPhpSetup(error){
   document.getElementById('app').innerHTML = `
     <div style="max-width:480px; margin:60px auto; padding:32px; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:3px solid var(--hivis); border-radius:6px;">
       <h2 style="margin:0 0 4px;">Alleycat Dispatch</h2>
-      <div style="color:var(--steel); font-size:13px; font-family:'JetBrains Mono'; margin-bottom:22px;">Server-Verbindung einrichten</div>
+      <div style="color:var(--steel); font-size:13px; font-family:'JetBrains Mono'; margin-bottom:22px;">${t('phpSetup.subtitle')}</div>
       ${error ? `<div style="background:rgba(178,58,46,0.15); border:1px solid var(--stamp); color:#ff9a8f; padding:10px 12px; border-radius:4px; font-size:13px; margin-bottom:14px;">${escapeHtml(error)}</div>` : ''}
-      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">API-Endpunkt</label>
-      <input type="text" id="php-setup-url" placeholder="https://deinedomain.tld/php-backend/api.php"
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('phpSetup.apiEndpointLabel')}</label>
+      <input type="text" id="php-setup-url" placeholder="${escapeHtml(t('phpSetup.apiEndpointPlaceholder'))}"
         style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
-      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">API-Key</label>
-      <input type="text" id="php-setup-key" placeholder="von install.php kopiert"
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('phpSetup.apiKeyLabel')}</label>
+      <input type="text" id="php-setup-key" placeholder="${escapeHtml(t('phpSetup.apiKeyPlaceholder'))}"
         style="width:100%; padding:9px 10px; margin-bottom:20px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
-      <button class="btn btn-primary" style="width:100%;" onclick="submitPhpSetup()">Verbinden</button>
-      <div style="color:var(--steel); font-size:11.5px; margin-top:14px; line-height:1.5;">Endpunkt und Key erhältst du nach dem Ausführen von <code>install.php</code> im <code>php-backend</code>-Ordner. Zum späteren Zurücksetzen diese Seite mit <code>?reset-php-config</code> an der URL aufrufen.</div>
+      <button class="btn btn-primary" style="width:100%;" onclick="submitPhpSetup()">${t('phpSetup.connectButton')}</button>
+      <div style="color:var(--steel); font-size:11.5px; margin-top:14px; line-height:1.5;">${t('phpSetup.installHint', {installPhp: '<code>install.php</code>', phpBackend: '<code>php-backend</code>', resetParam: '<code>?reset-php-config</code>'})}</div>
     </div>
   `;
 }
 async function submitPhpSetup(){
   const apiUrl = (document.getElementById('php-setup-url').value || '').trim().replace(/\/$/, '');
   const apiKey = (document.getElementById('php-setup-key').value || '').trim();
-  if(!apiUrl || !apiKey){ renderPhpSetup('Bitte beide Felder ausfüllen.'); return; }
+  if(!apiUrl || !apiKey){ renderPhpSetup(t('phpSetup.errorFieldsRequired')); return; }
   savePhpConfig({apiUrl, apiKey});
   try{
     const res = await phpRequest('GET', 'events:index');
     if(res.status === 401){
       localStorage.removeItem('alleycat:php-config');
-      renderPhpSetup('API-Key wurde vom Server abgelehnt.');
+      renderPhpSetup(t('phpSetup.errorKeyRejected'));
       return;
     }
     if(!res.ok && res.status !== 404){
       localStorage.removeItem('alleycat:php-config');
-      renderPhpSetup('Server antwortete mit Fehler ' + res.status + '.');
+      renderPhpSetup(t('phpSetup.errorServerStatus', {status: res.status}));
       return;
     }
   }catch(e){
     localStorage.removeItem('alleycat:php-config');
-    renderPhpSetup('Verbindung fehlgeschlagen: ' + e.message + ' (CORS/Endpunkt prüfen)');
+    renderPhpSetup(t('phpSetup.errorConnectionFailed', {message: e.message}));
     return;
   }
   location.reload();

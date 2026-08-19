@@ -334,7 +334,7 @@ function renderRidersSectionTeams(evt){
 }
 function renderRidersSectionCategories(evt){
   const groups = (evt.categoryGroups || []).slice().sort((a,b) => a.sortOrder - b.sortOrder);
-  const availablePresets = CATEGORY_PRESETS.filter(p => !groups.some(g => g.name === p.name));
+  const availablePresets = CATEGORY_PRESETS.filter(p => !groups.some(g => g.name === p.name()));
   const categoryGroupRows = groups.map(g => `
     <div class="type-row category-group-row">
       <div class="type-info" style="flex:1;">
@@ -375,7 +375,7 @@ function renderRidersSectionCategories(evt){
     </div>
   ` : `
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-      ${availablePresets.map(p => `<button class="btn btn-sm" onclick="addCategoryPreset('${p.key}')">+ ${escapeHtml(p.name)}</button>`).join('')}
+      ${availablePresets.map(p => `<button class="btn btn-sm" onclick="addCategoryPreset('${p.key}')">+ ${escapeHtml(p.name())}</button>`).join('')}
       <button class="btn" onclick="toggleNewCategoryGroupForm()">${t('category.newGroup')}</button>
     </div>
   `;

@@ -37,7 +37,7 @@ Everything here must build **byte-identical** across both variants — order isn
 
 | File | Owns |
 |---|---|
-| `i18n.js` | translations dict, `t(key, params)`, community language packs |
+| `i18n.js` | translations dict (`de` source), `t(key, params)`, `BUILTIN_LANGS`, community language packs |
 | `utils.js` | formatters (distance/time/coords), `escapeHtml`, `uid`, `haversineDistanceKm`, `computeRouteLegs` |
 | `checkpoint.js` | `CHECKPOINT_TYPES`, checkpoint CRUD/edit/drag/personnel, editor sidebar render |
 | `team.js` | `evt.teams` CRUD, `computeTeamStats` (scoring modes) |
@@ -90,7 +90,7 @@ All persistence goes through `storageGet(key)`/`storageSet(key, value)`/`storage
 
 ## Code style & naming conventions
 
-- **Language split**: UI-facing strings are German, routed through `t('namespace.key', params)` (`i18n.js`) — never hardcode visible text, and never wrap `t()` around user-entered content (checkpoint/team/category names, clues). Code identifiers (functions, variables, CSS classes, comments) are English.
+- **Language split**: UI-facing strings are authored in German first, routed through `t('namespace.key', params)` (`i18n.js`) — never hardcode visible text, and never wrap `t()` around user-entered content (checkpoint/team/category names, clues). Code identifiers (functions, variables, CSS classes, comments) are English. `de` (source, in `i18n.js`) and `en` (`src/i18n/en.json`, injected by `build.js` as `translations.en`) are both `BUILTIN_LANGS`, always shipped, selectable in Settings — `t()`'s per-key fallback to `de` means new keys are safe to add German-only. **Do not edit `src/i18n/en.json` proactively when adding/changing strings** — the user syncs it in a separate pass, on request.
 - **Function naming**: `renderX()` returns/writes HTML, `onXChange()`/`onXInput()` are input handlers, `toggleX()`/`selectX()` flip UI state, `computeX()` are pure derived-data functions with no side effects.
 - **Escaping**: `escapeHtml()` for HTML interpolation, a local `esc()` inside `exportRouteGPX()` for XML, `csvEscape()` for CSV (also neutralizes leading `= + - @` against formula injection).
 - **Numeric config gotcha**: never read with `config.x || default` — a real `0` is falsy and silently falls back. Use the `numOr(value, fallback)` helper (`Number.isFinite` check).
