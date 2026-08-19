@@ -19,6 +19,7 @@ function startAutoBackup(){
   autoBackupInterval = setInterval(runAutoBackupTick, minutes * 60000);
 }
 async function runAutoBackupTick(){
+  if(!state.appSettings.autoBackupEnabled) return;
   const evt = state.currentEvent;
   if(!evt || evt.status !== 'running') return;
   await triggerBackupNow(true);
@@ -49,6 +50,11 @@ function onAutoBackupIntervalChange(value){
   state.appSettings.autoBackupIntervalMinutes = Math.max(1, Math.min(180, parseInt(value, 10) || 10));
   saveAppSettings();
   startAutoBackup();
+  render();
+}
+function onAutoBackupEnabledChange(checked){
+  state.appSettings.autoBackupEnabled = !!checked;
+  saveAppSettings();
   render();
 }
 
@@ -122,15 +128,25 @@ async function onRequestPersistentStorageClick(){
 
 /* ---------------- settings: data-safety section ---------------- */
 function renderDataSafetySection(){
+  const autoBackupEnabled = !!state.appSettings.autoBackupEnabled;
   const backupSection = (typeof hasSharedStorage !== 'undefined' && hasSharedStorage) ? '' : `
     <div class="settings-section">
       <h3>${t('dataSafety.backupHeading')}</h3>
       <div class="settings-section-desc">${t('dataSafety.backupDesc')}</div>
       <div class="data-safety-row">
-        <label>${t('dataSafety.intervalLabel')}</label>
-        <input type="number" min="1" max="180" style="width:80px;" value="${state.appSettings.autoBackupIntervalMinutes || 10}" onchange="onAutoBackupIntervalChange(this.value)">
-        <span class="settings-section-desc" style="margin:0;">${t('dataSafety.intervalUnit')}</span>
+        <label class="toggle-switch">
+          <input type="checkbox" ${autoBackupEnabled ? 'checked' : ''} onchange="onAutoBackupEnabledChange(this.checked)">
+          <span class="toggle-switch-track"></span>
+        </label>
+        <span>${t('dataSafety.autoBackupEnabledLabel')}</span>
       </div>
+      ${autoBackupEnabled ? `
+        <div class="data-safety-row">
+          <label>${t('dataSafety.intervalLabel')}</label>
+          <input type="number" min="1" max="180" style="width:80px;" value="${state.appSettings.autoBackupIntervalMinutes || 10}" onchange="onAutoBackupIntervalChange(this.value)">
+          <span class="settings-section-desc" style="margin:0;">${t('dataSafety.intervalUnit')}</span>
+        </div>
+      ` : ''}
       <button type="button" class="btn btn-sm" onclick="triggerBackupNow(false)">${t('dataSafety.backupNowButton')}</button>
     </div>
   `;

@@ -30,6 +30,7 @@ Die beiden Übergabedokumente wurden nacheinander geschrieben und nummerieren di
 | 7 | Beamer-Erweiterungen | Phase 23 komplett | S–M | ❌ übersprungen (19.08.2026), auf Nutzerwunsch |
 | 8 | Paket-Abholung/-Zustellung | nicht Teil der Übergabe-Doks | S | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
 | 9 | Settings-Sidebar-Redesign | nicht Teil der Übergabe-Doks | M | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
+| 10 | Auto-Backup an/ausschaltbar | nicht Teil der Übergabe-Doks | S | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
 | — | *Idee, zurückgestellt:* Offline-Gerätesync (früher Paket 8) | Phase 22 komplett | L (unsicher) | ⚠️ Kamera/QR-Grundlage (jsQR) bereits vorhanden, Stream-Protokoll komplett offen — **kein aktives Arbeitspaket**, wandert zu den "vertagten Ideen" wie Kopfgeld-Modus/Service-Worker in der ursprünglichen Übergabe |
 
 Aufwand-Skala: S = klein (wenige, isolierte Änderungen), M = mittel (ein neues Modul oder mehrere verteilte Änderungen), L = groß (neues Modul + Umbau bestehender Kernlogik), XL = sehr groß (mehrere neue Module + Migration bestehender, produktiver Daten).
@@ -187,6 +188,16 @@ Ad-hoc-UX-Wunsch (19.08.2026): die Settings-Seite war eine einzige lange Scroll-
 - [x] `jumpToFeatureConfig('offline-settings')` (Feature-Registry-Zahnrad-Button) wählt jetzt `state.settingsSection = 'dataSafety'` statt nur zu scrollen — die anderen 3 `configScreen`-Ziele (Sound-Hook/Kategorien/Spielmodi) navigieren wie schon vorher zu Übersicht/Fahrer-Ansicht, nicht in die Settings, daher unverändert (19.08.2026)
 
 **Umsetzung (19.08.2026):** 771/771 Tests (+16, davon 4 bestehende Settings-Tests angepasst, die vorher naiv den kompletten `#view-settings`-Seiteninhalt nach allen Überschriften gleichzeitig durchsucht hatten — nach dem Umbau ist immer nur der aktive Screen im DOM). Bewusst **kein** 1:1-Umbau auf "jede `<h3>`-Überschrift wird ein eigener Nav-Punkt" — Backup/Speicher/Offline-Bereitschaft bleiben als eine zusammenhängende "Datensicherheit"-Seite mit mehreren Unterabschnitten (spart einen Umbau von `data-safety.js`/`offline-tiles.js`, deren Render-Funktionen bereits ineinandergreifen, für einen Komfortgewinn, der bei nur 3 Einträgen in einer Gruppe gering gewesen wäre). Sidebar-Nav-Labels als `() => t(...)`-Funktionen (nicht als am Ladezeitpunkt ausgewertete Strings wie bei `THEMES`) — derselbe Grund wie bei `FEATURE_REGISTRY`: ein nachträglich geladenes Community-Sprachpaket muss den Text bei jedem `render()` neu übersetzen können.
+
+### Paket 10 — Auto-Backup an/ausschaltbar (nicht Teil der ursprünglichen Übergabe-Dokumente)
+
+Ad-hoc-Nutzerwunsch (19.08.2026): Auto-Backup lief bisher immer automatisch mit, sobald ein Rennen den Status "Läuft" hatte — keine Möglichkeit, es abzuschalten. Jetzt ein eigener Ein/Aus-Schalter in den Einstellungen, **Default: aus**.
+
+- [x] `state.appSettings.autoBackupEnabled` (device-lokal wie Theme/Icon-Pack/Intervall), Default `false` (19.08.2026)
+- [x] `runAutoBackupTick()` bricht sofort ab, wenn deaktiviert — noch vor der bestehenden "läuft ein Rennen?"-Prüfung (19.08.2026)
+- [x] Toggle-Switch in der Datensicherheit-Sektion (wiederverwendet dieselbe `.toggle-switch`-Komponente wie die Feature-Registry); das Intervall-Feld wird nur angezeigt, wenn aktiviert (19.08.2026)
+
+**Umsetzung (19.08.2026):** 777/777 Tests (+6). Der manuelle "Jetzt sichern"-Button bleibt bewusst unabhängig vom Schalter immer verfügbar — der Schalter steuert nur den automatischen Intervall-Download, nicht die manuelle Aktion. Bestehende Nutzer mit einer schon gespeicherten `appSettings`-Blob ohne dieses Feld bekommen automatisch den neuen Default (`false`) über den bestehenden `Object.assign(default, gespeichert)`-Merge in `loadAppSettings()` — kein Migrations-Code nötig.
 
 ---
 

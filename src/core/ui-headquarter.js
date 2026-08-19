@@ -21,7 +21,7 @@ let state = {
   qrScannerActive: false,
   qrScanError: '',
   manifestSettingsOpen: false,
-  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal'},
+  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal'},
   featureRegistrySearch: '',
   settingsReturnView: 'dashboard',
   newTypeFormOpen: false,
@@ -365,7 +365,7 @@ function typeIconHtml(key){
 async function loadAppSettings(){
   try{
     const res = await storageGet('app:settings');
-    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal'}, JSON.parse(res.value));
+    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal'}, JSON.parse(res.value));
   }catch(e){ /* keep defaults */ }
 }
 async function saveAppSettings(){

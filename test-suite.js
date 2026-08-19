@@ -532,6 +532,40 @@ async function runAlleycatTestSuite(){
     }
     checkEqual('formatMinutesAgo erkennt "gerade eben"', formatMinutesAgo(toLocalDateTimeInputValue(new Date())), t('dataSafety.justNow'));
 
+    /* Auto-Backup an/ausschaltbar, Default aus (Ad-hoc-Nutzerwunsch 19.08.2026).
+       triggerBackupNow() wird hier durch einen Spy ersetzt statt echt aufgerufen
+       zu werden, damit der Test nicht bei jedem Lauf einen zweiten echten
+       Download auslöst (der erste, echte kommt bereits aus dem Check oben). */
+    {
+      const origTriggerBackupNow = window.triggerBackupNow;
+      let backupCalls = 0;
+      window.triggerBackupNow = async () => { backupCalls++; };
+      const statusBeforeAutoBackup = evt.status;
+
+      checkEqual('appSettings.autoBackupEnabled ist per Default deaktiviert', state.appSettings.autoBackupEnabled, false);
+
+      evt.status = 'running';
+      await runAutoBackupTick();
+      checkEqual('runAutoBackupTick tut nichts, wenn deaktiviert (auch während "Läuft")', backupCalls, 0);
+
+      onAutoBackupEnabledChange(true);
+      checkEqual('onAutoBackupEnabledChange aktiviert Auto-Backup', state.appSettings.autoBackupEnabled, true);
+
+      evt.status = 'planning';
+      await runAutoBackupTick();
+      checkEqual('runAutoBackupTick tut nichts, wenn kein Rennen läuft (auch wenn aktiviert)', backupCalls, 0);
+
+      evt.status = 'running';
+      await runAutoBackupTick();
+      checkEqual('runAutoBackupTick löst Backup aus, wenn aktiviert + "Läuft"', backupCalls, 1);
+
+      onAutoBackupEnabledChange(false);
+      checkEqual('onAutoBackupEnabledChange deaktiviert wieder', state.appSettings.autoBackupEnabled, false);
+
+      evt.status = statusBeforeAutoBackup;
+      window.triggerBackupNow = origTriggerBackupNow;
+    }
+
     const wakeLockOk = await requestWakeLock();
     check('requestWakeLock läuft ohne Fehler (true/false je nach Support)', wakeLockOk === true || wakeLockOk === false);
     releaseWakeLock();
