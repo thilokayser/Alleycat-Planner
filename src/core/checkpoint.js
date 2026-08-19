@@ -213,11 +213,37 @@ function onCpDragMove(e){
     const mid = rect.top + rect.height / 2;
     if(e.clientY < mid){ target = sibling; break; }
   }
-  if(target){
-    if(row.nextElementSibling !== target) list.insertBefore(row, target);
-  } else if(list.lastElementChild !== row){
-    list.appendChild(row);
-  }
+  const beforeRects = new Map(siblings.map(r => [r, r.getBoundingClientRect()]));
+  const moved = (() => {
+    if(target && row.nextElementSibling !== target){
+      list.insertBefore(row, target);
+      return true;
+    } else if(!target && list.lastElementChild !== row){
+      list.appendChild(row);
+      return true;
+    }
+    return false;
+  })();
+  if(moved) flipAnimateCpRows(siblings, beforeRects);
+}
+/* FLIP (First-Last-Invert-Play): the reorder above already happened by the
+   time this runs, so displaced siblings would otherwise just snap to their
+   new slot. Read each one's new position, offset it back to where it was
+   with an un-transitioned transform, then release the transform on the next
+   frame so the browser animates the settle instead of jump-cutting it. */
+function flipAnimateCpRows(rows, beforeRects){
+  rows.forEach(r => {
+    const before = beforeRects.get(r);
+    const after = r.getBoundingClientRect();
+    const dy = before.top - after.top;
+    if(Math.abs(dy) < 1) return;
+    r.style.transition = 'none';
+    r.style.transform = `translateY(${dy}px)`;
+    requestAnimationFrame(() => {
+      r.style.transition = 'transform .18s ease';
+      r.style.transform = '';
+    });
+  });
 }
 function onCpDragEnd(e){
   if(!cpDragState) return;
@@ -645,9 +671,9 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
         return `
           <div class="cp-row ${editing ? 'editing' : ''} ${cp.mandatory ? '' : 'optional'} ${itemLocked ? 'locked' : ''} ${state.cpBulkSelectedIds.includes(cp.id) ? 'bulk-selected' : ''}" data-cp-id="${cp.id}" onclick="onCpRowClick(event, '${cp.id}')" onmouseenter="setCpMarkerHoverSync('${cp.id}', true)" onmouseleave="setCpMarkerHoverSync('${cp.id}', false)">
             <div class="cp-row-top">
-              <span class="cp-drag-handle" title="${t('checkpoint.dragToReorder')}" ${(itemLocked || groupView) ? '' : `onpointerdown="onCpDragStart(event, '${cp.id}')"`} onclick="event.stopPropagation()">
+              ${(itemLocked || groupView) ? '' : `<span class="cp-drag-handle" title="${t('checkpoint.dragToReorder')}" onpointerdown="onCpDragStart(event, '${cp.id}')" onclick="event.stopPropagation()">
                 <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.4"/><circle cx="7.5" cy="2.5" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13.5" r="1.4"/><circle cx="7.5" cy="13.5" r="1.4"/></svg>
-              </span>
+              </span>`}
               <div class="cp-no">${cp.order}</div>
               <span class="cp-row-chevron">${editing ? '▾' : '▸'}</span>
               <div class="cp-name ${state.cluePreviewMode ? 'cp-name-clue' : ''}" id="row-name-${cp.id}">${state.cluePreviewMode ? (cp.clue ? escapeHtml(cp.clue) : `<i>${t('cluePreview.noClue')}</i>`) : escapeHtml(cp.name || t('checkpoint.noName'))}</div>
