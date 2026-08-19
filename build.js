@@ -37,6 +37,7 @@ const CORE_FILES = [
   'race-state.js',
   'rules-engine.js',
   'game-modes.js',
+  'race-formats.js',
   'dashboard.js',
   'demo-event.js',
   'sound-hook.js',

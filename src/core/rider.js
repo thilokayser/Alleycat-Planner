@@ -10,7 +10,12 @@ function withRiderDefaults(rider){
     raceStatus: '',
     categories: {},
     checkpointOrderOverrides: [],
-    gameFlags: {}
+    gameFlags: {},
+    cargoCapacityKg: 0,
+    cargoDelivered: {},
+    gearRatio: '',
+    isBrakeless: false,
+    isWorkbike: false
   }, rider);
 }
 
@@ -47,6 +52,32 @@ function onRiderEmergencyInput(bib, value){
   if(!r) return;
   r.emergencyContact = value;
   debouncedSave();
+}
+function onRiderCargoCapacityChange(bib, value){
+  const r = (state.currentEvent.riders || []).find(r => r.bib === bib);
+  if(!r) return;
+  r.cargoCapacityKg = Math.max(0, parseFloat(value) || 0);
+  debouncedSave();
+}
+function onRiderGearRatioChange(bib, value){
+  const r = (state.currentEvent.riders || []).find(r => r.bib === bib);
+  if(!r) return;
+  r.gearRatio = value;
+  debouncedSave();
+}
+function onRiderBrakelessChange(bib, checked){
+  const r = (state.currentEvent.riders || []).find(r => r.bib === bib);
+  if(!r) return;
+  r.isBrakeless = checked;
+  debouncedSave();
+  renderRiders();
+}
+function onRiderWorkbikeChange(bib, checked){
+  const r = (state.currentEvent.riders || []).find(r => r.bib === bib);
+  if(!r) return;
+  r.isWorkbike = checked;
+  debouncedSave();
+  renderRiders();
 }
 function toggleTeamsPanel(){
   state.teamsPanelOpen = !state.teamsPanelOpen;
@@ -129,6 +160,19 @@ function renderRiders(){
         `).join('')}
       </div>` : ''}
       <input type="text" class="rider-emergency-input" placeholder="${t('rider.emergencyPlaceholder')}" value="${escapeHtml(r.emergencyContact || '')}" oninput="onRiderEmergencyInput(${r.bib}, this.value)">
+      ${isFeatureEnabled('cargo_module', evt) ? `
+      <div class="rider-cargo-row">
+        <label>${t('raceFormats.cargoCapacityLabel')}</label>
+        <input type="text" inputmode="decimal" value="${r.cargoCapacityKg || 0}" onchange="onRiderCargoCapacityChange(${r.bib}, this.value)">
+      </div>
+      ` : ''}
+      ${isFeatureEnabled('trackbike_attributes', evt) ? `
+      <div class="rider-trackbike-row">
+        <input type="text" class="rider-gear-ratio-input" placeholder="${t('raceFormats.gearRatioPlaceholder')}" value="${escapeHtml(r.gearRatio || '')}" oninput="onRiderGearRatioChange(${r.bib}, this.value)">
+        <label class="checkbox-row-sm"><input type="checkbox" ${r.isBrakeless ? 'checked' : ''} onchange="onRiderBrakelessChange(${r.bib}, this.checked)"> ${t('raceFormats.brakelessLabel')}</label>
+        <label class="checkbox-row-sm"><input type="checkbox" ${r.isWorkbike ? 'checked' : ''} onchange="onRiderWorkbikeChange(${r.bib}, this.checked)"> ${t('raceFormats.workbikeLabel')}</label>
+      </div>
+      ` : ''}
     </div>
   `).join('');
 

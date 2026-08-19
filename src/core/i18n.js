@@ -703,7 +703,8 @@ const translations = {
         event_locations: 'Sonderorte (HQ/Afterparty)',
         image: 'Bild',
         table: 'Tabelle',
-        variable_text: 'Text mit Platzhaltern'
+        variable_text: 'Text mit Platzhaltern',
+        clue_sheet: 'Rätsel-Sheet'
       },
       toggleButton: 'PDF-Baukasten',
       hint: 'Zusätzliche Seiten, die an Manifest und/oder Spokecards-PDF angehängt werden — Reihenfolge per Pfeil-Buttons, pro Block wählbar für welche Dokumente er gilt.',
@@ -756,7 +757,30 @@ const translations = {
       previewManifest: 'Vorschau Manifest',
       previewSpokecards: 'Vorschau Spokecards',
       previewEmpty: 'Keine aktiven Blöcke für dieses Dokument.',
-      previewFilename: 'vorschau-{doc}.pdf'
+      previewFilename: 'vorschau-{doc}.pdf',
+      clueSheetAuto: 'Wird automatisch aus den Checkpoints erzeugt — Straßennetz-Hinweis nutzt das bestehende "Hinweis"-Feld des jeweiligen Checkpoints.',
+      clueSheetShiftLabel: 'Chiffre-Schlüssel (1–9)',
+      clueSheetStampsLabel: 'Leeres Stempelfeld pro Checkpoint drucken',
+      clueSheetLegend: 'Koordinaten-Chiffre: jede Ziffer um {shift} erhöht (mod 10) — zum Entschlüsseln {shift} abziehen.'
+    },
+    raceFormats: {
+      cargoItemCheckboxLabel: 'Frachtgut an diesem Checkpoint',
+      cargoItemNamePlaceholder: 'Bezeichnung (z. B. Sack Mehl)',
+      cargoWeightLabel: 'Gewicht (kg)',
+      cargoVolumeLabel: 'Volumen (Einheiten)',
+      cargoBonusPointsLabel: 'Bonuspunkte',
+      cargoCapacityLabel: 'Frachtkapazität (kg)',
+      cargoSectionHeading: 'Fracht',
+      cargoSummaryLine: '{weight} kg von {capacity} kg geliefert · {points} Bonuspunkte',
+      cargoLedgerReason: 'Fracht geliefert: {name}',
+      pointsAbbrev: 'Pkt.',
+      gearRatioPlaceholder: 'Übersetzung (z. B. 48x17 / 2.82)',
+      brakelessLabel: 'Bremsenlos',
+      workbikeLabel: 'Lastenrad',
+      fastestBrakelessBadge: '⚡ Bremsenlos-Rekord',
+      fastestBrakelessTitle: 'Schnellster Fahrer ohne Bremse',
+      bestWorkbikeBadge: '📦 Lastenrad-Rekord',
+      bestWorkbikeTitle: 'Schnellstes Lastenrad'
     },
     gameModes: {
       type: {
@@ -897,7 +921,11 @@ const translations = {
       categoriesName: 'Kategorien',
       categoriesDesc: 'Frei definierbare Kategorie-Gruppen pro Fahrer (z. B. Antrieb, Gender).',
       gameModesName: 'Spielmodi',
-      gameModesDesc: 'Zeitfenster, Bonus-CPs, Battle Royale, Joker und weitere optionale Rennformate.'
+      gameModesDesc: 'Zeitfenster, Bonus-CPs, Battle Royale, Joker und weitere optionale Rennformate.',
+      cargoModuleName: 'Cargo-Modus',
+      cargoModuleDesc: 'Frachtgut-Definitionen an Checkpoints, Frachtkapazität pro Fahrer, Bonuspunkte im Ziel-Check-in für gelieferte Fracht.',
+      trackbikeName: 'Trackbike-Attribute',
+      trackbikeDesc: 'Übersetzung, Bremsenlos, Lastenrad — zusätzliche Fahrer-Eigenschaften mit Leaderboard-Filter und Rekord-Badges.'
     },
     socialShare: {
       createButton: '🎉 Ergebnis-Karte erstellen',

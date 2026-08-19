@@ -61,6 +61,8 @@ function riderMatchesStatusFilter(r, filter){
   if(filter === 'eliminated') return r.raceStatus === 'eliminated';
   if(filter === 'arrived') return !!r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns' && r.raceStatus !== 'eliminated';
   if(filter === 'underway') return !r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns' && r.raceStatus !== 'eliminated';
+  if(filter === 'brakeless') return !!r.isBrakeless;
+  if(filter === 'workbike') return !!r.isWorkbike;
   return true;
 }
 function setLeaderboardTab(tab){
@@ -96,7 +98,7 @@ function renderLeaderboard(){
     if(tm) activeFilters.push({label: tm.name, onclick: `removeLeaderboardFilter('team')`});
   }
   if(state.leaderboardStatusFilter){
-    const statusLabels = {underway: t('leaderboard.statusUnderway'), arrived: t('checkin.statusArrived'), dnf: t('checkin.statusDnf'), dns: t('checkin.statusDns')};
+    const statusLabels = {underway: t('leaderboard.statusUnderway'), arrived: t('checkin.statusArrived'), dnf: t('checkin.statusDnf'), dns: t('checkin.statusDns'), brakeless: t('raceFormats.brakelessLabel'), workbike: t('raceFormats.workbikeLabel')};
     activeFilters.push({label: statusLabels[state.leaderboardStatusFilter] || state.leaderboardStatusFilter, onclick: `removeLeaderboardFilter('status')`});
   }
   groups.forEach(g => {
@@ -236,7 +238,7 @@ function renderLeaderboard(){
 
     return `
       <tr class="lb-row ${r.finishTime ? 'arrived' : 'missing'}">
-        <td class="lb-rider">${rankBadge}<span class="lb-bib">#${r.bib}</span><span class="lb-name">${escapeHtml(r.name || '—')}</span>${teamBadgeHtml(evt, r.teamId)}</td>
+        <td class="lb-rider">${rankBadge}<span class="lb-bib">#${r.bib}</span><span class="lb-name">${escapeHtml(r.name || '—')}</span>${teamBadgeHtml(evt, r.teamId)}${raceFormatsBadgeHtml(evt, r)}</td>
         ${cells}
         <td>${statusHtml}</td>
         <td><span class="lb-progress-tag">${t('leaderboard.progressCell', {done: doneMandatory, total: mandatoryCps.length, doneAll: completed.length, totalAll: cps.length})}</span></td>
@@ -263,6 +265,10 @@ function renderLeaderboard(){
         <option value="dnf" ${state.leaderboardStatusFilter === 'dnf' ? 'selected' : ''}>${t('checkin.statusDnf')}</option>
         <option value="dns" ${state.leaderboardStatusFilter === 'dns' ? 'selected' : ''}>${t('checkin.statusDns')}</option>
         ${(evt.riders || []).some(r => r.raceStatus === 'eliminated') ? `<option value="eliminated" ${state.leaderboardStatusFilter === 'eliminated' ? 'selected' : ''}>${t('gameModes.eliminatedStatus')}</option>` : ''}
+        ${isFeatureEnabled('trackbike_attributes', evt) ? `
+        <option value="brakeless" ${state.leaderboardStatusFilter === 'brakeless' ? 'selected' : ''}>${t('raceFormats.brakelessLabel')}</option>
+        <option value="workbike" ${state.leaderboardStatusFilter === 'workbike' ? 'selected' : ''}>${t('raceFormats.workbikeLabel')}</option>
+        ` : ''}
       </select>
       ${teams.length ? `
         <select class="leaderboard-team-filter" onchange="onLeaderboardTeamFilterChange(this.value)">

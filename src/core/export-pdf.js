@@ -238,6 +238,38 @@ function renderPdfBlockColumn(doc, b, evt, x, colRight, y, lineH, pageH, paginat
         y += lineH * 0.95;
       });
     }
+  }else if(b.type === 'clue_sheet'){
+    const shift = Number.isFinite(b.config.cipherShift) ? b.config.cipherShift : 3;
+    const includeStamps = b.config.includeStamps !== false;
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(STEEL);
+    doc.text(t('pdfBlocks.clueSheetLegend', {shift}), x, y);
+    y += lineH;
+    const checkpoints = evt.checkpoints.slice().sort((a, c) => a.order - c.order);
+    checkpoints.forEach(cp => {
+      maybeBreak();
+      doc.setFont('courier', 'bold'); doc.setFontSize(9); doc.setTextColor(INK);
+      doc.text(String(cp.order).padStart(2, '0'), x, y);
+      let tx = x + colW * 0.06;
+      if(includeStamps){
+        const boxSize = lineH * 1.2;
+        doc.setDrawColor(STEEL); doc.setLineWidth(0.5);
+        doc.rect(tx, y - boxSize * 0.75, boxSize, boxSize);
+        tx += boxSize + colW * 0.02;
+      }
+      doc.setFont('courier', 'normal'); doc.setFontSize(9.5); doc.setTextColor(INK);
+      doc.text(clueSheetEncryptedCoords(cp, shift), tx, y);
+      y += lineH * 0.85;
+      if(cp.clue){
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); doc.setTextColor(STEEL);
+        doc.splitTextToSize(cp.clue, colRight - tx).forEach(line => {
+          maybeBreak();
+          doc.text(line, tx, y);
+          y += lineH * 0.75;
+        });
+        doc.setTextColor(INK);
+      }
+      y += lineH * 0.5;
+    });
   }else{
     const content = interpolatePdfBlockVariables(b.content || '', evt);
     if(!content.trim()){

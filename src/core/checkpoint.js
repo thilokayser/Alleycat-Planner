@@ -12,7 +12,8 @@ function withCheckpointDefaults(cp){
     locked: false,
     staff: [],
     gameHidden: false,
-    gameRevealPrerequisiteCpId: ''
+    gameRevealPrerequisiteCpId: '',
+    cargoItem: null
   }, cp);
 }
 function withCpStaffDefaults(s){
@@ -578,6 +579,29 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
                     <option value="">${t('gameModes.revealPrerequisiteNone')}</option>
                     ${evt.checkpoints.filter(other => other.id !== cp.id).map(other => `<option value="${other.id}" ${cp.gameRevealPrerequisiteCpId === other.id ? 'selected' : ''}>${escapeHtml(other.name || t('checkpoint.noName'))}</option>`).join('')}
                   </select>
+                </div>
+                ` : ''}
+                ` : ''}
+                ${isFeatureEnabled('cargo_module', evt) ? `
+                <label class="checkbox-row">
+                  <input type="checkbox" ${cp.cargoItem ? 'checked' : ''} onchange="setCpCargoItem('${cp.id}', this.checked)">
+                  ${t('raceFormats.cargoItemCheckboxLabel')}
+                </label>
+                ${cp.cargoItem ? `
+                <div class="cp-cargo-item">
+                  <input type="text" placeholder="${t('raceFormats.cargoItemNamePlaceholder')}" value="${escapeHtml(cp.cargoItem.name)}" oninput="onCpCargoItemFieldChange('${cp.id}', 'name', this.value)">
+                  <div class="row2">
+                    <div>
+                      <label>${t('raceFormats.cargoWeightLabel')}</label>
+                      <input type="text" inputmode="decimal" value="${cp.cargoItem.weightKg}" onchange="onCpCargoItemFieldChange('${cp.id}', 'weightKg', this.value)">
+                    </div>
+                    <div>
+                      <label>${t('raceFormats.cargoVolumeLabel')}</label>
+                      <input type="text" inputmode="decimal" value="${cp.cargoItem.volumeUnits}" onchange="onCpCargoItemFieldChange('${cp.id}', 'volumeUnits', this.value)">
+                    </div>
+                  </div>
+                  <label>${t('raceFormats.cargoBonusPointsLabel')}</label>
+                  <input type="text" inputmode="numeric" value="${cp.cargoItem.bonusPoints}" onchange="onCpCargoItemFieldChange('${cp.id}', 'bonusPoints', this.value)">
                 </div>
                 ` : ''}
                 ` : ''}
