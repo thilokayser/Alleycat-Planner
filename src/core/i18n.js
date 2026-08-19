@@ -302,7 +302,11 @@ const translations = {
       staffBriefingTitle: 'PERSONAL-BRIEFING',
       staffBriefingInternalNote: 'Nur für den Organizer — nicht an Fahrer weitergeben.',
       staffBriefingNoneAssigned: 'Kein Personal zugewiesen.',
-      staffBriefingFooter: 'Intern — nicht Teil des Fahrer-Manifests'
+      staffBriefingFooter: 'Intern — nicht Teil des Fahrer-Manifests',
+      title: 'Manifest',
+      printDescription: 'Druckt das Manifest in einem neuen Fenster. Nutze den Browser-Print-Dialog zur Optimierung.',
+      exportDescription: 'Exportiert das komplette Manifest mit allen Checkpoints und PDF-Baukasten-Blöcken als PDF-Datei.',
+      backToList: '&larr; Übersicht'
     },
     checkpoint: {
       types: {
@@ -741,8 +745,7 @@ const translations = {
         event_locations: 'Sonderorte (HQ/Afterparty)',
         image: 'Bild',
         table: 'Tabelle',
-        variable_text: 'Text mit Platzhaltern',
-        clue_sheet: 'Rätsel-Sheet'
+        variable_text: 'Text mit Platzhaltern'
       },
       toggleButton: 'PDF-Baukasten',
       hint: 'Zusätzliche Seiten, die an Manifest und/oder Spokecards-PDF angehängt werden — Reihenfolge per Pfeil-Buttons, pro Block wählbar für welche Dokumente er gilt.',
@@ -795,11 +798,7 @@ const translations = {
       previewManifest: 'Vorschau Manifest',
       previewSpokecards: 'Vorschau Spokecards',
       previewEmpty: 'Keine aktiven Blöcke für dieses Dokument.',
-      previewFilename: 'vorschau-{doc}.pdf',
-      clueSheetAuto: 'Wird automatisch aus den Checkpoints erzeugt — Straßennetz-Hinweis nutzt das bestehende "Hinweis"-Feld des jeweiligen Checkpoints.',
-      clueSheetShiftLabel: 'Chiffre-Schlüssel (1–9)',
-      clueSheetStampsLabel: 'Leeres Stempelfeld pro Checkpoint drucken',
-      clueSheetLegend: 'Koordinaten-Chiffre: jede Ziffer um {shift} erhöht (mod 10) — zum Entschlüsseln {shift} abziehen.'
+      previewFilename: 'vorschau-{doc}.pdf'
     },
     gameModes: {
       type: {

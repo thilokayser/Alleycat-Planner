@@ -253,7 +253,7 @@ function renderRidersSectionRoster(evt){
       </div>
     ` : ''}
     ${renderActionLogPanel(evt)}
-    ${riders.length ? `<div class="riders-hint">${t('rider.spokecardHint')} ${t('pdfBlocks.spokecardsHint')} <a href="#" onclick="event.preventDefault(); openManifest(); state.pdfBlocksPanelOpen = true; render();">${t('pdfBlocks.toggleButton')}</a></div>` : ''}
+    ${riders.length ? `<div class="riders-hint">${t('rider.spokecardHint')} ${t('pdfBlocks.spokecardsHint')} <a href="#" onclick="event.preventDefault(); openManifest(); state.manifestSection = 'baukasten'; state.manifestMobileDetailOpen = true; render();">${t('pdfBlocks.toggleButton')}</a></div>` : ''}
     ${state.printPopupBlocked ? `<div class="riders-hint warn">${t('rider.printPopupBlocked')}</div>` : ''}
   `;
   if(riders.length === 0){

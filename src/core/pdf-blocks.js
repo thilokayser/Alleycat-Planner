@@ -8,7 +8,7 @@
    unübersetzte Organizer-Freitext-Eingabe wie Checkpoint-/Kategorie-Namen —
    einzige Ausnahme ist der optionale customTitle bei custom_text, der
    ebenfalls Rohtext ist. */
-const PDF_BLOCK_TYPES = ['waiver', 'rules', 'sponsors', 'checkpoint_list', 'notes', 'custom_text', 'emergency_info', 'event_locations', 'image', 'table', 'variable_text', 'clue_sheet'];
+const PDF_BLOCK_TYPES = ['waiver', 'rules', 'sponsors', 'checkpoint_list', 'notes', 'custom_text', 'emergency_info', 'event_locations', 'image', 'table', 'variable_text'];
 /* width: 'full'|'half'|'third' + pageBreakBefore (bool) drive layoutBlocks()'s
    auto-flow row packing (Paket 5 Teil B). Defaulted here (not a rigid
    document_type field per the spec's raw schema — kept the pre-existing,
@@ -319,18 +319,6 @@ function pdfBlockTableData(b, evt){
   return {headers, rows};
 }
 
-/* ---------------- clue_sheet: cipher-shift config ---------------- */
-function onPdfBlockClueSheetShiftChange(id, value){
-  const b = findPdfBlock(id);
-  if(!b) return;
-  let shift = parseInt(value, 10);
-  if(!Number.isFinite(shift)) shift = 3;
-  shift = Math.min(9, Math.max(1, shift));
-  b.config.cipherShift = shift;
-  debouncedSave();
-  renderManifest();
-}
-
 /* ---------------- variable_text: {{event.x}} placeholder interpolation ----------------
    Interpolated at export time only (17.5) — the stored content stays the
    raw template text, same "never runs through t()" rule as custom_text, so
@@ -391,10 +379,6 @@ async function onImportPdfBlocksFile(input){
 }
 
 /* ---------------- panel UI (rendered into the Manifest view) ---------------- */
-function togglePdfBlocksPanel(){
-  state.pdfBlocksPanelOpen = !state.pdfBlocksPanelOpen;
-  renderManifest();
-}
 function renderPdfBlockEditor(b){
   switch(b.type){
     case 'waiver':
@@ -463,17 +447,6 @@ function renderPdfBlockEditor(b){
         <div class="settings-section-desc">${t('pdfBlocks.tableAuto')}</div>
       `;
     }
-    case 'clue_sheet':
-      return `
-        <div class="settings-section-desc">${t('pdfBlocks.clueSheetAuto')}</div>
-        <div class="row2">
-          <div>
-            <label>${t('pdfBlocks.clueSheetShiftLabel')}</label>
-            <input type="number" min="1" max="9" value="${b.config.cipherShift ?? 3}" onchange="onPdfBlockClueSheetShiftChange('${b.id}', this.value)">
-          </div>
-        </div>
-        <label class="checkbox-row"><input type="checkbox" ${b.config.includeStamps !== false ? 'checked' : ''} onchange="onPdfBlockConfigToggle('${b.id}', 'includeStamps', this.checked)"> ${t('pdfBlocks.clueSheetStampsLabel')}</label>
-      `;
     default:
       return '';
   }

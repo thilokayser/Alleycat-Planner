@@ -695,12 +695,12 @@ async function runAlleycatTestSuite(){
     checkEqual('JSON-Vorlagen-Import stellt Blockanzahl wieder her', evt.pdfBlocks.length, countBeforeImport);
 
     openManifest();
-    state.pdfBlocksPanelOpen = true;
+    state.manifestSection = 'baukasten';
     render();
     await wait(20);
-    check('PDF-Baukasten-Panel rendert im Manifest-Toolbar', document.querySelector('.pdf-blocks-panel') !== null);
+    check('PDF-Baukasten-Panel rendert in der Manifest-Sidebar-Sektion', document.querySelector('.pdf-blocks-panel') !== null);
     checkEqual('Block-Zeilen im Panel entsprechen Blockanzahl', document.querySelectorAll('.pdf-block-row').length, evt.pdfBlocks.length);
-    state.pdfBlocksPanelOpen = false;
+    state.manifestSection = 'anpassen';
 
     const countBeforeDelete = evt.pdfBlocks.length;
     deletePdfBlock(evt.pdfBlocks[0].id);
@@ -757,13 +757,13 @@ async function runAlleycatTestSuite(){
     setPdfBlockWidth(widthTestBlock.id, 'full');
 
     openManifest();
-    state.pdfBlocksPanelOpen = true;
+    state.manifestSection = 'baukasten';
     render();
     await wait(20);
     checkEqual('Breiten-Dropdown pro Block gerendert', document.querySelectorAll('.pdf-block-width-label select').length, evt.pdfBlocks.length);
     checkEqual('Seitenumbruch-Checkbox pro Block gerendert', document.querySelectorAll('.pdf-block-row-options input[type=checkbox]').length, evt.pdfBlocks.length);
     check('Vorschau-Buttons im Panel gerendert', document.body.innerHTML.includes(t('pdfBlocks.previewManifest')) && document.body.innerHTML.includes(t('pdfBlocks.previewSpokecards')));
-    state.pdfBlocksPanelOpen = false;
+    state.manifestSection = 'anpassen';
     render();
 
     /* neuer Blocktyp: image (inkl. Client-Komprimierung) */
@@ -2489,43 +2489,6 @@ async function runAlleycatTestSuite(){
     check('Settings zeigt die "Sprache"-Sektion mit Import/Export-Buttons', settingsHtmlLang.includes(t('settings.languageHeading')) && settingsHtmlLang.includes(t('settings.languagePackImport')) && settingsHtmlLang.includes(t('settings.languagePackExportTemplate')));
   }
 
-  /* 4c) Paket 6 (Phase 21): Rätsel-Sheet-PDF-Block (race-formats.js).
-     (Cargo-Modul und Trackbike-Attribute wurden nach ursprünglicher
-     Umsetzung wieder entfernt — siehe Roadmap-Doku.) */
-  {
-    check('PDF_BLOCK_TYPES enthält "clue_sheet"', PDF_BLOCK_TYPES.includes('clue_sheet'));
-    checkEqual('clueSheetCipherDigits verschiebt Ziffern (mod 10)', clueSheetCipherDigits('50.9375', 3), '83.2608');
-    checkEqual('clueSheetCipherDigits + Gegenschiebung stellt Original wieder her', clueSheetCipherDigits(clueSheetCipherDigits('50.9375, 6.9603', 3), -3), '50.9375, 6.9603');
-    check('clueSheetCipherDigits lässt Nicht-Ziffern unverändert', clueSheetCipherDigits('N 6.96', 1).includes('N'));
-    const clueCp = evt.checkpoints[0];
-    checkEqual('clueSheetEncryptedCoords ohne Schiebung entspricht Klartext-Koordinaten', clueSheetEncryptedCoords(clueCp, 0), `${clueCp.lat.toFixed(5)}, ${clueCp.lng.toFixed(5)}`);
-
-    addPdfBlock('clue_sheet');
-    const clueBlock = evt.pdfBlocks[evt.pdfBlocks.length - 1];
-    checkEqual('Neuer clue_sheet-Block hat Default-Schlüssel 3', clueBlock.config.cipherShift ?? 3, 3);
-    onPdfBlockClueSheetShiftChange(clueBlock.id, '7');
-    checkEqual('onPdfBlockClueSheetShiftChange setzt Schlüssel', clueBlock.config.cipherShift, 7);
-    onPdfBlockClueSheetShiftChange(clueBlock.id, '99');
-    checkEqual('onPdfBlockClueSheetShiftChange klemmt auf Maximum 9', clueBlock.config.cipherShift, 9);
-    onPdfBlockClueSheetShiftChange(clueBlock.id, '0');
-    checkEqual('onPdfBlockClueSheetShiftChange klemmt auf Minimum 1', clueBlock.config.cipherShift, 1);
-    onPdfBlockConfigToggle(clueBlock.id, 'includeStamps', false);
-    checkEqual('includeStamps-Toggle greift', clueBlock.config.includeStamps, false);
-    onPdfBlockConfigToggle(clueBlock.id, 'includeStamps', true);
-
-    await checkNoThrowAsync('appendPdfBlocks rendert clue_sheet-Block ohne Fehler', async () => {
-      const { jsPDF } = window.jspdf;
-      appendPdfBlocks(new jsPDF({unit: 'pt', format: 'a4'}), evt, 'manifest');
-    });
-
-    openManifest();
-    state.pdfBlocksPanelOpen = true;
-    render();
-    await wait(20);
-    check('PDF-Baukasten-Panel zeigt Rätsel-Sheet-Add-Button', document.body.innerHTML.includes(t('pdfBlocks.type.clue_sheet')));
-    state.pdfBlocksPanelOpen = false;
-    render();
-  }
 
   /* 4d) Paket-Abholung/-Zustellung: zwei verknüpfte Checkpoint-Typen
      (Fahrer holt an A ab, muss an B zustellen). Läuft komplett auf zwei

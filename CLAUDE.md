@@ -61,7 +61,6 @@ Everything here must build **byte-identical** across both variants — order isn
 | `race-state.js` | race status machine (planning→ready→running→completed) |
 | `rules-engine.js` | generic game-mode trigger/condition/effect evaluator |
 | `game-modes.js` | 7 game-mode presets (`GAME_MODE_DEFS`) |
-| `race-formats.js` | clue-sheet PDF block cipher (Cargo/Trackbike were removed, see Known issues) |
 | `dashboard.js` | event CRUD, HQ dashboard, per-event Übersicht widgets |
 | `demo-event.js` | seeded first-run example event ("Kölner Kurierrennen") |
 | `sound-hook.js` | `AlleycatSounds` registry (register/play/unregister) |
@@ -95,7 +94,7 @@ All persistence goes through `storageGet(key)`/`storageSet(key, value)`/`storage
 - **Function naming**: `renderX()` returns/writes HTML, `onXChange()`/`onXInput()` are input handlers, `toggleX()`/`selectX()` flip UI state, `computeX()` are pure derived-data functions with no side effects.
 - **Escaping**: `escapeHtml()` for HTML interpolation, a local `esc()` inside `exportRouteGPX()` for XML, `csvEscape()` for CSV (also neutralizes leading `= + - @` against formula injection).
 - **Numeric config gotcha**: never read with `config.x || default` — a real `0` is falsy and silently falls back. Use the `numOr(value, fallback)` helper (`Number.isFinite` check).
-- **Sidebar-nav pages** (Settings, Riders — more may follow): reuse `.settings-layout`/`.settings-sidebar`/`.settings-content`/`.settings-nav-*`/`.settings-mobile-*` CSS classes verbatim rather than inventing page-specific names — purely structural, zero new layout CSS per page. Any test that queries these classes must scope to the page's root id (`#view-settings .settings-content`, not bare `.settings-content`) since the class is shared.
+- **Sidebar-nav pages** (Settings, Riders, Manifest — more may follow): reuse `.settings-layout`/`.settings-sidebar`/`.settings-content`/`.settings-nav-*`/`.settings-mobile-*` CSS classes verbatim rather than inventing page-specific names — purely structural, zero new layout CSS per page. Any test that queries these classes must scope to the page's root id (`#view-settings .settings-content`, not bare `.settings-content`) since the class is shared. Manifest's variant (2026-08-19) separates two previously-conflated functions (table/column customization vs. PDF-Baukasten extra pages) into distinct sidebar sections, plus Drucken/Export as their own sections; the manifest table itself renders unconditionally below the active section's panel in `.settings-content` (not toggled) since it's the shared context for all four sections.
 - **`t` shadowing**: arrow-function params named `t` inside `.map()` callbacks shadow the global `t()` — rename to `ct`/`tm`/`th` etc.
 - Watch for stray "unused" `.md` docs or module-map entries drifting from reality — this file's own module table and the roadmap's summary table have both gone stale before after a feature landed without the doc being updated in the same pass.
 
@@ -105,9 +104,8 @@ All persistence goes through `storageGet(key)`/`storageSet(key, value)`/`storage
 - **`pdf_page_format` (A4/US Letter switch + crop marks) deliberately deferred.** `exportManifestPDF()` uses absolute pt coordinates throughout, not page-size-relative fractions — a naive format switch risks clipping content on US Letter (50pt shorter than A4). Needs its own focused pass.
 - **Storage protocol: last writer wins.** One key = one whole event JSON blob; concurrent edits to the same event from two devices/tabs aren't merged, the last save overwrites. No optimistic locking/ETags. Blocks real live multi-marshal check-in (see below) until addressed.
 - **Not built yet** (from README's own Roadmap): rider self-registration (public signup link instead of organizer-generated slots); live multi-checkpoint check-in / live spectator leaderboard (server variant only, needs the storage-protocol fix above first).
-- **Cargo module / Trackbike attributes were built, then fully removed** on user request (no technical reason). If asked to re-add either, don't assume the old implementation is recoverable via `git blame` alone — the removal was total, not a toggle.
+- **Cargo module / Trackbike attributes / clue-sheet PDF block were built, then fully removed** on user request (no technical reason). The clue-sheet removal (2026-08-19) also deleted `src/core/race-formats.js` outright, since it existed solely for the clue-sheet cipher helpers. If asked to re-add any of these, don't assume the old implementation is recoverable via `git blame` alone — the removal was total, not a toggle.
 - **Deferred/skipped on user request**: Beamer `speechSynthesis` announcer + voice check-in (Paket 7); "Kopfgeld" (bounty/leader) game mode; Offline-Gerätesync (Screen-to-Camera QR sync, idea only).
-- **Flagged next UX candidate** (not requested yet): the Manifest export toolbar has the same "stacked collapsible panels" pattern Settings/Riders had before their sidebar redesigns.
 
 ## Test coverage gaps
 

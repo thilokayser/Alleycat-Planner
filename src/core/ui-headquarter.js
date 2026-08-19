@@ -20,7 +20,8 @@ let state = {
   saveStatus: 'idle',
   qrScannerActive: false,
   qrScanError: '',
-  manifestSettingsOpen: false,
+  manifestSection: 'anpassen',
+  manifestMobileDetailOpen: false,
   appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal'},
   featureRegistrySearch: '',
   settingsReturnView: 'dashboard',
@@ -34,7 +35,6 @@ let state = {
   leaderboardTeamFilter: '',
   overviewSettingsOpen: false,
   cpListGroupBy: 'order',
-  pdfBlocksPanelOpen: false,
   bulkImportOpen: false,
   bulkImportStep: 'upload',
   bulkImportRows: [],
@@ -277,6 +277,17 @@ function openOverview(){
 }
 function openManifest(){
   state.view = 'manifest';
+  state.manifestSection = 'anpassen';
+  state.manifestMobileDetailOpen = false;
+  render();
+}
+function selectManifestSection(id){
+  state.manifestSection = id;
+  state.manifestMobileDetailOpen = true;
+  render();
+}
+function closeManifestMobileDetail(){
+  state.manifestMobileDetailOpen = false;
   render();
 }
 function openRiders(){

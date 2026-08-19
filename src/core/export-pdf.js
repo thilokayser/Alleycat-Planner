@@ -238,38 +238,6 @@ function renderPdfBlockColumn(doc, b, evt, x, colRight, y, lineH, pageH, paginat
         y += lineH * 0.95;
       });
     }
-  }else if(b.type === 'clue_sheet'){
-    const shift = Number.isFinite(b.config.cipherShift) ? b.config.cipherShift : 3;
-    const includeStamps = b.config.includeStamps !== false;
-    doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(STEEL);
-    doc.text(t('pdfBlocks.clueSheetLegend', {shift}), x, y);
-    y += lineH;
-    const checkpoints = evt.checkpoints.slice().sort((a, c) => a.order - c.order);
-    checkpoints.forEach(cp => {
-      maybeBreak();
-      doc.setFont('courier', 'bold'); doc.setFontSize(9); doc.setTextColor(INK);
-      doc.text(String(cp.order).padStart(2, '0'), x, y);
-      let tx = x + colW * 0.06;
-      if(includeStamps){
-        const boxSize = lineH * 1.2;
-        doc.setDrawColor(STEEL); doc.setLineWidth(0.5);
-        doc.rect(tx, y - boxSize * 0.75, boxSize, boxSize);
-        tx += boxSize + colW * 0.02;
-      }
-      doc.setFont('courier', 'normal'); doc.setFontSize(9.5); doc.setTextColor(INK);
-      doc.text(clueSheetEncryptedCoords(cp, shift), tx, y);
-      y += lineH * 0.85;
-      if(cp.clue){
-        doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); doc.setTextColor(STEEL);
-        doc.splitTextToSize(cp.clue, colRight - tx).forEach(line => {
-          maybeBreak();
-          doc.text(line, tx, y);
-          y += lineH * 0.75;
-        });
-        doc.setTextColor(INK);
-      }
-      y += lineH * 0.5;
-    });
   }else{
     const content = interpolatePdfBlockVariables(b.content || '', evt);
     if(!content.trim()){
@@ -604,10 +572,6 @@ function printManifest(){
   }
   window.print();
 }
-function toggleManifestSettings(){
-  state.manifestSettingsOpen = !state.manifestSettingsOpen;
-  renderManifest();
-}
 function onManifestSettingToggle(key, checked){
   state.currentEvent.manifestSettings[key] = checked;
   debouncedSave();
@@ -831,7 +795,7 @@ async function exportManifestPDF(){
 }
 
 
-/* ---------------- render: manifest ---------------- */
+/* ---------------- render: manifest with sidebar navigation -------- */
 function renderManifest(){
   const el = document.getElementById('view-manifest');
   const evt = state.currentEvent;
@@ -839,6 +803,98 @@ function renderManifest(){
     el.innerHTML = `<div class="loading-row">${t('exportPdf.noEventSelected')}</div>`;
     return;
   }
+  el.innerHTML = renderManifestLayout(evt);
+}
+
+function renderManifestLayout(evt){
+  return `
+    <div class="settings-layout ${state.manifestMobileDetailOpen ? 'settings-mobile-detail' : 'settings-mobile-list'}">
+      ${renderManifestSidebar()}
+      <div class="settings-content" id="manifest-content">
+        <button type="button" class="settings-mobile-back" onclick="closeManifestMobileDetail()">${t('exportPdf.backToList')}</button>
+        ${renderManifestPanel(evt)}
+        <div id="print-root">
+          ${renderManifestWaybill(evt)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderManifestSidebar(){
+  const items = [
+    {id: 'anpassen', label: t('exportPdf.customize'), icon: '\u2699'},
+    {id: 'baukasten', label: t('pdfBlocks.toggleButton'), icon: '\ud83d\udce6'},
+    {id: 'drucken', label: t('exportPdf.print'), icon: '\ud83d\udda8'},
+    {id: 'export', label: t('exportPdf.exportAsPdf'), icon: '\ud83d\udcc4'}
+  ];
+  return `
+    <nav class="settings-sidebar">
+      <div class="settings-sidebar-head">
+        <h2>${t('exportPdf.title')}</h2>
+      </div>
+      ${items.map(item => `
+        <button type="button" class="settings-nav-item ${state.manifestSection === item.id ? 'active' : ''}" onclick="selectManifestSection('${item.id}')">
+          <span class="settings-nav-icon">${item.icon}</span>
+          <span>${item.label}</span>
+        </button>
+      `).join('')}
+    </nav>
+  `;
+}
+
+function renderManifestPanel(evt){
+  const ms = evt.manifestSettings;
+  const section = state.manifestSection;
+
+  if(section === 'anpassen'){
+    return `
+      <div class="settings-section">
+        <h3>${t('exportPdf.customize')}</h3>
+        <div class="manifest-settings-cols">
+          <label><input type="checkbox" ${ms.showNr ? 'checked' : ''} onchange="onManifestSettingToggle('showNr', this.checked)"> ${t('exportPdf.colNrCheckbox')}</label>
+          <label><input type="checkbox" ${ms.showCheckpoint ? 'checked' : ''} onchange="onManifestSettingToggle('showCheckpoint', this.checked)"> ${t('exportPdf.colCheckpointCheckbox')}</label>
+          <label><input type="checkbox" ${ms.showTyp ? 'checked' : ''} onchange="onManifestSettingToggle('showTyp', this.checked)"> ${t('exportPdf.colTypCheckbox')}</label>
+          <label><input type="checkbox" ${ms.showClue ? 'checked' : ''} onchange="onManifestSettingToggle('showClue', this.checked)"> ${t('exportPdf.colClueCheckbox')}</label>
+          <label><input type="checkbox" ${ms.showKoordinaten ? 'checked' : ''} onchange="onManifestSettingToggle('showKoordinaten', this.checked)"> ${t('exportPdf.colKoordinatenCheckbox')}</label>
+          <label><input type="checkbox" ${ms.showPunch ? 'checked' : ''} onchange="onManifestSettingToggle('showPunch', this.checked)"> ${t('exportPdf.colPunchCheckbox')}</label>
+        </div>
+        <div class="manifest-settings-image">
+          <label>${t('exportPdf.headerImageLabel')}</label>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            ${ms.headerImage ? `<img src="${ms.headerImage}" class="manifest-image-preview" alt="">` : ''}
+            <input type="file" accept="image/*" onchange="onManifestImageUpload(this)">
+            ${ms.headerImage ? `<button class="btn btn-ghost btn-sm" onclick="clearManifestImage()">${t('common.remove')}</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  if(section === 'baukasten'){
+    return renderPdfBlocksPanel(evt);
+  }
+  if(section === 'drucken'){
+    return `
+      <div class="settings-section">
+        <h3>${t('exportPdf.print')}</h3>
+        <div class="settings-section-desc">${t('exportPdf.printDescription')}</div>
+        <button class="btn btn-primary" onclick="printManifest()" style="margin-top:12px;">${t('exportPdf.print')}</button>
+      </div>
+    `;
+  }
+  if(section === 'export'){
+    return `
+      <div class="settings-section">
+        <h3>${t('exportPdf.exportAsPdf')}</h3>
+        <div class="settings-section-desc">${t('exportPdf.exportDescription')}</div>
+        <button class="btn btn-primary" onclick="exportManifestPDF()" style="margin-top:12px;">${t('exportPdf.exportAsPdf')}</button>
+      </div>
+    `;
+  }
+  return '';
+}
+
+function renderManifestWaybill(evt){
   const ms = evt.manifestSettings;
   const colCount = [ms.showNr, ms.showCheckpoint, ms.showTyp, ms.showClue, ms.showKoordinaten, ms.showPunch].filter(Boolean).length;
 
@@ -864,86 +920,54 @@ function renderManifest(){
   `;
   }).join('');
 
-  el.innerHTML = `
-    <div class="manifest-toolbar">
-      <div class="mono" style="color:var(--steel); font-size:11px;">${t(evt.checkpoints.length === 1 ? 'exportPdf.checkpointCountSingular' : 'exportPdf.checkpointCountPlural', {count: evt.checkpoints.length})}</div>
-      <div class="manifest-toolbar-actions">
-        <button class="btn" onclick="toggleManifestSettings()">${state.manifestSettingsOpen ? '\u25be' : '\u25b8'} ${t('exportPdf.customize')}</button>
-        <button class="btn" onclick="togglePdfBlocksPanel()">${state.pdfBlocksPanelOpen ? '\u25be' : '\u25b8'} ${t('pdfBlocks.toggleButton')}</button>
-        <button class="btn" onclick="printManifest()">${t('exportPdf.print')}</button>
-        <button class="btn btn-primary" onclick="exportManifestPDF()">${t('exportPdf.exportAsPdf')}</button>
+  return `
+    <div class="waybill">
+      <div class="waybill-head">
+        <h2>${escapeHtml(evt.name || t('common.unnamedEvent'))}</h2>
+        <div class="stamp-tag">${t('exportPdf.manifestStamp')}</div>
       </div>
-    </div>
-    ${state.pdfBlocksPanelOpen ? renderPdfBlocksPanel(evt) : ''}
-    ${state.manifestSettingsOpen ? `
-      <div class="manifest-settings-panel">
-        <div class="manifest-settings-cols">
-          <label><input type="checkbox" ${ms.showNr ? 'checked' : ''} onchange="onManifestSettingToggle('showNr', this.checked)"> ${t('exportPdf.colNrCheckbox')}</label>
-          <label><input type="checkbox" ${ms.showCheckpoint ? 'checked' : ''} onchange="onManifestSettingToggle('showCheckpoint', this.checked)"> ${t('exportPdf.colCheckpointCheckbox')}</label>
-          <label><input type="checkbox" ${ms.showTyp ? 'checked' : ''} onchange="onManifestSettingToggle('showTyp', this.checked)"> ${t('exportPdf.colTypCheckbox')}</label>
-          <label><input type="checkbox" ${ms.showClue ? 'checked' : ''} onchange="onManifestSettingToggle('showClue', this.checked)"> ${t('exportPdf.colClueCheckbox')}</label>
-          <label><input type="checkbox" ${ms.showKoordinaten ? 'checked' : ''} onchange="onManifestSettingToggle('showKoordinaten', this.checked)"> ${t('exportPdf.colKoordinatenCheckbox')}</label>
-          <label><input type="checkbox" ${ms.showPunch ? 'checked' : ''} onchange="onManifestSettingToggle('showPunch', this.checked)"> ${t('exportPdf.colPunchCheckbox')}</label>
+      <div class="waybill-meta">
+        <div>${t('exportPdf.dateLabel')}${escapeHtml(evt.date || '\u2014')}</div>
+        <div>${t('exportPdf.checkpointsLabel')}${evt.checkpoints.length}</div>
+        <div>${t('exportPdf.mandatoryBonusLine', {mandatory: t('common.mandatory'), mandatoryCount: evt.checkpoints.filter(c=>c.mandatory).length, bonus: t('common.bonus'), bonusCount: evt.checkpoints.filter(c=>!c.mandatory).length})}</div>
+      </div>
+      <div class="waybill-timing">
+        <div>
+          <div class="t-label">${t('exportPdf.startLabel')}</div>
+          <div class="t-value">${evt.startMode === 'scheduled' ? formatDateTime(evt.startTime) : t('exportPdf.manualStartButton')}</div>
+          <div class="t-sub">${evt.startMode === 'scheduled' ? t('exportPdf.fixedTime') : t('exportPdf.adminReleases')}</div>
         </div>
-        <div class="manifest-settings-image">
-          <label>${t('exportPdf.headerImageLabel')}</label>
-          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            ${ms.headerImage ? `<img src="${ms.headerImage}" class="manifest-image-preview" alt="${t('exportPdf.headerImagePreviewAlt')}">` : ''}
-            <input type="file" accept="image/*" onchange="onManifestImageUpload(this)">
-            ${ms.headerImage ? `<button class="btn btn-ghost btn-sm" onclick="clearManifestImage()">${t('common.remove')}</button>` : ''}
-          </div>
+        <div>
+          <div class="t-label">${t('exportPdf.curfewLabel')}</div>
+          <div class="t-value">${formatDateTime(evt.curfewTime)}</div>
+          <div class="t-sub">${evt.curfewMode === 'soft' ? t('exportPdf.curfewSoftSub', {penalty: evt.curfewPenaltyPerMin ?? 1}) : t('exportPdf.curfewHardSub')}</div>
         </div>
       </div>
-    ` : ''}
-    <div id="print-root">
-      <div class="waybill">
-        <div class="waybill-head">
-          <h2>${escapeHtml(evt.name || t('common.unnamedEvent'))}</h2>
-          <div class="stamp-tag">${t('exportPdf.manifestStamp')}</div>
-        </div>
-        <div class="waybill-meta">
-          <div>${t('exportPdf.dateLabel')}${escapeHtml(evt.date || '\u2014')}</div>
-          <div>${t('exportPdf.checkpointsLabel')}${evt.checkpoints.length}</div>
-          <div>${t('exportPdf.mandatoryBonusLine', {mandatory: t('common.mandatory'), mandatoryCount: evt.checkpoints.filter(c=>c.mandatory).length, bonus: t('common.bonus'), bonusCount: evt.checkpoints.filter(c=>!c.mandatory).length})}</div>
-        </div>
-        <div class="waybill-timing">
-          <div>
-            <div class="t-label">${t('exportPdf.startLabel')}</div>
-            <div class="t-value">${evt.startMode === 'scheduled' ? formatDateTime(evt.startTime) : t('exportPdf.manualStartButton')}</div>
-            <div class="t-sub">${evt.startMode === 'scheduled' ? t('exportPdf.fixedTime') : t('exportPdf.adminReleases')}</div>
-          </div>
-          <div>
-            <div class="t-label">${t('exportPdf.curfewLabel')}</div>
-            <div class="t-value">${formatDateTime(evt.curfewTime)}</div>
-            <div class="t-sub">${evt.curfewMode === 'soft' ? t('exportPdf.curfewSoftSub', {penalty: evt.curfewPenaltyPerMin ?? 1}) : t('exportPdf.curfewHardSub')}</div>
-          </div>
-        </div>
-        ${ms.headerImage ? `<img src="${ms.headerImage}" class="manifest-header-image" alt="${t('exportPdf.headerImageAlt')}">` : ''}
-        ${evt.checkpoints.length === 0 ? `
-          <div style="font-family:'JetBrains Mono'; font-size:12px; color:#8a8065; padding:20px 0;">${t('exportPdf.noCheckpointsYet')}</div>
-        ` : colCount === 0 ? `
-          <div style="font-family:'JetBrains Mono'; font-size:12px; color:#8a8065; padding:20px 0;">${t('exportPdf.allColumnsHidden')}</div>
-        ` : `
+      ${ms.headerImage ? `<img src="${ms.headerImage}" class="manifest-header-image" alt="">` : ''}
+      ${evt.checkpoints.length === 0 ? `
+        <div style="font-family:'JetBrains Mono'; font-size:12px; color:#8a8065; padding:20px 0;">${t('exportPdf.noCheckpointsYet')}</div>
+      ` : colCount === 0 ? `
+        <div style="font-family:'JetBrains Mono'; font-size:12px; color:#8a8065; padding:20px 0;">${t('exportPdf.allColumnsHidden')}</div>
+      ` : `
         <div class="manifest-table-scroll">
-        <table class="manifest-table">
-          <thead>
-            <tr>
-              ${ms.showNr ? `<th>${t('exportPdf.colNrTh')}</th>` : ''}
-              ${ms.showCheckpoint ? `<th>${t('exportPdf.colCheckpointTh')}</th>` : ''}
-              ${ms.showTyp ? `<th>${t('exportPdf.colTypTh')}</th>` : ''}
-              ${ms.showClue ? `<th>${t('exportPdf.colClueTh')}</th>` : ''}
-              ${ms.showKoordinaten ? `<th>${t('exportPdf.colKoordinatenTh')}</th>` : ''}
-              ${ms.showPunch ? `<th>${t('exportPdf.colPunchTh')}</th>` : ''}
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
+          <table class="manifest-table">
+            <thead>
+              <tr>
+                ${ms.showNr ? `<th>${t('exportPdf.colNrTh')}</th>` : ''}
+                ${ms.showCheckpoint ? `<th>${t('exportPdf.colCheckpointTh')}</th>` : ''}
+                ${ms.showTyp ? `<th>${t('exportPdf.colTypTh')}</th>` : ''}
+                ${ms.showClue ? `<th>${t('exportPdf.colClueTh')}</th>` : ''}
+                ${ms.showKoordinaten ? `<th>${t('exportPdf.colKoordinatenTh')}</th>` : ''}
+                ${ms.showPunch ? `<th>${t('exportPdf.colPunchTh')}</th>` : ''}
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
         </div>
-        `}
-        <div class="waybill-foot">
-          <span>${t('exportPdf.headquarterManifest')}</span>
-          <span>${t('exportPdf.autoGenFooter')}</span>
-        </div>
+      `}
+      <div class="waybill-foot">
+        <span>${t('exportPdf.headquarterManifest')}</span>
+        <span>${t('exportPdf.autoGenFooter')}</span>
       </div>
     </div>
   `;
