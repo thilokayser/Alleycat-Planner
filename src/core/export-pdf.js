@@ -48,6 +48,48 @@ function renderPdfPreview(){
     </div>
   `;
 }
+/* ---------------- PDF-Baukasten 2.0: auto-flow row layout (Paket 5 Teil B) ----------------
+   appendPdfBlocks() groups enabled blocks via layoutBlocks() (pdf-blocks.js)
+   into rows, then renders row-by-row instead of the old one-block-per-page
+   loop. Every ROW still starts on a fresh page (doc.addPage() unconditional
+   per row, not per page-that-still-has-room) — deliberately, so a
+   pre-Teil-B event (every block defaults to width:'full', which always
+   lands alone in its own row, see layoutBlocks()) renders byte-for-byte
+   like before: one page per block, nothing packed onto a shared page. Only
+   genuinely NEW same-row blocks (half/third width) share a page, since
+   that packing has no prior behavior to regress — pageBreakBefore stays
+   meaningful regardless (it decides ROW membership in layoutBlocks(), and
+   a block that's forced into its own row also always gets its own fresh
+   page as a consequence of the per-row addPage()). Single-block rows fall
+   back to the old internal-addPage()-on-overflow pagination via the
+   `pagination` param so long content still spans
+   multiple pages exactly as before; multi-column rows do not (splitting a
+   *row* of side-by-side columns across a page boundary while keeping them
+   aligned is exactly the 2D-grid-editor complexity 17.2 explicitly opts
+   out of — acceptable given half/third blocks are meant for compact
+   content like logos/small text/images, not sprawling checkpoint lists). */
+/* "Vorschau"-Button (17.3/17.8 step 5): reuses the existing in-page iframe
+   preview from Paket 1 (showPdfPreview()) instead of adding a PDF-to-image
+   rasterization step — the project's own "no new dependencies" rule
+   (PROJEKT-UEBERSICHT.md §9) rules out a pdf.js-style library, and an
+   iframe of the real PDF is a strictly better preview than a static image
+   of it anyway. Builds a standalone doc containing only this document
+   type's block layout (not the full manifest/spokecards content) so it
+   stays fast and doesn't require riders/checkpoints to already be
+   PDF-ready — deliberately NOT wired to re-render on every keystroke
+   (17.3's explicit non-goal), only when the button is clicked. */
+function previewPdfBlocksLayout(docType){
+  const evt = state.currentEvent;
+  if(!evt || !window.jspdf) return;
+  const hasBlocks = (evt.pdfBlocks || []).some(b => b.enabled && (b.targetDocuments || []).includes(docType));
+  if(!hasBlocks){ alert(t('pdfBlocks.previewEmpty')); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF(docType === 'spokecards' ? {unit: 'mm', format: 'a4'} : {unit: 'pt', format: 'a4'});
+  appendPdfBlocks(doc, evt, docType);
+  doc.deletePage(1);
+  const docLabel = docType === 'manifest' ? t('pdfBlocks.targetManifest') : t('pdfBlocks.targetSpokecards');
+  showPdfPreview(doc, t('pdfBlocks.previewFilename', {doc: docLabel}));
+}
 function appendPdfBlocks(doc, evt, targetDocType){
   const blocks = ((evt.pdfBlocks || [])).filter(b => b.enabled && (b.targetDocuments || []).includes(targetDocType)).sort((a, b) => a.sortOrder - b.sortOrder);
   if(!blocks.length) return;
@@ -55,123 +97,179 @@ function appendPdfBlocks(doc, evt, targetDocType){
   const pageH = doc.internal.pageSize.getHeight();
   const marginX = pageW * 0.08;
   const pageRight = pageW - marginX;
+  const contentW = pageRight - marginX;
   const topY = pageH * 0.09;
   const bottomLimit = pageH * 0.92;
   const lineH = pageH * 0.018;
-  const INK = '#241f18', HIVIS = '#ff5f1f', STEEL = '#5b5340';
+  const colGap = contentW * 0.04;
 
-  blocks.forEach(b => {
+  const rows = layoutBlocks(blocks);
+  rows.forEach(row => {
     doc.addPage();
-    let y = topY;
-    doc.setTextColor(INK);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
-    doc.text(pdfBlockTitle(b), marginX, y);
-    y += pageH * 0.012;
-    doc.setDrawColor(HIVIS); doc.setLineWidth(1);
-    doc.line(marginX, y, pageRight, y);
-    y += pageH * 0.03;
-
-    y = renderPdfBlockContentToDoc(doc, b, evt, marginX, pageRight, y, bottomLimit, topY, lineH);
-
-    if(b.type === 'waiver' && (b.config.showSignatureLine || b.config.showDateField)){
-      y += pageH * 0.03;
-      if(y > bottomLimit - pageH * 0.06){ doc.addPage(); y = topY; }
-      doc.setDrawColor(STEEL); doc.setLineWidth(0.6);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(STEEL);
-      if(b.config.showDateField){
-        const w = (pageRight - marginX) * 0.28;
-        doc.line(marginX, y, marginX + w, y);
-        doc.text(t('pdfBlocks.dateFieldLabel'), marginX, y + pageH * 0.014);
-      }
-      if(b.config.showSignatureLine){
-        const sigX = marginX + (pageRight - marginX) * 0.4;
-        doc.line(sigX, y, pageRight, y);
-        doc.text(t('pdfBlocks.signatureFieldLabel'), sigX, y + pageH * 0.014);
-      }
+    const y = topY;
+    if(row.length === 1){
+      renderPdfBlockColumn(doc, row[0], evt, marginX, pageRight, y, lineH, pageH, {bottomLimit, topY});
+    }else{
+      let x = marginX;
+      row.forEach(b => {
+        const w = contentW * (PDF_BLOCK_WIDTH_VALUES[b.width] || 1);
+        renderPdfBlockColumn(doc, b, evt, x, x + w - colGap, y, lineH, pageH, null);
+        x += w;
+      });
     }
   });
 }
-function renderPdfBlockContentToDoc(doc, b, evt, marginX, pageRight, y, bottomLimit, topY, lineH){
+/* Renders one block's title + rule + content inside the column bounds
+   [x, colRight]. `pagination` (only ever passed for lone full-row blocks)
+   re-enables the old per-line addPage()-on-overflow behavior; multi-column
+   rows pass null and just draw past the bottom margin in the rare case
+   their content is too tall (see appendPdfBlocks' comment above). */
+function renderPdfBlockColumn(doc, b, evt, x, colRight, y, lineH, pageH, pagination){
+  const colW = colRight - x;
+  const INK = '#241f18', HIVIS = '#ff5f1f', STEEL = '#5b5340';
+  const maybeBreak = () => {
+    if(pagination && y > pagination.bottomLimit){ doc.addPage(); y = pagination.topY; }
+  };
+  doc.setTextColor(INK);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+  doc.text(pdfBlockTitle(b), x, y);
+  y += pageH * 0.012;
+  doc.setDrawColor(HIVIS); doc.setLineWidth(1);
+  doc.line(x, y, colRight, y);
+  y += pageH * 0.03;
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
-  doc.setTextColor('#241f18');
+  doc.setTextColor(INK);
 
   if(b.type === 'sponsors'){
     const logos = b.config.logos || [];
     if(!logos.length){
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor('#5b5340');
-      doc.text(t('pdfBlocks.sponsorsEmpty'), marginX, y);
-      return y + lineH;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(STEEL);
+      doc.text(t('pdfBlocks.sponsorsEmpty'), x, y);
+    }else{
+      const perRow = pdfBlockLogosPerRow(b.width);
+      const gap = colW * 0.04;
+      const logoW = (colW - gap * (perRow - 1)) / perRow;
+      const logoH = logoW * 0.5;
+      let cx = x, col = 0;
+      logos.forEach(l => {
+        if(pagination && y + logoH > pagination.bottomLimit){ doc.addPage(); y = pagination.topY; cx = x; col = 0; }
+        try{ doc.addImage(l.dataUrl, cx, y, logoW, logoH, undefined, 'FAST'); }catch(e){ /* unsupported image format — skip tile */ }
+        col++;
+        if(col >= perRow){ col = 0; cx = x; y += logoH + lineH; }
+        else cx += logoW + gap;
+      });
     }
-    const gap = (pageRight - marginX) * 0.03;
-    const logoW = (pageRight - marginX - gap * 2) / 3;
-    const logoH = logoW * 0.5;
-    let x = marginX, col = 0;
-    logos.forEach(l => {
-      if(y + logoH > bottomLimit){ doc.addPage(); y = topY; x = marginX; col = 0; }
-      try{ doc.addImage(l.dataUrl, x, y, logoW, logoH, undefined, 'FAST'); }catch(e){ /* unsupported image format — skip tile */ }
-      col++;
-      if(col >= 3){ col = 0; x = marginX; y += logoH + lineH; }
-      else x += logoW + gap;
-    });
-    return y + logoH + lineH;
-  }
-
-  if(b.type === 'checkpoint_list'){
+  }else if(b.type === 'checkpoint_list'){
     const checkpoints = evt.checkpoints.slice().sort((a, c) => a.order - c.order);
     checkpoints.forEach(cp => {
-      if(y > bottomLimit){ doc.addPage(); y = topY; }
-      doc.setFont('courier', 'bold'); doc.setFontSize(9); doc.setTextColor('#241f18');
-      doc.text(String(cp.order).padStart(2, '0'), marginX, y);
+      maybeBreak();
+      doc.setFont('courier', 'bold'); doc.setFontSize(9); doc.setTextColor(INK);
+      doc.text(String(cp.order).padStart(2, '0'), x, y);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
-      doc.text(cp.name || '—', marginX + (pageRight - marginX) * 0.06, y);
+      doc.text(cp.name || '—', x + colW * 0.06, y);
       y += lineH;
     });
-    return y;
-  }
-
-  if(b.type === 'event_locations'){
+  }else if(b.type === 'event_locations'){
     const rows = [
       {label: t('eventLocations.hqLabel'), loc: getEventLocation(evt, 'headquarters')},
       {label: t('eventLocations.afterpartyLabel'), loc: getEventLocation(evt, 'afterparty')}
     ].filter(r => eventLocationHasPosition(r.loc));
     if(!rows.length){
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor('#5b5340');
-      doc.text(t('pdfBlocks.eventLocationsEmpty'), marginX, y);
-      return y + lineH;
-    }
-    rows.forEach(r => {
-      if(y > bottomLimit){ doc.addPage(); y = topY; }
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor('#241f18');
-      doc.text(`${r.label}: ${r.loc.name || '—'}`, marginX, y);
-      y += lineH;
-      [r.loc.address, r.loc.notes].filter(Boolean).forEach(text => {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor('#5b5340');
-        doc.splitTextToSize(text, pageRight - marginX).forEach(line => {
-          if(y > bottomLimit){ doc.addPage(); y = topY; }
-          doc.text(line, marginX, y);
-          y += lineH * 0.85;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(STEEL);
+      doc.text(t('pdfBlocks.eventLocationsEmpty'), x, y);
+    }else{
+      rows.forEach(r => {
+        maybeBreak();
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(INK);
+        doc.text(`${r.label}: ${r.loc.name || '—'}`, x, y);
+        y += lineH;
+        [r.loc.address, r.loc.notes].filter(Boolean).forEach(text => {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(STEEL);
+          doc.splitTextToSize(text, colW).forEach(line => {
+            maybeBreak();
+            doc.text(line, x, y);
+            y += lineH * 0.85;
+          });
         });
+        y += lineH * 0.6;
       });
-      y += lineH * 0.6;
-    });
-    return y;
-  }
-
-  const content = b.content || '';
-  if(!content.trim()){
-    doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor('#5b5340');
-    doc.text(t('pdfBlocks.emptyContent'), marginX, y);
-    return y + lineH;
-  }
-  content.split(/\n{2,}/).forEach(paragraph => {
-    const lines = doc.splitTextToSize(paragraph, pageRight - marginX);
-    lines.forEach(line => {
-      if(y > bottomLimit){ doc.addPage(); y = topY; }
-      doc.text(line, marginX, y);
+    }
+  }else if(b.type === 'image'){
+    if(!b.config.dataUrl){
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(STEEL);
+      doc.text(t('pdfBlocks.imageEmpty'), x, y);
+    }else{
+      const dims = b.config.imageDims || {w: 4, h: 3};
+      const h = colW * (dims.h / dims.w);
+      try{ doc.addImage(b.config.dataUrl, x, y, colW, h, undefined, 'FAST'); }catch(e){ /* unsupported image format */ }
+      y += h;
+      if(b.config.caption){
+        y += lineH * 0.6;
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); doc.setTextColor(STEEL);
+        const align = b.config.alignment || 'center';
+        const capX = align === 'left' ? x : align === 'right' ? colRight : x + colW / 2;
+        doc.text(b.config.caption, capX, y, {align});
+      }
+    }
+  }else if(b.type === 'table'){
+    const {headers, rows: tableRows} = pdfBlockTableData(b, evt);
+    const colCount = headers.length;
+    const colWidths = headers.map((h, i) => i === 0 ? colW * 0.4 : colW * 0.6 / (colCount - 1));
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(INK);
+    let cx = x;
+    headers.forEach((h, i) => { doc.text(h, cx, y); cx += colWidths[i]; });
+    y += lineH * 0.3;
+    doc.setDrawColor(STEEL); doc.setLineWidth(0.4);
+    doc.line(x, y, colRight, y);
+    y += lineH * 0.9;
+    if(!tableRows.length){
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(STEEL);
+      doc.text(t('pdfBlocks.tableEmpty'), x, y);
+    }else{
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(INK);
+      tableRows.forEach(row => {
+        maybeBreak();
+        cx = x;
+        row.forEach((cell, i) => {
+          const lines = doc.splitTextToSize(String(cell), colWidths[i] - 2);
+          doc.text(lines[0] || '', cx, y);
+          cx += colWidths[i];
+        });
+        y += lineH * 0.95;
+      });
+    }
+  }else{
+    const content = interpolatePdfBlockVariables(b.content || '', evt);
+    if(!content.trim()){
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(STEEL);
+      doc.text(t('pdfBlocks.emptyContent'), x, y);
+    }else{
+      content.split(/\n{2,}/).forEach(paragraph => {
+        doc.splitTextToSize(paragraph, colW).forEach(line => {
+          maybeBreak();
+          doc.text(line, x, y);
+          y += lineH;
+        });
+        y += lineH * 0.5;
+      });
+    }
+    if(b.type === 'waiver' && (b.config.showSignatureLine || b.config.showDateField)){
       y += lineH;
-    });
-    y += lineH * 0.5;
-  });
+      maybeBreak();
+      doc.setDrawColor(STEEL); doc.setLineWidth(0.6);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(STEEL);
+      if(b.config.showDateField){
+        const w = colW * 0.28;
+        doc.line(x, y, x + w, y);
+        doc.text(t('pdfBlocks.dateFieldLabel'), x, y + lineH * 0.8);
+      }
+      if(b.config.showSignatureLine){
+        const sigX = x + colW * 0.4;
+        doc.line(sigX, y, colRight, y);
+        doc.text(t('pdfBlocks.signatureFieldLabel'), sigX, y + lineH * 0.8);
+      }
+    }
+  }
   return y;
 }
 

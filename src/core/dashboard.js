@@ -53,6 +53,7 @@ function withEventDefaults(evt){
 async function createNewEvent(){
   const id = uid('evt');
   const evt = withEventDefaults({id, name:t('dashboard.newEventDefaultName'), date:'', description:'', checkpoints:[]});
+  evt.pdfBlocks = defaultPdfBlocksForNewEvent();
   state.eventsIndex.push({id, name:evt.name, date:evt.date});
   await saveEventsIndex();
   state.currentEvent = evt;

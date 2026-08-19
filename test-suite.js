@@ -575,14 +575,21 @@ async function runAlleycatTestSuite(){
 
   /* 3i) PDF-Baukasten */
   {
-    checkEqual('Event hat leere pdfBlocks per Default', evt.pdfBlocks.length, 0);
+    /* Paket 5 Teil B (17.6): neue Events bekommen jetzt vorbefüllte
+       Dokument-Typ-Vorlagen statt eines leeren Baukastens — 5 Manifest- +
+       2 Spokecards-Default-Blöcke, siehe PDF_DOCUMENT_TEMPLATES. */
+    checkEqual('Neues Event hat vorbefüllte Standard-PDF-Blöcke (Dokument-Typ-Vorlagen)', evt.pdfBlocks.length, 7);
+    check('Standard-Blöcke enthalten Checkpoint-Übersicht für Manifest', evt.pdfBlocks.some(b => b.type === 'checkpoint_list' && b.targetDocuments.includes('manifest')));
+    check('Standard-Blöcke enthalten Notfall-Infos für Spokecards', evt.pdfBlocks.some(b => b.type === 'emergency_info' && b.targetDocuments.includes('spokecards')));
+
+    const countBeforeAdds = evt.pdfBlocks.length;
     addPdfBlock('waiver');
     addPdfBlock('sponsors');
     addPdfBlock('checkpoint_list');
-    checkEqual('addPdfBlock legt 3 Blöcke an', evt.pdfBlocks.length, 3);
-    checkEqual('Neuer Block hat Default-Target "manifest"', evt.pdfBlocks[0].targetDocuments.join(','), 'manifest');
+    checkEqual('addPdfBlock legt 3 weitere Blöcke an', evt.pdfBlocks.length, countBeforeAdds + 3);
+    const waiverBlock = evt.pdfBlocks[evt.pdfBlocks.length - 3];
+    checkEqual('Neuer Block hat Default-Target "manifest"', waiverBlock.targetDocuments.join(','), 'manifest');
 
-    const waiverBlock = evt.pdfBlocks[0];
     onPdfBlockContentChange(waiverBlock.id, 'Teilnahme auf eigene Gefahr.\n\nZweiter Absatz.');
     checkEqual('onPdfBlockContentChange setzt Inhalt', waiverBlock.content, 'Teilnahme auf eigene Gefahr.\n\nZweiter Absatz.');
     onPdfBlockConfigToggle(waiverBlock.id, 'showSignatureLine', true);
@@ -665,6 +672,198 @@ async function runAlleycatTestSuite(){
     deletePdfBlock(evt.pdfBlocks[0].id);
     window.confirm = origConfirmPdf;
     checkEqual('deletePdfBlock entfernt Block', evt.pdfBlocks.length, countBeforeDelete - 1);
+  }
+
+  /* 3i-b) PDF-Baukasten 2.0 — Auto-Flow-Layout, Breiten, neue Blocktypen,
+     Dokument-Vorlagen, Vorschau (Paket 5 Teil B, Phase 17) */
+  {
+    /* layoutBlocks() — verbatim spec function 17.2 */
+    const mk = (width, pageBreakBefore) => ({width, pageBreakBefore: !!pageBreakBefore});
+    checkEqual('layoutBlocks: leere Liste -> keine Zeilen', layoutBlocks([]).length, 0);
+    const rFull = layoutBlocks([mk('full'), mk('full')]);
+    checkEqual('layoutBlocks: zwei full-Blöcke -> je eigene Zeile', rFull.length, 2);
+    const rHalf = layoutBlocks([mk('half'), mk('half')]);
+    checkEqual('layoutBlocks: zwei half-Blöcke -> 1 gemeinsame Zeile', rHalf.length, 1);
+    checkEqual('layoutBlocks: Zeile enthält beide half-Blöcke', rHalf[0].length, 2);
+    const rThird3 = layoutBlocks([mk('third'), mk('third'), mk('third')]);
+    checkEqual('layoutBlocks: drei third-Blöcke (0.99) passen in 1 Zeile', rThird3.length, 1);
+    checkEqual('layoutBlocks: Zeile enthält alle drei third-Blöcke', rThird3[0].length, 3);
+    const rThird4 = layoutBlocks([mk('third'), mk('third'), mk('third'), mk('third')]);
+    checkEqual('layoutBlocks Edge Case Summe>100%: vierter third-Block startet neue Zeile', rThird4.length, 2);
+    check('layoutBlocks Edge Case: erste Zeile 3 Blöcke, zweite 1 Block', rThird4[0].length === 3 && rThird4[1].length === 1);
+    const rHalfThird = layoutBlocks([mk('half'), mk('third')]);
+    checkEqual('layoutBlocks: half+third (0.83) teilen sich eine Zeile', rHalfThird.length, 1);
+    const rBreak = layoutBlocks([mk('half'), mk('half', true)]);
+    checkEqual('layoutBlocks: pageBreakBefore erzwingt neue Zeile trotz freiem Platz', rBreak.length, 2);
+
+    /* Migrationsregression (17.8 Schritt 8): ein Block ohne width/pageBreakBefore-
+       Feld (Storage-Shape vor Teil B) muss weiterhin wie ein einzelner
+       full-width-Block behandelt werden — eigene Zeile, eigene Seite. */
+    const legacyRaw = {id: 'legacy1', type: 'rules', targetDocuments: ['manifest'], enabled: true, sortOrder: 0, content: 'Alter Inhalt', config: {}};
+    const migrated = withPdfBlockDefaults(legacyRaw);
+    checkEqual('Migration: Legacy-Block ohne width-Feld bekommt Default "full"', migrated.width, 'full');
+    checkEqual('Migration: Legacy-Block ohne pageBreakBefore-Feld bekommt Default false', migrated.pageBreakBefore, false);
+    checkEqual('Migration: zwei migrierte full-Blöcke bleiben je eine eigene Zeile', layoutBlocks([migrated, withPdfBlockDefaults({id: 'legacy2', type: 'notes', targetDocuments: ['manifest'], enabled: true, sortOrder: 1, content: 'B', config: {}})]).length, 2);
+    await checkNoThrowAsync('Migration: appendPdfBlocks rendert einen migrierten Legacy-Block ohne Fehler', async () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({unit: 'pt', format: 'a4'});
+      appendPdfBlocks(doc, Object.assign({}, evt, {pdfBlocks: [migrated]}), 'manifest');
+      checkEqual('Migration: ein full-width-Block bekommt weiterhin genau eine eigene Seite', doc.internal.getNumberOfPages(), 2);
+    });
+
+    /* width/pageBreakBefore Setter + UI */
+    const widthTestBlock = evt.pdfBlocks[0];
+    setPdfBlockWidth(widthTestBlock.id, 'half');
+    checkEqual('setPdfBlockWidth setzt Breite', widthTestBlock.width, 'half');
+    setPdfBlockWidth(widthTestBlock.id, 'invalid-value');
+    checkEqual('setPdfBlockWidth ignoriert ungültigen Wert', widthTestBlock.width, 'half');
+    togglePdfBlockPageBreak(widthTestBlock.id, true);
+    checkEqual('togglePdfBlockPageBreak setzt Flag', widthTestBlock.pageBreakBefore, true);
+    togglePdfBlockPageBreak(widthTestBlock.id, false);
+    setPdfBlockWidth(widthTestBlock.id, 'full');
+
+    openManifest();
+    state.pdfBlocksPanelOpen = true;
+    render();
+    await wait(20);
+    checkEqual('Breiten-Dropdown pro Block gerendert', document.querySelectorAll('.pdf-block-width-label select').length, evt.pdfBlocks.length);
+    checkEqual('Seitenumbruch-Checkbox pro Block gerendert', document.querySelectorAll('.pdf-block-row-options input[type=checkbox]').length, evt.pdfBlocks.length);
+    check('Vorschau-Buttons im Panel gerendert', document.body.innerHTML.includes(t('pdfBlocks.previewManifest')) && document.body.innerHTML.includes(t('pdfBlocks.previewSpokecards')));
+    state.pdfBlocksPanelOpen = false;
+    render();
+
+    /* neuer Blocktyp: image (inkl. Client-Komprimierung) */
+    check('PDF_BLOCK_TYPES enthält "image"', PDF_BLOCK_TYPES.includes('image'));
+    addPdfBlock('image');
+    const imageBlock = evt.pdfBlocks[evt.pdfBlocks.length - 1];
+    checkEqual('Neuer image-Block hat noch kein dataUrl', !!imageBlock.config.dataUrl, false);
+
+    const bigCanvas = document.createElement('canvas');
+    bigCanvas.width = 2000; bigCanvas.height = 1000;
+    bigCanvas.getContext('2d').fillRect(0, 0, 2000, 1000);
+    const bigBlob = await new Promise(resolve => bigCanvas.toBlob(resolve, 'image/png'));
+    const bigResult = await compressImageFile(new File([bigBlob], 'route.png', {type: 'image/png'}));
+    check('compressImageFile liefert eine JPEG-DataURL', bigResult.dataUrl.startsWith('data:image/jpeg'));
+    checkEqual('compressImageFile skaliert >1600px Breite auf 1600px', bigResult.w, 1600);
+    checkEqual('compressImageFile skaliert Höhe proportional (2000x1000 -> 1600x800)', bigResult.h, 800);
+
+    const smallCanvas = document.createElement('canvas');
+    smallCanvas.width = 400; smallCanvas.height = 300;
+    smallCanvas.getContext('2d').fillRect(0, 0, 400, 300);
+    const smallBlob = await new Promise(resolve => smallCanvas.toBlob(resolve, 'image/png'));
+    const smallResult = await compressImageFile(new File([smallBlob], 'small.png', {type: 'image/png'}));
+    checkEqual('compressImageFile skaliert kleine Bilder nicht hoch', smallResult.w, 400);
+
+    await onPdfBlockImageUpload(imageBlock.id, {files: [new File([bigBlob], 'route.png', {type: 'image/png'})], value: ''});
+    check('onPdfBlockImageUpload speichert dataUrl + imageDims', !!imageBlock.config.dataUrl && imageBlock.config.imageDims.w === 1600);
+    onPdfBlockImageCaptionChange(imageBlock.id, 'Streckenübersicht');
+    checkEqual('onPdfBlockImageCaptionChange setzt Bildunterschrift', imageBlock.config.caption, 'Streckenübersicht');
+    onPdfBlockImageAlignChange(imageBlock.id, 'left');
+    checkEqual('onPdfBlockImageAlignChange setzt Ausrichtung', imageBlock.config.alignment, 'left');
+    await checkNoThrowAsync('appendPdfBlocks rendert image-Block mit Bild ohne Fehler', async () => {
+      const { jsPDF } = window.jspdf;
+      appendPdfBlocks(new jsPDF({unit: 'pt', format: 'a4'}), evt, 'manifest');
+    });
+    removePdfBlockImage(imageBlock.id);
+    checkEqual('removePdfBlockImage entfernt dataUrl', !!imageBlock.config.dataUrl, false);
+    await checkNoThrowAsync('appendPdfBlocks rendert image-Block ohne Bild (Leer-Hinweis) ohne Fehler', async () => {
+      const { jsPDF } = window.jspdf;
+      appendPdfBlocks(new jsPDF({unit: 'pt', format: 'a4'}), evt, 'manifest');
+    });
+
+    /* neuer Blocktyp: table (feste App-Daten-Quellen) */
+    check('PDF_BLOCK_TYPES enthält "table"', PDF_BLOCK_TYPES.includes('table'));
+    checkEqual('pdfBlockLogosPerRow: full->3, half->2, third->1', [pdfBlockLogosPerRow('full'), pdfBlockLogosPerRow('half'), pdfBlockLogosPerRow('third')].join(','), '3,2,1');
+    addPdfBlock('table');
+    const tableBlock = evt.pdfBlocks[evt.pdfBlocks.length - 1];
+    const cpTableData = pdfBlockTableData(tableBlock, evt);
+    checkEqual('table-Block Default-Source ist checkpoint_distances', cpTableData.headers[0], t('pdfBlocks.table.checkpoint'));
+    checkEqual('table checkpoint_distances liefert eine Zeile pro Checkpoint (+ Gesamt bei >1)', cpTableData.rows.length, evt.checkpoints.length + (evt.checkpoints.length > 1 ? 1 : 0));
+    onPdfBlockTableSourceChange(tableBlock.id, 'category_breakdown');
+    checkEqual('onPdfBlockTableSourceChange wechselt Quelle', tableBlock.config.source, 'category_breakdown');
+    checkEqual('table category_breakdown liefert 3 Spalten', pdfBlockTableData(tableBlock, evt).headers.length, 3);
+    onPdfBlockTableSourceChange(tableBlock.id, 'team_list');
+    const teamTableData = pdfBlockTableData(tableBlock, evt);
+    checkEqual('table team_list liefert 2 Spalten', teamTableData.headers.length, 2);
+    checkEqual('table team_list liefert eine Zeile pro Team', teamTableData.rows.length, evt.teams.length);
+    onPdfBlockTableSourceChange(tableBlock.id, 'invalid-source');
+    checkEqual('onPdfBlockTableSourceChange ignoriert ungültige Quelle', tableBlock.config.source, 'team_list');
+    await checkNoThrowAsync('appendPdfBlocks rendert table-Block ohne Fehler', async () => {
+      const { jsPDF } = window.jspdf;
+      appendPdfBlocks(new jsPDF({unit: 'pt', format: 'a4'}), evt, 'manifest');
+    });
+
+    /* neuer Blocktyp: variable_text (Platzhalter-Interpolation, 17.5) */
+    check('PDF_BLOCK_TYPES enthält "variable_text"', PDF_BLOCK_TYPES.includes('variable_text'));
+    addPdfBlock('variable_text');
+    const varBlock = evt.pdfBlocks[evt.pdfBlocks.length - 1];
+    onPdfBlockContentChange(varBlock.id, 'Willkommen beim {{event.name}}! {{event.riderCount}} Fahrer am Start. Unbekannt: {{event.doesNotExist}}');
+    const interpolated = interpolatePdfBlockVariables(varBlock.content, evt);
+    check('interpolatePdfBlockVariables setzt {{event.name}} ein', interpolated.includes(evt.name));
+    check('interpolatePdfBlockVariables setzt {{event.riderCount}} ein', interpolated.includes(String(evt.riders.length)));
+    check('interpolatePdfBlockVariables lässt unbekannte Platzhalter unverändert', interpolated.includes('{{event.doesNotExist}}'));
+    check('interpolatePdfBlockVariables verändert den gespeicherten content nicht (Vorlage bleibt wiederverwendbar)', varBlock.content.includes('{{event.name}}'));
+    await checkNoThrowAsync('appendPdfBlocks rendert variable_text-Block ohne Fehler', async () => {
+      const { jsPDF } = window.jspdf;
+      appendPdfBlocks(new jsPDF({unit: 'pt', format: 'a4'}), evt, 'manifest');
+    });
+
+    /* Dokument-Typ-Vorlagen + "Auf Standard zurücksetzen" (17.6) */
+    check('PDF_DOCUMENT_TEMPLATES enthält Vorlagen für manifest und spokecards', !!PDF_DOCUMENT_TEMPLATES.manifest && !!PDF_DOCUMENT_TEMPLATES.spokecards);
+    const freshBlocks = defaultPdfBlocksForNewEvent();
+    checkEqual('defaultPdfBlocksForNewEvent liefert 7 Blöcke (5 Manifest + 2 Spokecards)', freshBlocks.length, 7);
+    checkEqual('defaultPdfBlocksForNewEvent: 5 Blöcke targeten nur Manifest', freshBlocks.filter(b => b.targetDocuments.join(',') === 'manifest').length, 5);
+    checkEqual('defaultPdfBlocksForNewEvent: 2 Blöcke targeten nur Spokecards', freshBlocks.filter(b => b.targetDocuments.join(',') === 'spokecards').length, 2);
+
+    const dualTargetBlock = evt.pdfBlocks.find(b => b.targetDocuments.includes('manifest'));
+    togglePdfBlockTargetDocument(dualTargetBlock.id, 'spokecards', true);
+    check('Vorbereitung Reset-Test: Block targetet jetzt Manifest+Spokecards', dualTargetBlock.targetDocuments.includes('manifest') && dualTargetBlock.targetDocuments.includes('spokecards'));
+    const origConfirmReset = window.confirm;
+    window.confirm = () => true;
+    resetPdfBlocksToDefault('manifest');
+    window.confirm = origConfirmReset;
+    const manifestOnlyAfterReset = evt.pdfBlocks.filter(b => b.targetDocuments.length === 1 && b.targetDocuments[0] === 'manifest');
+    checkEqual('resetPdfBlocksToDefault(manifest) hinterlässt genau die 5 Vorlagen-Blöcke für Manifest', manifestOnlyAfterReset.length, 5);
+    check('resetPdfBlocksToDefault(manifest) lässt Spokecards-Blöcke unangetastet', evt.pdfBlocks.some(b => b.targetDocuments.includes('spokecards')));
+    checkEqual('resetPdfBlocksToDefault(manifest) entfernt "manifest" aus Blöcken die auch Spokecards targeten (kein komplettes Löschen)', dualTargetBlock.targetDocuments.join(','), 'spokecards');
+    await checkNoThrowAsync('appendPdfBlocks rendert nach Reset-to-Default ohne Fehler', async () => {
+      const { jsPDF } = window.jspdf;
+      appendPdfBlocks(new jsPDF({unit: 'pt', format: 'a4'}), evt, 'manifest');
+    });
+
+    /* Vorlagen-Export/-Import um Breiten erweitert (17.8 Schritt 7) */
+    const widthImportBlock = evt.pdfBlocks[0];
+    setPdfBlockWidth(widthImportBlock.id, 'half');
+    togglePdfBlockPageBreak(widthImportBlock.id, true);
+    const templateJsonWithWidth = JSON.stringify(evt.pdfBlocks);
+    const countBeforeWidthImport = evt.pdfBlocks.length;
+    evt.pdfBlocks = [];
+    const origConfirmImport2 = window.confirm;
+    window.confirm = () => true;
+    await onImportPdfBlocksFile({value: '', files: [new File([templateJsonWithWidth], 'template-width.json', {type: 'application/json'})]});
+    window.confirm = origConfirmImport2;
+    checkEqual('JSON-Import stellt Blockanzahl wieder her', evt.pdfBlocks.length, countBeforeWidthImport);
+    check('JSON-Import überträgt width/pageBreakBefore aus der Vorlage (statt sie zu verwerfen)', evt.pdfBlocks.some(b => b.width === 'half' && b.pageBreakBefore === true));
+
+    /* Vorschau-Funktion (17.8 Schritt 5) — rendert nur den Baukasten-Teil
+       in einem Standalone-Doc, gezeigt über die bestehende Iframe-Vorschau
+       aus Paket 1 statt einer neuen PDF->Bild-Rasterisierung. */
+    await checkNoThrowAsync('previewPdfBlocksLayout("manifest") läuft ohne Fehler', async () => previewPdfBlocksLayout('manifest'));
+    check('previewPdfBlocksLayout öffnet die PDF-Vorschau', state.pdfPreviewOpen === true);
+    closePdfPreview();
+    await checkNoThrowAsync('previewPdfBlocksLayout("spokecards") läuft ohne Fehler', async () => previewPdfBlocksLayout('spokecards'));
+    closePdfPreview();
+
+    const origAlertPreview = window.alert;
+    let previewAlertCalled = false;
+    window.alert = () => { previewAlertCalled = true; };
+    const emptyBlocksEvt = state.currentEvent;
+    const savedBlocks = emptyBlocksEvt.pdfBlocks;
+    emptyBlocksEvt.pdfBlocks = [];
+    previewPdfBlocksLayout('manifest');
+    check('previewPdfBlocksLayout zeigt Hinweis statt Vorschau bei keinen aktiven Blöcken', previewAlertCalled && !state.pdfPreviewOpen);
+    window.alert = origAlertPreview;
+    emptyBlocksEvt.pdfBlocks = savedBlocks;
   }
 
   /* 3j) Spielmodi-Engine */

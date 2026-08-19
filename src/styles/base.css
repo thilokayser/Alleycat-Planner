@@ -687,6 +687,17 @@
   .pdf-block-sponsor-logo img{width:90px; height:45px; object-fit:contain; background:var(--chalk); border-radius:3px;}
   .pdf-block-add-row{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
   .pdf-block-template-row{display:flex; gap:8px; flex-wrap:wrap; padding-top:12px; border-top:1px dashed var(--asphalt-3);}
+  .pdf-block-row-options{
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:8px; padding-top:8px;
+    border-top:1px dashed var(--asphalt-3); font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--steel);
+  }
+  .pdf-block-width-label{display:flex; align-items:center; gap:6px;}
+  .pdf-block-width-label select{
+    padding:3px 6px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt-2);
+    color:var(--chalk); font-family:'JetBrains Mono',monospace; font-size:10.5px;
+  }
+  .pdf-block-image-preview{display:flex; align-items:center; gap:10px;}
+  .pdf-block-image-preview img{max-width:180px; max-height:100px; object-fit:contain; background:var(--chalk); border-radius:3px;}
 
   /* ---------- game modes (Spielmodi-Engine) ---------- */
   .game-mode-scoring-banner{

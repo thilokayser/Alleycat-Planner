@@ -700,7 +700,10 @@ const translations = {
         notes: 'Notizen',
         custom_text: 'Eigener Text',
         emergency_info: 'Notfall-Infos',
-        event_locations: 'Sonderorte (HQ/Afterparty)'
+        event_locations: 'Sonderorte (HQ/Afterparty)',
+        image: 'Bild',
+        table: 'Tabelle',
+        variable_text: 'Text mit Platzhaltern'
       },
       toggleButton: 'PDF-Baukasten',
       hint: 'Zusätzliche Seiten, die an Manifest und/oder Spokecards-PDF angehängt werden — Reihenfolge per Pfeil-Buttons, pro Block wählbar für welche Dokumente er gilt.',
@@ -723,7 +726,37 @@ const translations = {
       deleteConfirm: 'Diesen Block wirklich löschen?',
       importPreview: '{count} Block/Blöcke aus der Datei importieren?',
       importFailed: 'Import fehlgeschlagen: Die Datei ist keine gültige PDF-Baukasten-Vorlage.',
-      spokecardsHint: 'Zusätzliche Seiten für die Spokecards (Waiver, Sponsoren, …) verwaltet im'
+      spokecardsHint: 'Zusätzliche Seiten für die Spokecards (Waiver, Sponsoren, …) verwaltet im',
+      widthLabel: 'Breite:',
+      widthFull: '100%',
+      widthHalf: '50%',
+      widthThird: '33%',
+      pageBreakBefore: 'Seitenumbruch davor',
+      imageCaptionPlaceholder: 'Bildunterschrift (optional)',
+      imageEmpty: 'Noch kein Bild hochgeladen.',
+      imageUploadFailed: 'Bild konnte nicht verarbeitet werden.',
+      alignLeft: 'Links',
+      alignCenter: 'Zentriert',
+      alignRight: 'Rechts',
+      tableAuto: 'Wird automatisch aus den Event-Daten erzeugt — kein Text nötig.',
+      tableEmpty: 'Keine Daten vorhanden.',
+      tableSource: {
+        checkpoint_distances: 'Checkpoint-Distanzen',
+        category_breakdown: 'Kategorien-Verteilung',
+        team_list: 'Team-Liste'
+      },
+      table: {
+        checkpoint: 'Checkpoint', leg: 'Etappe', cumulative: 'Gesamt', total: 'Gesamtstrecke',
+        category: 'Kategorie', option: 'Option', count: 'Anzahl',
+        team: 'Team', members: 'Mitglieder'
+      },
+      variableTextHint: 'Platzhalter: {{event.name}}, {{event.date}}, {{event.riderCount}}, {{event.hqAddress}}, {{event.afterpartyName}} — werden beim Export eingesetzt.',
+      resetConfirm: 'Alle Blöcke dieses Dokuments durch die Standard-Vorlage ersetzen?',
+      resetTo: 'Standard: {doc}',
+      previewManifest: 'Vorschau Manifest',
+      previewSpokecards: 'Vorschau Spokecards',
+      previewEmpty: 'Keine aktiven Blöcke für dieses Dokument.',
+      previewFilename: 'vorschau-{doc}.pdf'
     },
     gameModes: {
       type: {
