@@ -255,3 +255,124 @@ async function publishRiderConfigNow(){
 function retryPublishRiderConfig(){
   publishRiderConfigNow().then(() => render());
 }
+
+/* ---------------- Merge-Polling ----------------
+   Liest das Log ab dem gespeicherten Cursor und merged die Zeilen in
+   evt.riders. Läuft nur, solange ein Rennen bevorsteht oder läuft —
+   vorher gibt es nichts zu holen, danach nichts mehr.
+
+   Die wichtigste Regel steht in applyRiderLogPage(): render() nur,
+   wenn sich wirklich etwas geändert hat. Ein bedingungsloses Neurendern
+   alle fünf Sekunden zerstört laufende Texteingaben (dieselbe
+   Fehlerklasse wie der Fokusverlust im Suchfeld, Commit 9641fbf). */
+let riderPollTimer = null;
+let riderPollInFlight = false;
+const RIDER_POLL_INTERVAL_MS = 5000;
+
+function riderPollingWanted(evt){
+  return !!evt && (evt.status === 'ready' || evt.status === 'running') && !!evt.publicId;
+}
+
+function startRiderPolling(){
+  stopRiderPolling();
+  if(!riderPollingWanted(state.currentEvent)) return;
+  riderPollTimer = setInterval(riderPollTick, RIDER_POLL_INTERVAL_MS);
+  riderPollTick();
+}
+function stopRiderPolling(){
+  if(riderPollTimer){ clearInterval(riderPollTimer); riderPollTimer = null; }
+}
+
+async function riderPollTick(){
+  /* Überlappende Läufe würden denselben Cursor zweimal lesen und die
+     zweite Antwort auf einen veralteten Stand anwenden. */
+  if(riderPollInFlight) return;
+  const evt = state.currentEvent;
+  if(!riderPollingWanted(evt)){ stopRiderPolling(); return; }
+
+  riderPollInFlight = true;
+  try{
+    let changed = false;
+    let guard = 0;
+    /* `more` heißt: der Server hatte mehr Zeilen als das Limit. Dann
+       sofort weiterlesen statt das nächste Intervall abzuwarten, sonst
+       bräuchte ein Rückstand von 1000 Zeilen 25 Sekunden zum Aufholen.
+       guard deckelt die Schleife, damit ein fehlerhafter Cursor die
+       Seite nicht einfriert. */
+    while(guard++ < 10){
+      const res = await pollRiderLog(evt.publicId, evt.riderLastLogId || 0);
+      /* null = diese Variante hat keine Fahrer-App. Dann dauerhaft
+         aufhören, nicht alle fünf Sekunden erneut feststellen. */
+      if(res === null){ stopRiderPolling(); return; }
+      if(res.ok === false) return;
+
+      const merged = mergeRiderLogRows(evt, res.rows || []);
+      if(merged.changed) changed = true;
+      if(res.lastId > (evt.riderLastLogId || 0)){
+        evt.riderLastLogId = res.lastId;
+        changed = true;
+      }
+      if(!res.more) break;
+    }
+    if(changed){
+      debouncedSave();
+      render();
+    }
+  } finally {
+    riderPollInFlight = false;
+  }
+}
+
+/* ---------------- Anmeldungen bestätigen ---------------- */
+function pendingRiderRegistrations(evt){
+  return (evt.riders || []).filter(r => r.riderStatus === 'pending');
+}
+
+async function confirmPendingRider(bib){
+  const evt = state.currentEvent;
+  const rider = (evt.riders || []).find(r => r.bib === bib);
+  if(!rider || rider.riderStatus !== 'pending') return;
+
+  const data = rider.pendingData || {};
+  const before = {name: rider.name, emergencyContact: rider.emergencyContact, categories: Object.assign({}, rider.categories), riderStatus: rider.riderStatus, pendingData: rider.pendingData};
+  logUndoableAction(evt, t('riderApp.undoConfirm', {bib}), () => {
+    Object.assign(rider, before);
+    confirmRiderSlot(evt.publicId, bib, 'pending');
+    render();
+  });
+
+  rider.name = data.name || rider.name;
+  rider.emergencyContact = data.emergencyContact || rider.emergencyContact;
+  if(data.categories && typeof data.categories === 'object') rider.categories = Object.assign({}, rider.categories, data.categories);
+  rider.riderStatus = 'confirmed';
+  rider.pendingData = null;
+
+  await confirmRiderSlot(evt.publicId, bib, 'confirmed');
+  debouncedSave();
+  render();
+}
+
+async function rejectPendingRider(bib){
+  const evt = state.currentEvent;
+  const rider = (evt.riders || []).find(r => r.bib === bib);
+  if(!rider || rider.riderStatus !== 'pending') return;
+  if(!confirm(t('riderApp.rejectConfirm', {bib}))) return;
+
+  const before = {name: rider.name, emergencyContact: rider.emergencyContact, riderStatus: rider.riderStatus, pendingData: rider.pendingData};
+  logUndoableAction(evt, t('riderApp.undoReject', {bib}), () => {
+    Object.assign(rider, before);
+    confirmRiderSlot(evt.publicId, bib, 'pending');
+    render();
+  });
+
+  /* Slot wird wieder ausgebbar: die gedruckte Karte bekommt der nächste
+     Fahrer in die Hand, deshalb müssen die Daten wirklich weg. */
+  rider.name = '';
+  rider.emergencyContact = '';
+  rider.riderStatus = '';
+  rider.pendingData = null;
+
+  await confirmRiderSlot(evt.publicId, bib, 'free');
+  debouncedSave();
+  render();
+}

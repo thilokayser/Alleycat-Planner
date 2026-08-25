@@ -3130,6 +3130,50 @@ async function runAlleycatTestSuite(){
     const partialRiderApp = withEventDefaults({id: 'x', name: 'y', riderApp: {map: true}});
     checkEqual('withEventDefaults() ergänzt fehlende riderApp-Schalter', partialRiderApp.riderApp.progress, true);
     checkEqual('withEventDefaults() behält gesetzte riderApp-Schalter', partialRiderApp.riderApp.map, true);
+
+    /* Ausstehende Anmeldungen */
+    const pendEvt = withEventDefaults({id: 'p', name: 'p', riders: [
+      {bib: 1, riderStatus: 'confirmed'}, {bib: 2, riderStatus: 'pending', pendingData: {name: 'Wartender'}},
+      {bib: 3, riderStatus: ''}
+    ]});
+    checkEqual('pendingRiderRegistrations() findet nur wartende Slots', pendingRiderRegistrations(pendEvt).length, 1);
+    checkEqual('pendingRiderRegistrations() liefert den richtigen Slot', pendingRiderRegistrations(pendEvt)[0].bib, 2);
+
+    /* In der lokalen Variante liefert riderAppBaseUrl() '' — daran hängt
+       die gesamte Rider-Oberfläche. Diese Prüfungen laufen deshalb im
+       lokalen Build und belegen genau das Ausblenden. */
+    checkEqual('riderAppBaseUrl() ist in der lokalen Variante leer', riderAppBaseUrl(), '');
+    check('Fahrer-Sidebar zeigt ohne Fahrer-App keinen Anmeldungs-Punkt',
+      !ridersNavGroups(pendEvt).some(g => g.items.some(i => i.id === 'pending')));
+
+    const pendHtml = renderRidersSectionPending(pendEvt);
+    check('Anmeldungs-Sektion zeigt die wartende Startnummer', pendHtml.includes('#2'));
+    check('Anmeldungs-Sektion zeigt den eingegebenen Namen', pendHtml.includes('Wartender'));
+    const emptyPendHtml = renderRidersSectionPending(withEventDefaults({id: 'q', name: 'q'}));
+    check('Anmeldungs-Sektion zeigt einen Empty State ohne Anmeldungen', emptyPendHtml.includes(t('riderApp.pendingEmptyTitle')));
+
+    /* Fahrer-eingegebene Namen dürfen nicht als HTML landen */
+    const xssEvt = withEventDefaults({id: 'x2', name: 'x2', riders: [
+      {bib: 5, riderStatus: 'pending', pendingData: {name: '<img src=x onerror=alert(1)>', contact: '<b>roh</b>'}}
+    ]});
+    const xssHtml = renderRidersSectionPending(xssEvt);
+    check('Anmeldungs-Sektion escapt einen eingegebenen Namen', !xssHtml.includes('<img src=x'));
+    check('Anmeldungs-Sektion escapt einen eingegebenen Kontakt', !xssHtml.includes('<b>roh</b>'));
+
+    /* Verwaiste Check-ins erscheinen im Leaderboard */
+    const orphanEvt = withEventDefaults({id: 'o', name: 'o',
+      riders: [withRiderDefaults({bib: 1, finishTime: '2026-08-25T12:00'})],
+      checkpoints: [withCheckpointDefaults({id: 'cp-x', name: 'X', order: 0})],
+      orphanCheckins: [{id: 9, bib: 42, cp_id: 'cp-weg', type: 'checkin'}]
+    });
+    const evtBefore = state.currentEvent, viewBefore = state.view;
+    state.currentEvent = orphanEvt;
+    renderLeaderboard();
+    const lbHtml = document.getElementById('view-leaderboard').innerHTML;
+    check('Leaderboard weist auf verwaiste Check-ins hin', lbHtml.includes(t('riderApp.orphanHeading', {count: 1})));
+    check('Leaderboard nennt die verwaiste Startnummer', lbHtml.includes('42'));
+    state.currentEvent = evtBefore; state.view = viewBefore;
+    render();
   }
 
   /* Zusammenfassung */

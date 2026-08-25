@@ -256,6 +256,7 @@ function goDashboard(){
   state.currentEvent = null;
   state.addMode = false;
   state.editingId = null;
+  stopRiderPolling();
   render();
 }
 async function openEditor(id){
@@ -268,6 +269,7 @@ async function openEditor(id){
   state.geoImportLayers = []; // "temporär" imported geo layers are session-only, tied to whichever event is currently open
   registerEventSounds(state.currentEvent);
   state.loading = false;
+  startRiderPolling();
   render();
   /* Guarded on state.view, same reasoning as the sidebar-collapse/mobile-map
      invalidateSize() gotcha already documented in CLAUDE.md: this is a

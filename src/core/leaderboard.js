@@ -119,6 +119,23 @@ function renderLeaderboard(){
   const arrivedCount = allRiders.filter(r => r.finishTime).length;
   const arrivalPct = allRiders.length ? Math.round((arrivedCount / allRiders.length) * 100) : 0;
 
+  /* Check-ins, deren Startnummer oder Checkpoint es im Event nicht mehr
+     gibt — etwa weil ein Checkpoint nach dem Kartendruck gelöscht wurde.
+     Sie werden angezeigt statt verworfen: ein Fahrer, der nachweislich
+     an einem Punkt war, darf nicht durch einen Konfigurationsfehler aus
+     der Wertung fallen. */
+  const orphanHtml = (evt.orphanCheckins || []).length ? `
+    <div class="leaderboard-orphan-note">
+      <strong>${t('riderApp.orphanHeading', {count: evt.orphanCheckins.length})}</strong>
+      <div>${t('riderApp.orphanDesc')}</div>
+      <ul>
+        ${evt.orphanCheckins.slice(0, 10).map(o =>
+          `<li>${t('riderApp.orphanRow', {bib: o.bib, cp: escapeHtml(o.cp_id || '—')})}</li>`
+        ).join('')}
+      </ul>
+    </div>
+  ` : '';
+
   const tabsHtml = `
     <div class="leaderboard-tabs">
       <button class="lb-tab-btn ${state.leaderboardTab === 'individual' ? 'active' : ''}" onclick="setLeaderboardTab('individual')">${t('leaderboard.individualTab')}</button>
@@ -175,6 +192,7 @@ function renderLeaderboard(){
         <h2>${t('leaderboard.title')}</h2>
       </div>
       ${tabsHtml}
+      ${orphanHtml}
       <div class="leaderboard-toolbar">
         <div class="leaderboard-stats"><span>${t(teamStats.teams.length === 1 ? 'leaderboard.teamCountSingular' : 'leaderboard.teamCountPlural', {count: teamStats.teams.length})}</span> <span class="lb-scoring-mode-tag">${teamStats.scoringMode === 'allMustFinish' ? t('rider.teamScoringAllMustFinish') : t('rider.teamScoringBestTime')}</span></div>
         <button class="btn" onclick="exportLeaderboardCSV()">${t('leaderboard.exportCsv')}</button>
@@ -258,6 +276,7 @@ function renderLeaderboard(){
       <h2>${t('leaderboard.title')}</h2>
     </div>
     ${tabsHtml}
+      ${orphanHtml}
     <div class="leaderboard-toolbar">
       <div class="leaderboard-search">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>

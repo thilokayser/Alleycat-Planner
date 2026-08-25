@@ -42,6 +42,9 @@ function markReady(evt){
      nur im Status 'running' an, ein verzögerter Publish sperrte die
      ersten Fahrer nach dem Startschuss ohne erkennbaren Grund aus. */
   publishRiderConfigNow();
+  /* startRiderPolling() beendet sich selbst, wenn der neue Status kein
+     Polling braucht — deshalb hier ein Aufruf für beide Richtungen. */
+  startRiderPolling();
   debouncedSave();
   render();
   return true;
@@ -54,6 +57,9 @@ function startRace(evt){
      nur im Status 'running' an, ein verzögerter Publish sperrte die
      ersten Fahrer nach dem Startschuss ohne erkennbaren Grund aus. */
   publishRiderConfigNow();
+  /* startRiderPolling() beendet sich selbst, wenn der neue Status kein
+     Polling braucht — deshalb hier ein Aufruf für beide Richtungen. */
+  startRiderPolling();
   evt.startConfirmedAt = toLocalDateTimeInputValue(new Date());
   evt.cpLockOverride = false;
   state.addMode = false;
@@ -83,6 +89,9 @@ function completeRace(evt){
      nur im Status 'running' an, ein verzögerter Publish sperrte die
      ersten Fahrer nach dem Startschuss ohne erkennbaren Grund aus. */
   publishRiderConfigNow();
+  /* startRiderPolling() beendet sich selbst, wenn der neue Status kein
+     Polling braucht — deshalb hier ein Aufruf für beide Richtungen. */
+  startRiderPolling();
   debouncedSave();
   render();
   return true;
@@ -107,6 +116,9 @@ function onStatusSelectChange(value){
      nur im Status 'running' an, ein verzögerter Publish sperrte die
      ersten Fahrer nach dem Startschuss ohne erkennbaren Grund aus. */
   publishRiderConfigNow();
+  /* startRiderPolling() beendet sich selbst, wenn der neue Status kein
+     Polling braucht — deshalb hier ein Aufruf für beide Richtungen. */
+  startRiderPolling();
     debouncedSave();
     render();
   }
