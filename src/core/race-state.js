@@ -38,6 +38,10 @@ function markReady(evt){
   }
   evt.status = 'ready';
   evt.statusChangedAt = toLocalDateTimeInputValue(new Date());
+  /* Sofort statt über den 3-Sekunden-Debounce: rider.php nimmt Check-ins
+     nur im Status 'running' an, ein verzögerter Publish sperrte die
+     ersten Fahrer nach dem Startschuss ohne erkennbaren Grund aus. */
+  publishRiderConfigNow();
   debouncedSave();
   render();
   return true;
@@ -46,6 +50,10 @@ function startRace(evt){
   if(!evt) return;
   evt.status = 'running';
   evt.statusChangedAt = toLocalDateTimeInputValue(new Date());
+  /* Sofort statt über den 3-Sekunden-Debounce: rider.php nimmt Check-ins
+     nur im Status 'running' an, ein verzögerter Publish sperrte die
+     ersten Fahrer nach dem Startschuss ohne erkennbaren Grund aus. */
+  publishRiderConfigNow();
   evt.startConfirmedAt = toLocalDateTimeInputValue(new Date());
   evt.cpLockOverride = false;
   state.addMode = false;
@@ -71,6 +79,10 @@ function completeRace(evt){
   }
   evt.status = 'completed';
   evt.statusChangedAt = toLocalDateTimeInputValue(new Date());
+  /* Sofort statt über den 3-Sekunden-Debounce: rider.php nimmt Check-ins
+     nur im Status 'running' an, ein verzögerter Publish sperrte die
+     ersten Fahrer nach dem Startschuss ohne erkennbaren Grund aus. */
+  publishRiderConfigNow();
   debouncedSave();
   render();
   return true;
@@ -91,6 +103,10 @@ function onStatusSelectChange(value){
     }
     evt.status = value;
     evt.statusChangedAt = toLocalDateTimeInputValue(new Date());
+  /* Sofort statt über den 3-Sekunden-Debounce: rider.php nimmt Check-ins
+     nur im Status 'running' an, ein verzögerter Publish sperrte die
+     ersten Fahrer nach dem Startschuss ohne erkennbaren Grund aus. */
+  publishRiderConfigNow();
     debouncedSave();
     render();
   }

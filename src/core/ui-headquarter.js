@@ -15,6 +15,9 @@ let state = {
   checkinActiveBib: null,
   checkinNotFound: false,
   leaderboardSearch: '',
+  /* null = diese Installation hat keine Fahrer-App (Seam liefert null).
+     Sonst {ok, at, error} des letzten Publish-Versuchs. */
+  riderPublish: null,
   spokeCardsGenerating: false,
   riderSheetGenerating: false,
   printPopupBlocked: false,
@@ -167,7 +170,10 @@ async function saveCurrentEvent(){
   setSaveStatus('saving');
   const ok = await storageSet('event:' + state.currentEvent.id, JSON.stringify(state.currentEvent));
   setSaveStatus(ok ? 'saved' : 'error');
-  if(ok) broadcastEventUpdated(state.currentEvent.id);
+  if(ok){
+    broadcastEventUpdated(state.currentEvent.id);
+    schedulePublishRiderConfig();
+  }
 }
 function debouncedSave(){
   setSaveStatus('pending');

@@ -183,3 +183,75 @@ async function buildRiderSyncPayload(evt){
     checkpoints
   };
 }
+
+/* ---------------- Publish ----------------
+   Bewusst NICHT an debouncedSave() gehängt: das wäre ein
+   Netzwerk-Roundtrip pro Tastendruck. Stattdessen ein eigener,
+   deutlich längerer Debounce nach dem erfolgreichen Speichern, plus
+   ein sofortiger Publish bei jedem Rennstatuswechsel — dort zählt
+   Aktualität, weil rider.php Check-ins nur im Status 'running'
+   annimmt. */
+let riderPublishTimeout = null;
+let riderPublishInFlight = false;
+const RIDER_PUBLISH_DEBOUNCE_MS = 3000;
+
+/* Der Wächter bricht eine sonst unvermeidliche Schleife: ein Publish
+   kann Token nachrüsten und muss dann speichern, und Speichern plant
+   einen Publish. Ohne ihn folgte jedem Erst-Publish ein zweiter,
+   wirkungsloser Netzwerkaufruf. */
+function schedulePublishRiderConfig(){
+  if(riderPublishInFlight) return;
+  clearTimeout(riderPublishTimeout);
+  riderPublishTimeout = setTimeout(publishRiderConfigNow, RIDER_PUBLISH_DEBOUNCE_MS);
+}
+
+async function publishRiderConfigNow(){
+  clearTimeout(riderPublishTimeout);
+  const evt = state.currentEvent;
+  if(!evt) return null;
+
+  /* Zuerst fragen, ob es überhaupt eine Fahrer-App gibt — und zwar
+     bevor irgendetwas am Event verändert wird. Der Rückgabewert des
+     Seams käme dafür zu spät: bis er da ist, hätte das Event längst eine
+     publicId und Token, die in dieser Installation niemand je benutzt,
+     und der nächste debouncedSave() schriebe sie mit. */
+  if(!riderAppBaseUrl()){
+    state.riderPublish = null;
+    return null;
+  }
+
+  riderPublishInFlight = true;
+  try{
+    /* Token und publicId werden hier nachgerüstet statt in einem eigenen
+       Migrationsschritt: der erste Publish eines Altbestands-Events
+       erzeugt, was fehlt, und speichert es zurück. */
+    let needsSave = false;
+    if(!evt.publicId){ evt.publicId = generateEventPublicId(); needsSave = true; }
+    if(ensureRiderTokens(evt)) needsSave = true;
+    if(ensureCheckpointTokens(evt)) needsSave = true;
+
+    const payload = await buildRiderSyncPayload(evt);
+    const res = await publishRiderConfig(payload);
+
+    /* null heißt: diese Variante oder diese Installation hat keine
+       Fahrer-App. Dann auch nichts zurückschreiben — sonst bekäme ein
+       lokales Event Token, die niemand je benutzt. */
+    if(res === null){
+      state.riderPublish = null;
+      return null;
+    }
+
+    state.riderPublish = res.ok
+      ? {ok: true, at: Date.now(), error: ''}
+      : {ok: false, at: Date.now(), error: res.error || 'unbekannt'};
+
+    if(needsSave) await saveCurrentEvent();
+    return res;
+  } finally {
+    riderPublishInFlight = false;
+  }
+}
+
+function retryPublishRiderConfig(){
+  publishRiderConfigNow().then(() => render());
+}

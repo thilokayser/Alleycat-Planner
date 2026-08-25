@@ -138,6 +138,17 @@ async function exportBackupBlob(evt){
 function supportsLocalBackup(){
   return !hasSharedStorage;
 }
+/* Rider-App-Seams. Diese Variante hat kein Backend, das ein Fahrer-Handy
+   erreichen könnte — ohne gemeinsamen Server gibt es keine Fahrer-App.
+   null ist das vereinbarte Signal dafür: der geteilte Kern blendet daran
+   sämtliche Rider-Oberfläche aus, statt selbst nach der Variante zu
+   fragen. Gleiches Muster wie exportBackupBlob(). */
+async function publishRiderConfig(){ return null; }
+async function pollRiderLog(){ return null; }
+async function confirmRiderSlot(){ return null; }
+/* Gehört zum selben Seam-Vertrag: der Kern erzeugt daraus die QR-Nutzlast.
+   Leer heißt "keine Adresse, auf die ein QR-Code zeigen könnte". */
+function riderAppBaseUrl(){ return ''; }
 async function initStorageBackend(){
   await initSqliteStorage();
   return true;
