@@ -25,6 +25,26 @@ Lebendiges Dokument (14.4 im Planungsdokument): wächst mit jeder Installation, 
 | Besonderheiten | Der PHP-eingebaute Entwicklungsserver (`php -S`) ist standardmäßig **einsträngig** und verarbeitet Anfragen nacheinander — für den Nebenläufigkeits-/Lasttest musste `PHP_CLI_SERVER_WORKERS=8` gesetzt werden, sonst serialisiert der Server selbst alle "gleichzeitigen" Anfragen und der Test misst nur den Entwicklungsserver, nicht die App. Ein echtes Shared-Hosting-Setup (Apache/nginx + PHP-FPM) ist von Haus aus mehrsträngig, insofern eher der Realität näher als der Default-Devserver |
 | Fazit | Pre-Flight-Check, Migrations-Runner und Backend-Endpunkte verhalten sich wie geplant. Kein Ersatz für einen echten Shared-Hosting-Test (siehe unten) |
 
+### Lokale Entwicklungsumgebung (macOS, Homebrew) — Migration 2, 25.08.2026
+
+**Kontext:** Schema-Prüfung für das Rider-App-Fundament (Teilprojekt 1, Paket 2). Migration `2` legt fünf neue Tabellen neben der kv-Tabelle an: `_rider_event`, `_rider_slot`, `_rider_checkpoint`, `_rider_log`, `_rider_ratelimit`. Geprüft wurde ausschließlich das Schema — `rider.php` existiert zu diesem Zeitpunkt noch nicht.
+
+| Punkt | Wert |
+|---|---|
+| Betriebssystem | macOS (Apple Silicon), Homebrew-Pakete |
+| PHP-Version | 8.5.9 (CLI) |
+| MySQL/MariaDB | MariaDB 12.3.2 |
+| Frische Datenbank | Migrationen 1 und 2 angewendet, `schema_version` = 2, alle fünf Tabellen vorhanden |
+| Erneuter Lauf | Wendet nichts an, Version bleibt 2 — idempotent wie Migration 1 |
+| Bestandsdatenbank auf Version 1 | Nur Migration 2 wird nachgeholt. Bestehender Event-Blob byte-identisch, beide kv-Zeilen erhalten, Umlaute und 4-Byte-Zeichen (Emoji) unversehrt — kein Datenverlust |
+| `utf8`-Rückfall | Migration 2 läuft auch mit `$charset = 'utf8'` durch, Tabellen erhalten `utf8mb3_uca1400_ai_ci`. Erwartete Einschränkung dieses Pfads: 4-Byte-Zeichen (Emoji) lassen sich dann nicht speichern, MariaDB weist sie mit Fehler 1366 ab statt sie stillschweigend zu verstümmeln |
+| `uq_scan` | Zweiter Check-in desselben Fahrers am selben Checkpoint wird mit SQLSTATE 23000 abgewiesen — Doppelscan-Schutz liegt in der Datenbank, nicht im Anwendungscode |
+| `uq_scan` mit `cp_id NULL` | Mehrere Registrierungszeilen desselben Fahrers kollidieren nicht. Bestätigt die tragende Annahme, dass MySQL NULL-Werte in einem UNIQUE-Index als jeweils verschieden behandelt |
+| `uq_client` | Wiederholter INSERT mit gleicher `client_uuid` wird abgewiesen — macht den Retry der Offline-Queue idempotent |
+| `uq_bib` / `uq_token` | Startnummer pro Event nur einmal belegbar, `token_hash` global eindeutig |
+| Ergebnis | 25 Prüfungen bestanden, 0 fehlgeschlagen (utf8-Rückfall separat: 24/24) |
+| Fazit | Schema und Index-Zusagen verhalten sich wie geplant, auf beiden Charset-Pfaden. Kein Ersatz für einen echten Shared-Hosting-Test |
+
 ### `hasencore.de` — noch offen
 
 Der im Planungsdokument (14.7) vorgesehene erste praktische Durchlauf auf einem echten Hoster steht noch aus — dafür wird Zugriff auf den dortigen Webspace benötigt (nur der Nutzer hat diesen Zugriff). Sobald durchgeführt: PHP-/MySQL-Version per `phpinfo()` bzw. `SELECT VERSION();` ermitteln (danach `phpinfo.php` sofort wieder löschen — zeigt sicherheitsrelevante Details), Pre-Flight-Check-Ausgabe hier dokumentieren, danach diesen Eintrag ergänzen.

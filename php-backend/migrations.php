@@ -28,6 +28,103 @@ function migrationsList($table, $charset){
         `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
     },
+
+    /* Rider-App-Fundament. Fünf Tabellen neben der kv-Tabelle, nicht
+       darin: Fahrer-Check-ins sind reine INSERTs und dürfen nicht mit
+       dem Read-Modify-Write des Organizers auf den Event-Blob
+       konkurrieren. Namen der Tabellen leiten sich per Suffix vom
+       kv-Tabellennamen ab, damit eine Installation mit eigenem Präfix
+       zusammenhängend bleibt. */
+    2 => function(PDO $pdo) use ($table, $charset){
+      /* Das öffentliche Gegenstück zu einem Event-Blob. `storage_key`
+         zeigt zurück auf die kv-Zeile, aus der es veröffentlicht
+         wurde. */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_rider_event` (
+        `public_id` VARCHAR(16) NOT NULL PRIMARY KEY,
+        `storage_key` VARCHAR(191) NOT NULL,
+        `name` VARCHAR(191) NOT NULL DEFAULT '',
+        `status` VARCHAR(16) NOT NULL DEFAULT 'planning',
+        `settings` TEXT NOT NULL,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      /* Eine Zeile pro gedruckter Spokecard. Token und Code liegen nur
+         als SHA-256 vor: sie werden per Lookup gefunden, ein Salt pro
+         Zeile machte den Index unbrauchbar — und bei 32 Zeichen aus
+         einem kryptografischen Zufallsgenerator gibt es nichts zu
+         erraten. `uq_bib` macht das Belegen einer Startnummer atomar,
+         auch wenn zwei Fahrer gleichzeitig dieselbe wählen. */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_rider_slot` (
+        `public_id` VARCHAR(16) NOT NULL,
+        `bib` INT UNSIGNED NOT NULL,
+        `token_hash` CHAR(64) NOT NULL,
+        `code_hash` CHAR(64) NOT NULL,
+        `status` VARCHAR(16) NOT NULL DEFAULT 'free',
+        PRIMARY KEY (`public_id`, `bib`),
+        UNIQUE KEY `uq_token` (`token_hash`),
+        UNIQUE KEY `uq_code` (`public_id`, `code_hash`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      /* Koordinaten sind nullbar: sie werden nur veröffentlicht, wenn
+         die Kartenansicht für Fahrer freigeschaltet ist. */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_rider_checkpoint` (
+        `public_id` VARCHAR(16) NOT NULL,
+        `cp_id` VARCHAR(64) NOT NULL,
+        `label` VARCHAR(191) NOT NULL DEFAULT '',
+        `qr_token_hash` CHAR(64) NOT NULL,
+        `qr_enabled` TINYINT(1) NOT NULL DEFAULT 0,
+        `sort_index` INT NOT NULL DEFAULT 0,
+        `lat` DOUBLE NULL,
+        `lon` DOUBLE NULL,
+        PRIMARY KEY (`public_id`, `cp_id`),
+        KEY `idx_qr` (`qr_token_hash`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      /* Append-only. Die monoton steigende `id` ist der Cursor, mit dem
+         Organizer und Beamer unabhängig voneinander nachlesen.
+
+         Zwei UNIQUE-Indizes ersetzen Prüfungen im Anwendungscode:
+         `uq_client` macht den Retry der Offline-Queue idempotent,
+         `uq_scan` verhindert den doppelten Scan desselben Checkpoints.
+         `uq_scan` funktioniert trotz nullbarer `cp_id`, weil MySQL
+         NULL-Werte in einem UNIQUE-Index als jeweils verschieden
+         behandelt — Registrierungszeilen (cp_id NULL) kollidieren
+         deshalb nie miteinander.
+
+         `created_at` ist bewusst kein TIMESTAMP mit Default: der Wert
+         ist der Scan-Zeitpunkt auf dem Gerät, nicht der Upload-
+         Zeitpunkt. Ein Check-in aus der Offline-Queue kann Stunden
+         später ankommen, für die Wertung zählt der Scan. */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_rider_log` (
+        `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `public_id` VARCHAR(16) NOT NULL,
+        `type` VARCHAR(16) NOT NULL,
+        `bib` INT UNSIGNED NOT NULL,
+        `cp_id` VARCHAR(64) NULL,
+        `client_uuid` CHAR(36) NOT NULL,
+        `payload` TEXT NULL,
+        `gps_lat` DOUBLE NULL,
+        `gps_lon` DOUBLE NULL,
+        `gps_distance_m` INT NULL,
+        `created_at` DATETIME NOT NULL,
+        UNIQUE KEY `uq_client` (`client_uuid`),
+        UNIQUE KEY `uq_scan` (`public_id`, `bib`, `cp_id`),
+        KEY `idx_feed` (`public_id`, `id`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      /* rider.php ist ohne Admin-Key erreichbar, also öffentlich. Der
+         8-Zeichen-Klartextcode von der Spokecard ist das schwächste
+         Geheimnis im System und wird nicht durch Länge geschützt,
+         sondern durch Bremsen. Gezählt werden nur fehlgeschlagene
+         Authentifizierungen — ein Fahrer mit vielen gültigen Scans darf
+         sich nicht selbst aussperren. */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_rider_ratelimit` (
+        `ip_hash` CHAR(64) NOT NULL PRIMARY KEY,
+        `window_start` DATETIME NOT NULL,
+        `fail_count` INT UNSIGNED NOT NULL DEFAULT 0,
+        `block_until` DATETIME NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+    },
   ];
 }
 
