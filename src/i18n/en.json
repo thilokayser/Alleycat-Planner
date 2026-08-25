@@ -18,6 +18,31 @@
     "namePrompt": "Please provide a team name.",
     "deleteConfirm": "Really delete this team? Assigned riders will lose their team assignment."
   },
+  "splashscreen": {
+    "title": "Alleycat Dispatch",
+    "claim": "Set checkpoints. Run the race. Stay in control.",
+    "cta": "Get Started"
+  },
+  "onboarding": {
+    "noEventToast": "The tour needs at least one event.",
+    "stepCounter": "Step {current} of {total}",
+    "back": "&larr; Back",
+    "next": "Next &rarr;",
+    "finish": "Done",
+    "skip": "Skip",
+    "step1Title": "Your events",
+    "step1Text": "Here you see all your races. Open one to edit checkpoints, riders, and more.",
+    "step2Title": "Plan checkpoints",
+    "step2Text": "Place checkpoints on the map; here in the list you set order and type.",
+    "step3Title": "Rider list",
+    "step3Text": "Add riders, import via CSV, or organize them into teams/categories.",
+    "step4Title": "Check-in",
+    "step4Text": "On race day, marshals enter bib numbers here to confirm checkpoints.",
+    "step5Title": "Leaderboard",
+    "step5Text": "Live results and ranking while the race is running.",
+    "step6Title": "Manifest & Export",
+    "step6Text": "Export start lists, bib numbers, and spokecards as PDF."
+  },
   "dashboard": {
     "title": "Your Alleycats",
     "sharedBoardHint": "Shared Headquarters board — visible to everyone with access to this tool.",
@@ -557,6 +582,9 @@
     "backToList": "&larr; Overview",
     "themeHeading": "Theme",
     "themeDesc": "Changes the color palette of the entire app.",
+    "splashscreenSubheading": "Start",
+    "splashscreenToggleLabel": "Show splash screen on every app start",
+    "onboardingRestartButton": "Show introduction again",
     "iconPackHeading": "Icon Pack",
     "iconPackDesc": "Determines how checkpoint types are displayed on the map and in the legend. Font Awesome and Material Symbols are loaded from a CDN when selected.",
     "languageHeading": "Language",
