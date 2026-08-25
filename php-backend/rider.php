@@ -133,9 +133,10 @@ if($action === 'sync'){
         ->execute([$publicId, $publicId]);
 
     $keptCps = [];
-    $cpStmt = $pdo->prepare("INSERT INTO `{$cpT}` (`public_id`,`cp_id`,`label`,`qr_token_hash`,`qr_enabled`,`sort_index`,`lat`,`lon`)
-                             VALUES (?,?,?,?,?,?,?,?)
+    $cpStmt = $pdo->prepare("INSERT INTO `{$cpT}` (`public_id`,`cp_id`,`label`,`cp_type`,`qr_token_hash`,`qr_enabled`,`sort_index`,`lat`,`lon`)
+                             VALUES (?,?,?,?,?,?,?,?,?)
                              ON DUPLICATE KEY UPDATE `label`=VALUES(`label`),
+                                                     `cp_type`=VALUES(`cp_type`),
                                                      `qr_token_hash`=VALUES(`qr_token_hash`),
                                                      `qr_enabled`=VALUES(`qr_enabled`),
                                                      `sort_index`=VALUES(`sort_index`),
@@ -148,6 +149,7 @@ if($action === 'sync'){
       $cpStmt->execute([
         $publicId, $cpId,
         (string)($cp['label'] ?? ''),
+        (string)($cp['cpType'] ?? ''),
         (string)($cp['qrTokenHash'] ?? ''),
         !empty($cp['qrEnabled']) ? 1 : 0,
         (int)($cp['sortIndex'] ?? 0),
@@ -239,7 +241,7 @@ if($action === 'me'){
 
   $settings = json_decode($evt['settings'], true) ?: [];
 
-  $cpStmt = $pdo->prepare("SELECT `cp_id`,`label`,`qr_enabled`,`sort_index`,`lat`,`lon`
+  $cpStmt = $pdo->prepare("SELECT `cp_id`,`label`,`cp_type`,`qr_enabled`,`sort_index`,`lat`,`lon`
                            FROM `" . riderTableName('checkpoint') . "`
                            WHERE `public_id` = ? ORDER BY `sort_index` ASC");
   $cpStmt->execute([$publicId]);
@@ -247,6 +249,7 @@ if($action === 'me'){
     return [
       'cpId' => $c['cp_id'],
       'label' => $c['label'],
+      'cpType' => $c['cp_type'],
       'qrEnabled' => (bool)(int)$c['qr_enabled'],
       'lat' => $c['lat'] === null ? null : (float)$c['lat'],
       'lon' => $c['lon'] === null ? null : (float)$c['lon']

@@ -121,6 +121,11 @@ async function buildRiderSyncPayload(evt){
   const checkpoints = await Promise.all((evt.checkpoints || []).map(async (cp, i) => ({
     cpId: cp.id,
     label: cp.name || '',
+    /* Der Typ sagt dem Fahrer, was hier zu tun ist. Kein Geheimnis — er
+       steht auf dem gedruckten Manifest. Die Beschriftung dazu holt sich
+       die Fahrer-App selbst aus ihrer eigenen Typtabelle, hier geht nur
+       der Schlüssel raus. */
+    cpType: cp.type || '',
     qrTokenHash: await sha256Hex(cp.qrToken),
     qrEnabled: !!cp.qrCheckinEnabled,
     sortIndex: i,

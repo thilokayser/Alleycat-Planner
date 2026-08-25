@@ -126,6 +126,29 @@ function migrationsList($table, $charset){
         `block_until` DATETIME NULL
       ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
     },
+
+    /* Checkpoint-Typ für die Fahrer-App. Sie zeigt pro Checkpoint, was
+       dort zu tun ist ("Foto machen" statt nur "offen"), und braucht
+       dafür den Typ. Kein Geheimnis: er steht ohnehin auf dem gedruckten
+       Manifest in der Hand des Fahrers.
+
+       Additiv mit Default, also unkritisch für bestehende Installationen —
+       vorhandene Zeilen bekommen den leeren String und werden beim
+       nächsten Publish des Organizers gefüllt. */
+    3 => function(PDO $pdo) use ($table, $charset){
+      /* `ADD COLUMN IF NOT EXISTS` gibt es in MariaDB, in MySQL nicht.
+         Die Idempotenz-Zusage des Runners (siehe Kopf dieser Datei) muss
+         aber auf beiden gelten, deshalb die Abfrage statt der Kurzform. */
+      $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'cp_type'"
+      );
+      $stmt->execute(["{$table}_rider_checkpoint"]);
+      if((int)$stmt->fetchColumn() === 0){
+        $pdo->exec("ALTER TABLE `{$table}_rider_checkpoint`
+                    ADD COLUMN `cp_type` VARCHAR(32) NOT NULL DEFAULT ''");
+      }
+    },
   ];
 }
 
