@@ -3,8 +3,7 @@ function uid(prefix){ return prefix + '-' + Math.random().toString(36).slice(2,9
 function escapeHtml(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-function downloadJSON(obj, filename){
-  const blob = new Blob([JSON.stringify(obj, null, 2)], {type: 'application/json'});
+function downloadBlob(blob, filename){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename;
@@ -12,6 +11,15 @@ function downloadJSON(obj, filename){
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function downloadJSON(obj, filename){
+  downloadBlob(new Blob([JSON.stringify(obj, null, 2)], {type: 'application/json'}), filename);
+}
+function restoreInputFocus(selector, cursorPos){
+  const el = document.querySelector(selector);
+  if(!el) return;
+  el.focus();
+  if(typeof cursorPos === 'number' && el.setSelectionRange) el.setSelectionRange(cursorPos, cursorPos);
 }
 /* Paket 5 Teil A, Schritt 2 (Spec 20.1): 12h/24h switch, state.appSettings.
    timeFormat ('24h' default | '12h'). 12h mode formats via 'en-US' (not

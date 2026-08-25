@@ -190,9 +190,16 @@ function filteredRosterRiders(evt){
   if(!q) return riders.slice();
   return riders.filter(r => (r.name || '').toLowerCase().includes(q) || String(r.bib).includes(q));
 }
+let riderRosterSearchRenderTimeout;
 function onRiderRosterSearchInput(value){
   state.riderRosterSearch = value;
-  renderRiders();
+  clearTimeout(riderRosterSearchRenderTimeout);
+  riderRosterSearchRenderTimeout = setTimeout(() => {
+    const active = document.activeElement;
+    const cursor = active && active.classList.contains('riders-search-input') ? active.selectionStart : null;
+    renderRiders();
+    restoreInputFocus('.riders-search-input', cursor);
+  }, 150);
 }
 function onRiderSortByChange(value){
   state.riderSortBy = value;

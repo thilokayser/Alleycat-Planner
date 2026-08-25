@@ -34,13 +34,7 @@ async function triggerBackupNow(silent){
     saveAppSettings();
     alert(t('dataSafety.multiDownloadHint'));
   }
-  const url = URL.createObjectURL(backup.blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = backup.filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  downloadBlob(backup.blob, backup.filename);
   evt.lastBackupAt = toLocalDateTimeInputValue(new Date());
   debouncedSave();
   if(!silent) showToast({message: t('dataSafety.backupTriggered')});

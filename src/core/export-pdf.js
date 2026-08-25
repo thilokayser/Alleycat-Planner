@@ -416,12 +416,12 @@ async function buildSpokeCardsDoc(evt){
     drawSpokeCardFront(doc, x, y, cardW, cardH, evt, r);
   });
 
+  const qrCodes = await Promise.all(riders.map(r => renderQrDataUrl(String(r.bib), 300)));
   doc.addPage();
   for(let i = 0; i < riders.length; i++){
     if(i > 0 && i % perPage === 0) doc.addPage();
     const {x, y} = pos(i);
-    const qr = await renderQrDataUrl(String(riders[i].bib), 300);
-    drawSpokeCardBack(doc, x, y, cardW, cardH, evt, riders[i], qr);
+    drawSpokeCardBack(doc, x, y, cardW, cardH, evt, riders[i], qrCodes[i]);
   }
   appendPdfBlocks(doc, evt, 'spokecards');
   return doc;
@@ -464,11 +464,11 @@ async function buildRiderSheetDoc(evt){
   const {perPage, pos} = computeCardGrid(210, 297, cardW, cardH, 10, 8, 6, 5);
 
   const riders = evt.riders;
+  const qrCodes = await Promise.all(riders.map(r => renderQrDataUrl(String(r.bib), 300)));
   for(let i = 0; i < riders.length; i++){
     if(i > 0 && i % perPage === 0) doc.addPage();
     const {x, y} = pos(i);
-    const qr = await renderQrDataUrl(String(riders[i].bib), 300);
-    drawSpokeCardBack(doc, x, y, cardW, cardH, evt, riders[i], qr);
+    drawSpokeCardBack(doc, x, y, cardW, cardH, evt, riders[i], qrCodes[i]);
   }
   return doc;
 }

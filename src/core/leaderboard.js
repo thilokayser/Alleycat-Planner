@@ -23,9 +23,16 @@ function showPointsLedger(bib){
   alert(t('gameModes.ledgerTitle', {bib}) + '\n\n' + lines.join('\n'));
 }
 
+let leaderboardSearchRenderTimeout;
 function onLeaderboardSearchInput(value){
   state.leaderboardSearch = value;
-  renderLeaderboard();
+  clearTimeout(leaderboardSearchRenderTimeout);
+  leaderboardSearchRenderTimeout = setTimeout(() => {
+    const active = document.activeElement;
+    const cursor = active && active.classList.contains('leaderboard-search-input') ? active.selectionStart : null;
+    renderLeaderboard();
+    restoreInputFocus('.leaderboard-search-input', cursor);
+  }, 150);
 }
 function onLeaderboardTeamFilterChange(value){
   state.leaderboardTeamFilter = value;
@@ -254,7 +261,7 @@ function renderLeaderboard(){
     <div class="leaderboard-toolbar">
       <div class="leaderboard-search">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" placeholder="${t('leaderboard.searchPlaceholder')}" value="${escapeHtml(state.leaderboardSearch)}" oninput="onLeaderboardSearchInput(this.value)">
+        <input type="text" class="leaderboard-search-input" placeholder="${t('leaderboard.searchPlaceholder')}" value="${escapeHtml(state.leaderboardSearch)}" oninput="onLeaderboardSearchInput(this.value)">
       </div>
       <select class="leaderboard-status-filter" onchange="onLeaderboardStatusFilterChange(this.value)">
         <option value="">${t('leaderboard.allStatuses')}</option>

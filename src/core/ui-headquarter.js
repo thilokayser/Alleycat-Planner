@@ -229,11 +229,8 @@ function applyStaticTranslations(){
 async function init(){
   if(isBeamerRoute()){ await initBeamer(); return; }
   if(!(await initStorageBackend())) return;
-  await loadAppSettings();
+  await Promise.all([loadAppSettings(), loadCustomLanguagePacks(), loadCustomCheckpointTypes(), loadEventsIndex()]);
   applyAppSettings();
-  await loadCustomLanguagePacks();
-  await loadCustomCheckpointTypes();
-  await loadEventsIndex();
   await seedDemoEventIfNeeded();
   state.loading = false;
   if(state.appSettings.showSplashScreen) state.view = 'splashscreen';

@@ -73,13 +73,6 @@ function exportLeaderboardCSV(splitKey){
 
   const csv = '﻿' + lines.join('\r\n');
   const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = (evt.name || 'leaderboard').replace(/\s+/g, '_').toLowerCase() + '-ergebnisse.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  downloadBlob(blob, (evt.name || 'leaderboard').replace(/\s+/g, '_').toLowerCase() + '-ergebnisse.csv');
 }
 
