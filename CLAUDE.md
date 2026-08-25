@@ -73,17 +73,27 @@ Everything here must build **byte-identical** across both variants — order not
 | `splashscreen.js` | Hero-Startbildschirm vor dem Dashboard (jeder App-Start, per Setting abschaltbar) |
 | `onboarding.js` | Geführte Spotlight-Tour durchs Demo-Event (6 Views), Auto-Start nach dem Splashscreen |
 | `documentation.js` | In-App-Nachschlagewerk unter Settings → Hilfe (11 Themen, Suchfilter) |
+| `rider-sync.js` | Rider-App-Fundament: QR-Payload-Parser, Publish, Log-Merge, Anmeldungen bestätigen. Alles Netzabhängige läuft über Seams |
 | `ui-headquarter.js` | `state`, `init()`, `render()` dispatcher, Settings-Hub sidebar |
 
 `src/storage/storage-{local,server}.js` (backend-specific), `src/styles/base.css`+`themes.css`, `templates/{local,server}.template.html`.
 
 ### Storage-capability seams
 
-Variant-specific behavior never branches on `hasSharedStorage`/`typeof sqlDb` inside `src/core/*` — goes through one of three seams, implemented per-backend in `src/storage/*`:
+Variant-specific behavior never branches on `hasSharedStorage`/`typeof sqlDb` inside `src/core/*` — goes through one of four seams, implemented per-backend in `src/storage/*`. **This is enforced by `build.js`, not just convention** — see Core guard below.
 
 - **`initStorageBackend()`** — called first in `init()`. Local always returns `true`; server returns `false` (renders PHP setup screen) until configured.
 - **`renderStorageDashboardExtras()`** — dashboard toolbar extra HTML (local: SQLite import/export buttons; server: `''`).
 - **`exportBackupBlob(evt)`** — local: `.sqlite` export of whole DB; server: `.json` export of just `evt`; both `null` when `hasSharedStorage` (hides Auto-Backup entirely).
+- **`supportsLocalBackup()`** — sync, `!hasSharedStorage` in both variants. The *capability* question behind `exportBackupBlob`, for the two render paths that need to hide backup UI without producing a blob (`renderDataSafetySection`, `renderBackupStatusLine`).
+- **`riderAppBaseUrl()`** — sync, `''` when there can be no rider app (local variant always; server variant until a rider-app URL is configured). **Ask this before mutating anything rider-related** — the three async seams below only reveal `null` after the call, by which point an event would already carry a `publicId` and tokens nobody will use.
+- **`publishRiderConfig(payload)` / `pollRiderLog(publicId, since)` / `confirmRiderSlot(publicId, bib, status)`** — `null` in the local variant. Server variant posts to `rider.php`, whose URL is derived from the configured `api.php` endpoint (same directory).
+
+### Core guard (`build.js`)
+
+`assertCoreIsBackendAgnostic()` runs before either variant is built and **fails the build** (exit 1, with file, line, and the violated rule) if any `CORE_FILES` module contains: `hasSharedStorage`, `sqlDb`, a `*.php` endpoint name, or a function defined in `src/rider/`. The `.php` rule exempts `i18n.js`, where `api.php`/`install.php` legitimately appear in PHP-setup placeholder strings — translation text is data, not endpoint knowledge. The `src/rider/` rule is inert until that directory exists.
+
+Rationale: the two variants share ~97.5% of their code (11.2k lines in `src/core/`, ~290 variant-specific), so a repo/folder split would be far more expensive than an enforced boundary. If a guard rule blocks you, the fix is almost always a new seam, not an exemption.
 
 Offline map-tile caching (`offline-tiles.js`) deliberately skips this pattern — raw per-device `indexedDB` cache, identical in both variants, no seam needed.
 
@@ -105,14 +115,17 @@ All persistence goes through `storageGet(key)`/`storageSet(key, value)`/`storage
 
 - **PHP backend untested on real host.** `php-backend/` code-complete (pre-flight checks, migrations, hardened error handling) but only verified against local MariaDB/PHP dev server — never installed on real shared hosting. Needs user to run `install.php` on their host, record result in `php-backend/COMPATIBILITY.md`.
 - **`pdf_page_format` (A4/US Letter switch + crop marks) deliberately deferred.** `exportManifestPDF()` uses absolute pt coordinates throughout, not page-size-relative fractions — naive format switch risks clipping content on US Letter (50pt shorter than A4). Needs own focused pass.
-- **Storage protocol: last writer wins.** One key = one whole event JSON blob; concurrent edits to same event from two devices/tabs aren't merged — last save overwrites. No optimistic locking/ETags. Blocks real live multi-marshal check-in (see below) until addressed.
-- **Not built yet** (from README's own Roadmap): rider self-registration (public signup link instead of organizer-generated slots); live multi-checkpoint check-in / live spectator leaderboard (server variant only, needs storage-protocol fix above first).
+- **Storage protocol: last writer wins — but no longer for check-ins.** One key = one whole event JSON blob, and two devices editing the same event still overwrite each other; there is no optimistic locking or ETag. Rider check-ins and registrations are the exception: since the rider-app foundation (2026-08-25) they are append-only rows in `<prefix>_rider_log`, never blob writes, and `mergeRiderLogRows()` is idempotent — so two organizer devices reading the same log converge instead of clobbering. Anything else the organizer edits is still last-writer-wins.
+- **Not built yet**: the rider-facing app itself (`dist/alleycat-rider.html` — login, progress, checkpoint scan, offline queue), the spokecard-QR format switch and checkpoint-QR PDF (sub-project 2), plus the beamer live ping and the public pre-registration page (sub-project 3). See [`docs/superpowers/specs/2026-08-25-rider-app-fundament-design.md`](docs/superpowers/specs/2026-08-25-rider-app-fundament-design.md) §13.
+- **Server variant is the active one.** Since 2026-08-25 new features go into the server variant only; the local variant is feature-frozen but must not regress — `test-suite.js` against the local build plus `node build.js --core-hash` are the gates.
 - **Cargo module / Trackbike attributes / clue-sheet PDF block were built, then fully removed** on user request (no technical reason). Clue-sheet removal (2026-08-19) also deleted `src/core/race-formats.js` outright — existed solely for clue-sheet cipher helpers. If asked to re-add any of these, don't assume old implementation recoverable via `git blame` alone — removal was total, not a toggle.
 - **Deferred/skipped on user request**: Beamer `speechSynthesis` announcer + voice check-in (Paket 7); "Kopfgeld" (bounty/leader) game mode; Offline-Gerätesync (Screen-to-Camera QR sync, idea only).
 
 ## Test coverage gaps
 
 - `test-suite.js` is always a manual browser-console paste — no CI, no automated runner.
-- One known flaky check: `formatMinutesAgo erkennt "gerade eben"` — timing-dependent, fails occasionally under slow/throttled tab. Not a real bug.
-- PHP backend concurrency/load tests only ran against PHP's built-in dev server (`PHP_CLI_SERVER_WORKERS=8`), never against real shared-hosting PHP-FPM/Apache behavior.
+- **The suite needs a *visible* browser pane, not just an active tab.** If the pane is collapsed, `innerWidth/innerHeight` are 0 and `document.hidden` is `true` even for the fronted tab; Leaflet's `flyTo` then gets `NaN`, `selectCp` throws, and the run aborts partway looking like a real failure (it also trips the app's own error boundary). Check with `JSON.stringify({v:[innerWidth,innerHeight],h:document.hidden})` before blaming a change — `tabs_select` and `resize_window` do **not** un-collapse the pane. Two known flakes on top of that: `formatMinutesAgo erkennt "gerade eben"` (timing) and `selectCp (inkl. Karten-Zentrierung)` (map size not settled yet on the first run after load). Both pass on a second run; neither is a real bug.
+- **Don't run the suite in a tab you've been poking at.** It reuses `state.currentEvent`, so leftover stubs or a checkpoint left on the wrong type from earlier console work produce failures that look like regressions. Reload first.
+- PHP backend concurrency/load tests only ran against PHP's built-in dev server (`PHP_CLI_SERVER_WORKERS=8`), never against real shared-hosting PHP-FPM/Apache behavior. This now also covers `rider.php`'s rate limiter, which counts failures in a shared table — worth re-checking under PHP-FPM's parallel worker processes.
+- Rider-app load was only ever generated by `curl`, never by real phones on real mobile networks.
 - No visual regression baseline — UI changes checked via ad hoc screenshots during session, not saved for comparison.

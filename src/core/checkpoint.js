@@ -13,8 +13,20 @@ function withCheckpointDefaults(cp){
     staff: [],
     gameHidden: false,
     gameRevealPrerequisiteCpId: '',
-    pairedDropoffCpId: ''
+    pairedDropoffCpId: '',
+    qrCheckinEnabled: false,
+    qrToken: ''
   }, cp);
+}
+/* Gegenstück zu ensureRiderTokens(): rüstet qrToken für Checkpoints nach, die
+   vor der Rider-App angelegt wurden. Fasst vorhandene Token nie an — ein
+   gewechseltes Token macht einen laminierten QR-Code vor Ort ungültig. */
+function ensureCheckpointTokens(evt){
+  let changed = false;
+  (evt.checkpoints || []).forEach(cp => {
+    if(!cp.qrToken){ cp.qrToken = generateRiderToken(); changed = true; }
+  });
+  return changed;
 }
 function withCpStaffDefaults(s){
   return Object.assign({id: uid('staff'), name: '', phone: '', role: '', shiftNote: '', notes: ''}, s);
@@ -314,6 +326,12 @@ function onEditClue(id, value){
   cp.clue = value;
   debouncedSave();
 }
+function onEditQrCheckin(id, checked){
+  const cp = findCp(id); if(!cp) return;
+  cp.qrCheckinEnabled = !!checked;
+  debouncedSave();
+  render();
+}
 function onEditPunch(id, value){
   const cp = findCp(id); if(!cp) return;
   cp.punchCode = value;
@@ -570,6 +588,14 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
                     ${CHECKPOINT_TYPES.map(ct => `<option value="${ct.key}" ${cp.type === ct.key ? 'selected' : ''}>${ct.dropdownLabel}</option>`).join('')}
                   </select>
                 </div>
+                ${riderAppBaseUrl() ? `
+                <div class="cp-qr-checkin">
+                  <label class="cp-qr-checkin-row">
+                    <input type="checkbox" ${cp.qrCheckinEnabled ? 'checked' : ''} onchange="onEditQrCheckin('${cp.id}', this.checked)">
+                    <span>${t('riderApp.cpToggleLabel')}</span>
+                  </label>
+                  <div class="riders-hint" style="margin:4px 0 0;">${getCheckpointType(cp.type).isScored ? t('riderApp.cpToggleHintScored') : t('riderApp.cpToggleHint')}</div>
+                </div>` : ''}
                 <div>
                   <label>${t('checkpoint.clueLabel')}</label>
                   <textarea oninput="onEditClue('${cp.id}', this.value)">${escapeHtml(cp.clue)}</textarea>

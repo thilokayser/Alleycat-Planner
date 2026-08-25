@@ -10,7 +10,12 @@ function withRiderDefaults(rider){
     raceStatus: '',
     categories: {},
     checkpointOrderOverrides: [],
-    gameFlags: {}
+    gameFlags: {},
+    riderToken: '',
+    riderCode: '',
+    riderStatus: '',
+    pendingData: null,
+    gpsFlags: {}
   }, rider);
 }
 
@@ -30,11 +35,30 @@ function generateRiderSlots(){
   }))) return;
   const next = [];
   for(let i = 1; i <= n; i++){
-    next.push(existing.find(r => r.bib === i) || {bib: i, name: '', emergencyContact: '', finishTime: '', completed: [], scores: {}, checkpointTimes: {}});
+    /* Bestehende Slots werden wiederverwendet, nicht ersetzt — sonst würde ein
+       Regenerieren die riderToken wechseln und jede bereits gedruckte
+       Spokecard entwerten. */
+    next.push(existing.find(r => r.bib === i) || {
+      bib: i, name: '', emergencyContact: '', finishTime: '', completed: [], scores: {}, checkpointTimes: {},
+      riderToken: generateRiderToken(), riderCode: generateRiderCode(), riderStatus: '', pendingData: null, gpsFlags: {}
+    });
   }
   evt.riders = next;
+  ensureRiderTokens(evt);
   debouncedSave();
   renderRiders();
+}
+/* Rüstet Slots aus Events nach, die vor der Rider-App angelegt wurden. Statt
+   eines eigenen Migrationsschritts: läuft beim Publish und beim Slot-Erzeugen,
+   ergänzt nur Fehlendes und fasst vorhandene Token nie an. Gibt true zurück,
+   wenn etwas ergänzt wurde — der Aufrufer weiß dann, dass er speichern muss. */
+function ensureRiderTokens(evt){
+  let changed = false;
+  (evt.riders || []).forEach(r => {
+    if(!r.riderToken){ r.riderToken = generateRiderToken(); changed = true; }
+    if(!r.riderCode){ r.riderCode = generateRiderCode(); changed = true; }
+  });
+  return changed;
 }
 function onRiderNameInput(bib, value){
   const r = (state.currentEvent.riders || []).find(r => r.bib === bib);
@@ -60,9 +84,14 @@ function onRiderEmergencyInput(bib, value){
    this can't be a static top-level const like SETTINGS_NAV_GROUPS. */
 function ridersNavGroups(evt){
   const categoriesEnabled = isFeatureEnabled('categories', evt);
+  /* Nur sichtbar, wenn es überhaupt eine Fahrer-App gibt UND gerade
+     jemand wartet — ein dauerhaft leerer Nav-Punkt wäre in der lokalen
+     Variante schlicht tot. */
+  const pending = riderAppBaseUrl() ? pendingRiderRegistrations(evt).length : 0;
   return [
     {id: 'roster', label: () => t('rider.navGroupRoster'), items: [
       {id: 'roster', icon: '🚴', label: () => t('rider.navRoster')},
+      ...(pending ? [{id: 'pending', icon: '📥', label: () => t('riderApp.navPending', {count: pending})}] : []),
       {id: 'bulkImport', icon: '📋', label: () => t('rider.navBulkImport')}
     ]},
     {id: 'config', label: () => t('rider.navGroupConfig'), items: [
@@ -407,6 +436,48 @@ function renderRidersSectionCategories(evt){
     </div>
   `;
 }
+/* Selbstanmeldungen, die auf eine Entscheidung warten. Bewusst eine
+   eigene Sektion statt einer Markierung in der Roster-Liste: das ist
+   Arbeit, die am HQ-Tisch abgearbeitet wird, während der Fahrer davor
+   steht — sie soll nicht zwischen 45 Startnummern gesucht werden.
+   Fahrer-eingegebene Werte laufen durch escapeHtml() und nicht durch
+   t(), sie sind Inhalt, keine Oberfläche. */
+function renderRidersSectionPending(evt){
+  const pending = pendingRiderRegistrations(evt);
+  if(!pending.length){
+    return `<div class="settings-section"><h3>${t('riderApp.pendingHeading')}</h3>${emptyStateHtml({
+      icon: '📥',
+      title: t('riderApp.pendingEmptyTitle'),
+      description: t('riderApp.pendingEmptyDesc'),
+      compact: true
+    })}</div>`;
+  }
+  return `
+    <div class="settings-section">
+      <h3>${t('riderApp.pendingHeading')}</h3>
+      <div class="settings-section-desc">${t('riderApp.pendingDesc')}</div>
+      <div class="rider-pending-list">
+        ${pending.map(r => {
+          const d = r.pendingData || {};
+          return `
+            <div class="rider-pending-card">
+              <div class="rider-pending-bib">#${r.bib}</div>
+              <div class="rider-pending-body">
+                <div class="rider-pending-name">${escapeHtml(d.name || t('riderApp.pendingNoName'))}</div>
+                ${d.contact ? `<div class="rider-pending-line">${t('riderApp.pendingContact')}: ${escapeHtml(d.contact)}</div>` : ''}
+                ${d.emergencyContact ? `<div class="rider-pending-line">${t('riderApp.pendingEmergency')}: ${escapeHtml(d.emergencyContact)}</div>` : ''}
+              </div>
+              <div class="rider-pending-actions">
+                <button type="button" class="btn btn-primary btn-sm" onclick="confirmPendingRider(${r.bib})">${t('riderApp.confirmButton')}</button>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="rejectPendingRider(${r.bib})">${t('riderApp.rejectButton')}</button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
 function renderRidersSectionCardDesign(evt){
   return `
     <div class="settings-section">
@@ -426,6 +497,7 @@ function renderRidersSectionCardDesign(evt){
 }
 function ridersSectionContent(evt, id){
   switch(id){
+    case 'pending': return renderRidersSectionPending(evt);
     case 'bulkImport': return renderRidersSectionBulkImport(evt);
     case 'teams': return renderRidersSectionTeams(evt);
     case 'categories': return renderRidersSectionCategories(evt);

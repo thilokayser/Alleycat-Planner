@@ -1,5 +1,44 @@
 /* ---------------- utils ---------------- */
 function uid(prefix){ return prefix + '-' + Math.random().toString(36).slice(2,9); }
+
+/* ---------------- rider credentials ----------------
+   Anders als uid() bewusst NICHT über Math.random(): diese Werte sind
+   Zugangsdaten. Ein rider token ist alles, was ein Fahrer-Handy vorzeigt,
+   um sich als Startnummer 23 auszugeben, und ein qr token alles, was einen
+   Checkpoint-Scan gültig macht. Vorhersagbare Werte wären hier eine echte
+   Lücke, keine Kosmetik.                                                 */
+const RIDER_TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
+/* Ohne O/0/I/1: dieser Code wird von einer gedruckten Spokecard abgetippt,
+   wenn die Kamera streikt. Verwechselbare Zeichen kosten dort echte Zeit. */
+const RIDER_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+/* Zieht n Zeichen aus alphabet, ohne Modulo-Bias: Werte im nicht durch die
+   Alphabetlänge teilbaren Rest des Byte-Bereichs werden verworfen statt
+   umgerechnet, sonst wären die ersten Zeichen des Alphabets minimal
+   wahrscheinlicher als die letzten. */
+function randomStringFromAlphabet(n, alphabet){
+  const limit = Math.floor(256 / alphabet.length) * alphabet.length;
+  let out = '';
+  const buf = new Uint8Array(n * 2);
+  while(out.length < n){
+    crypto.getRandomValues(buf);
+    for(let i = 0; i < buf.length && out.length < n; i++){
+      if(buf[i] < limit) out += alphabet[buf[i] % alphabet.length];
+    }
+  }
+  return out;
+}
+function generateRiderToken(){ return randomStringFromAlphabet(32, RIDER_TOKEN_ALPHABET); }
+function generateRiderCode(){ return randomStringFromAlphabet(8, RIDER_CODE_ALPHABET); }
+
+/* SHA-256 als Hex. Der Organizer hasht Tokens, bevor er sie zum Server
+   schickt — Klartext-Zugangsdaten verlassen die App nie, auch nicht über
+   die eigene authentifizierte Verbindung. */
+async function sha256Hex(str){
+  const bytes = new TextEncoder().encode(String(str));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
 function escapeHtml(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }

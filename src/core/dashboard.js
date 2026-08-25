@@ -37,8 +37,13 @@ function withEventDefaults(evt){
     zones: [],
     eventLocations: [],
     orgaPins: [],
-    importedGeoLayers: []
+    importedGeoLayers: [],
+    publicId: '',
+    riderApp: {progress: true, map: false, leaderboard: false, selfRegister: false},
+    riderLastLogId: 0,
+    orphanCheckins: []
   }, evt);
+  merged.riderApp = Object.assign({progress: true, map: false, leaderboard: false, selfRegister: false}, merged.riderApp);
   merged.pdfBlocks = (merged.pdfBlocks || []).map(withPdfBlockDefaults);
   merged.gameModes = (merged.gameModes || []).map(withGameModeDefaults);
   merged.checkpoints = (merged.checkpoints || []).map(withCheckpointDefaults);
@@ -483,7 +488,7 @@ function renderAfterpartyStatusLine(evt){
   `;
 }
 function renderBackupStatusLine(evt){
-  if(typeof hasSharedStorage !== 'undefined' && hasSharedStorage) return '';
+  if(!supportsLocalBackup()) return '';
   if(!evt.lastBackupAt && evt.status !== 'running') return '';
   const text = evt.lastBackupAt ? t('dataSafety.lastBackupLine', {time: formatMinutesAgo(evt.lastBackupAt)}) : t('dataSafety.noBackupYet');
   return `
