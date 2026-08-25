@@ -86,7 +86,7 @@ qrToken: ''              // 32 Zeichen [a-z0-9], bei Checkpoint-Anlage erzeugt
 
 ### 4.2 Neue Tabellen
 
-Vier Tabellen, angelegt als Migration `2` in `migrationsList()` ([migrations.php:22](../../../php-backend/migrations.php)). Die Namen leiten sich vom bestehenden `ALLEYCAT_TABLE` aus `config.php` ab, per Suffix: `ALLEYCAT_TABLE . '_rider_event'` und so weiter. Im folgenden SQL steht `{p}` für den Wert von `ALLEYCAT_TABLE`. `migrationsList()` bekommt den Wert bereits als `$table` übergeben, es ist also kein neuer Konfigurationseintrag nötig.
+Fünf Tabellen, angelegt als Migration `2` in `migrationsList()` ([migrations.php:22](../../../php-backend/migrations.php)). Die Namen leiten sich vom bestehenden `ALLEYCAT_TABLE` aus `config.php` ab, per Suffix: `ALLEYCAT_TABLE . '_rider_event'` und so weiter. Im folgenden SQL steht `{p}` für den Wert von `ALLEYCAT_TABLE`. `migrationsList()` bekommt den Wert bereits als `$table` übergeben, es ist also kein neuer Konfigurationseintrag nötig.
 
 ```sql
 CREATE TABLE IF NOT EXISTS `{p}_rider_event` (
@@ -136,7 +136,16 @@ CREATE TABLE IF NOT EXISTS `{p}_rider_log` (
   UNIQUE KEY `uq_scan` (`public_id`, `bib`, `cp_id`),
   KEY `idx_feed` (`public_id`, `id`)
 ) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS `{p}_rider_ratelimit` (
+  `ip_hash`      CHAR(64) NOT NULL PRIMARY KEY,
+  `window_start` DATETIME NOT NULL,
+  `fail_count`   INT UNSIGNED NOT NULL DEFAULT 0,
+  `block_until`  DATETIME NULL
+) ENGINE=InnoDB;
 ```
+
+Details zur Verwendung der fünften Tabelle in §9.
 
 Charset kommt wie in Migration `1` aus der `utf8mb4`-Feature-Detection, nicht hartkodiert.
 
