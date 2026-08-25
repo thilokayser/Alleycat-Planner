@@ -66,6 +66,28 @@ Lebendiges Dokument (14.4 im Planungsdokument): wächst mit jeder Installation, 
 | Ergebnis | 60 Prüfungen bestanden, 0 fehlgeschlagen |
 | Fazit | Endpunkt verhält sich wie geplant, inklusive der drei Zusagen, die in der Datenbank statt im Anwendungscode liegen. Kein Ersatz für einen echten Shared-Hosting-Test — insbesondere das Rate-Limit sollte dort erneut geprüft werden, weil PHP-FPM mehrere Arbeitsprozesse parallel bedient |
 
+### Lokale Entwicklungsumgebung (macOS, Homebrew) — Abnahme Teilprojekt 1, 25.08.2026
+
+**Kontext:** Abschließender Durchlauf über alle neun Abnahmekriterien des Rider-App-Fundaments, diesmal bewusst über den **echten Installationsweg**: frische Datenbank, `install.php` per HTTP-POST aufgerufen, danach mit dem dort erzeugten API-Key gearbeitet. Die vorigen Einträge hatten die Migrationen direkt aufgerufen und diesen Pfad damit nie geprüft.
+
+| Punkt | Ergebnis |
+|---|---|
+| `install.php` auf frischer Datenbank | Legt alle sieben Tabellen an (`kv`, `db_meta`, fünf Rider-Tabellen), `schema_version` = 2, löscht sich anschließend selbst |
+| `config.php` nach der Installation | Enthält nur `ALLEYCAT_API_KEY_HASH` (bcrypt), keinen Klartext-Key. `password_verify()` gegen den einmalig angezeigten Key bestätigt |
+| Publish | 10 Slots, 3 Checkpoints; zweiter Publish erzeugt keine Duplikate |
+| Check-in per `curl` | Angenommen; erscheint binnen eines Poll-Durchlaufs (5 s) im Leaderboard der Organizer-App mit Haken und Fortschritt 2/3 |
+| Doppelscan / Queue-Retry | `duplicate:true` bzw. `already` mit Zeitstempel, beide HTTP 200; nach drei Versuchen genau eine Log-Zeile |
+| Selbstanmeldung | Wildcard-Slot auf `pending`, erscheint in der Fahrerliste; Bestätigen und Ablehnen schreiben den Status zurück auf den Server, beides rückholbar |
+| Datenschutz `?a=me` | Kein eigener und kein fremder Fahrername, kein Notfallkontakt, keine Rätsellösung, kein fremdes Klartext-Token; eigener Fortschritt vorhanden |
+| Datenschutz veröffentlichte Tabellen | Fahrername, Notfallkontakt, Rätsellösung und Klartext-Token in `_rider_slot`/`_rider_event`/`_rider_checkpoint` **nicht auffindbar** (geprüft per `mysqldump` + `grep`) |
+| `?a=freebibs` | Ohne freigeschaltete Selbstregistrierung 403 |
+| Rate-Limit | Fehlversuche 1–10 → 403, ab dem 11. → 429; 20 gültige Zugriffe in Folge sperren nicht |
+| Admin-Auth | `?a=log` ohne Key 401, mit Key 200 |
+| Lokale Variante | Kein QR-Häkchen, kein Anmeldungs-Nav-Punkt, keine `publicId`, **kein laufender Poll-Timer** |
+| Ergebnis | 24 Abnahmeprüfungen bestanden, 0 fehlgeschlagen; `test-suite.js` 905/905 |
+
+**Beobachtung am Rande:** `?reset-php-config` bleibt beim `location.reload()` nach dem Setup in der URL stehen und löscht die gerade gespeicherte Konfiguration sofort wieder. Kein neuer Fehler und kein Problem im normalen Ablauf (der Parameter wird bewusst manuell angehängt), aber verwirrend, wenn man ihn zum Neu-Einrichten benutzt — dann muss man ihn vor dem Absenden aus der URL entfernen.
+
 ### `hasencore.de` — noch offen
 
 Der im Planungsdokument (14.7) vorgesehene erste praktische Durchlauf auf einem echten Hoster steht noch aus — dafür wird Zugriff auf den dortigen Webspace benötigt (nur der Nutzer hat diesen Zugriff). Sobald durchgeführt: PHP-/MySQL-Version per `phpinfo()` bzw. `SELECT VERSION();` ermitteln (danach `phpinfo.php` sofort wieder löschen — zeigt sicherheitsrelevante Details), Pre-Flight-Check-Ausgabe hier dokumentieren, danach diesen Eintrag ergänzen.

@@ -34,6 +34,9 @@ Die beiden Übergabedokumente wurden nacheinander geschrieben und nummerieren di
 | 11 | Fahrer-Sidebar-Redesign | nicht Teil der Übergabe-Doks | M | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
 | 12 | Manifest-Sidebar-Redesign | nicht Teil der Übergabe-Doks | S–M | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
 | 13 | Erstnutzer-Erfahrung (Splashscreen, Onboarding-Tour, Doku-Seite) | nicht Teil der Übergabe-Doks | M–L | ✅ abgeschlossen (25.08.2026) — Ad-hoc-Nutzerwunsch, alle drei Teile fertig |
+| **14** | **Rider-App — Teilprojekt 1: Fundament** | nicht Teil der Übergabe-Doks | L | ✅ abgeschlossen (25.08.2026) — Backend + Organizer-Verkabelung, ohne Fahrer-Oberfläche |
+| 15 | Rider-App — Teilprojekt 2: Fahrer-App | nicht Teil der Übergabe-Doks | L | ❌ offen — **nächster Schritt** |
+| 16 | Rider-App — Teilprojekt 3: Beamer-Ping + Online-Vorab-Registrierung | nicht Teil der Übergabe-Doks | M | ❌ offen |
 | — | *Idee, zurückgestellt:* Offline-Gerätesync (früher Paket 8) | Phase 22 komplett | L (unsicher) | ⚠️ Kamera/QR-Grundlage (jsQR) bereits vorhanden, Stream-Protokoll komplett offen — **kein aktives Arbeitspaket**, wandert zu den "vertagten Ideen" wie Kopfgeld-Modus/Service-Worker in der ursprünglichen Übergabe |
 
 Aufwand-Skala: S = klein (wenige, isolierte Änderungen), M = mittel (ein neues Modul oder mehrere verteilte Änderungen), L = groß (neues Modul + Umbau bestehender Kernlogik), XL = sehr groß (mehrere neue Module + Migration bestehender, produktiver Daten).
@@ -252,3 +255,33 @@ Vorerst nur Idee, kein aktives Arbeitspaket — Entscheidung vom 17.08.2026. Ein
 ## 5. Offene Rückfrage
 
 **Kapazität für Parallel-Spuren:** Paket 3 (Backend) berührt keine Datei, die die anderen Pakete anfassen — lohnt es sich, es wirklich parallel zu Paket 1/2 zu bauen, oder bleibt strikt sequenziell (ein Paket nach dem anderen) einfacher zu verfolgen? *Durch die Praxis beantwortet (19.08.2026): alle Pakete wurden strikt sequenziell gebaut, ohne dass eine Parallel-Spur je gebraucht wurde — kein offener Punkt mehr.*
+
+---
+
+## 4. Rider-App-Initiative (ab 25.08.2026)
+
+Ab hier wird **nur noch die Server-Variante weiterentwickelt**. Die lokale Variante ist funktional eingefroren, bleibt aber lauffähig — Entscheidung des Nutzers vom 25.08.2026: für eine reine Einzelgerät-Variante gibt es keine sinnvollen neuen Funktionen mehr. Alles Folgende braucht ein gemeinsames Backend per Definition.
+
+Die Initiative ist in drei Teilprojekte geschnitten, jedes mit eigener Spec → Plan → Umsetzung:
+
+| # | Teilprojekt | Inhalt | Status |
+|---|---|---|---|
+| **14** | Fundament | Token-Datenmodell, `rider.php` + fünf Tabellen, Publish, Merge-Polling, Anmeldungen bestätigen | ✅ 25.08.2026 |
+| 15 | Fahrer-App | eigenes Bundle `dist/alleycat-rider.html` (Login, Fortschritt, Checkpoint-Scan, Offline-Queue, Wildcard-Registrierung); dazu Spokecard-QR-Umstellung, Checkpoint-QR-PDF, `CHECKPOINT_TYPES` in ein geteiltes Modul extrahieren | ❌ offen |
+| 16 | Live + Vorab | Beamer-Ping auf der Kartenansicht, öffentliche Online-Vorab-Registrierung | ❌ offen |
+
+Später vorgemerkt, bewusst nicht in Teilprojekt 15: Checkpoint-Karte in der Fahrer-App, Live-Leaderboard für Fahrer, Liga-/Saison-Profile über mehrere Events hinweg. Die Sichtbarkeit ist bereits als `evt.riderApp`-Schalter angelegt (`progress`/`map`/`leaderboard`/`selfRegister`), der Admin entscheidet also pro Event — die beiden hinteren Schalter sind noch ohne Wirkung.
+
+### Teilprojekt 14 — was gebaut wurde
+
+Spec: [`superpowers/specs/2026-08-25-rider-app-fundament-design.md`](superpowers/specs/2026-08-25-rider-app-fundament-design.md), Plan: [`superpowers/plans/2026-08-25-rider-app-fundament-plan.md`](superpowers/plans/2026-08-25-rider-app-fundament-plan.md). Tiefe Begründungen in [`implementation-notes.md`](implementation-notes.md).
+
+- [x] **Paket 0 — Build-Guard.** `assertCoreIsBackendAgnostic()` in `build.js` bricht den Build ab, wenn Servercode in `src/core/*` gerät. Vorher zwei bestehende Verstöße behoben (`data-safety.js`, `dashboard.js` fragten direkt `hasSharedStorage` statt eines Seams) — sonst hätte der Guard mit einer Ausnahmeliste starten müssen. Gewählt statt einer Repo-/Ordner-Trennung, weil die Varianten ~97,5 % ihres Codes teilen.
+- [x] **Paket 1 — Datenfelder und reine Funktionen.** Token-Erzeugung aus `crypto.getRandomValues`, QR-Payload-Parser (inkl. der alten nackten Startnummer, damit gedruckte Karten gültig bleiben), idempotenter Merge, Publish-Nutzlast als Positivliste. 62 neue Tests.
+- [x] **Paket 2 — Schema.** Migration `2`, fünf Tabellen. Gegen frische und befüllte Datenbank geprüft, beide Charset-Pfade.
+- [x] **Paket 3 — `rider.php`.** Sieben Aktionen, zwei Auth-Ebenen, Rate-Limit. 60 Prüfungen gegen MariaDB.
+- [x] **Paket 4 — Seams und Publish.** Drei Seams plus `riderAppBaseUrl()`, optionales drittes Setup-Feld, 3-Sekunden-Debounce plus sofortiger Publish bei Statuswechsel.
+- [x] **Paket 5 — Merge und Oberfläche.** Poll alle 5 s, Rendern nur bei echter Änderung, Sektion „Ausstehende Anmeldungen", QR-Häkchen im Checkpoint-Editor, Hinweis auf verwaiste Check-ins.
+- [x] **Paket 6 — Abnahme.** Alle neun Kriterien erfüllt, inklusive echtem `install.php`-Durchlauf. Ergebnisse in [`../php-backend/COMPATIBILITY.md`](../php-backend/COMPATIBILITY.md).
+
+**Weiterhin offen und nicht Teil dieses Teilprojekts:** der reale Testlauf auf `hasencore.de` (braucht Zugriff des Nutzers), ein Lasttest mit echten Handys statt `curl`, und die Prüfung des Rate-Limits unter PHP-FPM mit mehreren Arbeitsprozessen statt `php -S`.

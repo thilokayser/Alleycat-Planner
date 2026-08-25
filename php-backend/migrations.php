@@ -8,8 +8,9 @@
    nur additive ALTERs), damit sowohl eine frische Installation als
    auch eine bereits vor Einführung dieses Mechanismus bestehende
    kv-Tabelle (Schema-Version faktisch 0, aber Daten vorhanden) sauber
-   auf den aktuellen Stand kommen, ohne Datenverlust — siehe
-   runMigrations()'s zweiter Testfall in test-race-and-load.php.
+   auf den aktuellen Stand kommen, ohne Datenverlust. Die Testläufe
+   dazu sind Wegwerf-Skripte und liegen nicht im Repo — ihre Ergebnisse
+   stehen in COMPATIBILITY.md.
 
    MySQL/MariaDB committen DDL-Statements (CREATE TABLE/ALTER) immer
    implizit — es gibt dafür keine echte Transaktionssicherheit wie bei
