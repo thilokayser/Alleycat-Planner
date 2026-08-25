@@ -79,11 +79,18 @@ Everything here must build **byte-identical** across both variants — order not
 
 ### Storage-capability seams
 
-Variant-specific behavior never branches on `hasSharedStorage`/`typeof sqlDb` inside `src/core/*` — goes through one of three seams, implemented per-backend in `src/storage/*`:
+Variant-specific behavior never branches on `hasSharedStorage`/`typeof sqlDb` inside `src/core/*` — goes through one of four seams, implemented per-backend in `src/storage/*`. **This is enforced by `build.js`, not just convention** — see Core guard below.
 
 - **`initStorageBackend()`** — called first in `init()`. Local always returns `true`; server returns `false` (renders PHP setup screen) until configured.
 - **`renderStorageDashboardExtras()`** — dashboard toolbar extra HTML (local: SQLite import/export buttons; server: `''`).
 - **`exportBackupBlob(evt)`** — local: `.sqlite` export of whole DB; server: `.json` export of just `evt`; both `null` when `hasSharedStorage` (hides Auto-Backup entirely).
+- **`supportsLocalBackup()`** — sync, `!hasSharedStorage` in both variants. The *capability* question behind `exportBackupBlob`, for the two render paths that need to hide backup UI without producing a blob (`renderDataSafetySection`, `renderBackupStatusLine`).
+
+### Core guard (`build.js`)
+
+`assertCoreIsBackendAgnostic()` runs before either variant is built and **fails the build** (exit 1, with file, line, and the violated rule) if any `CORE_FILES` module contains: `hasSharedStorage`, `sqlDb`, a `*.php` endpoint name, or a function defined in `src/rider/`. The `.php` rule exempts `i18n.js`, where `api.php`/`install.php` legitimately appear in PHP-setup placeholder strings — translation text is data, not endpoint knowledge. The `src/rider/` rule is inert until that directory exists.
+
+Rationale: the two variants share ~97.5% of their code (11.2k lines in `src/core/`, ~290 variant-specific), so a repo/folder split would be far more expensive than an enforced boundary. If a guard rule blocks you, the fix is almost always a new seam, not an exemption.
 
 Offline map-tile caching (`offline-tiles.js`) deliberately skips this pattern — raw per-device `indexedDB` cache, identical in both variants, no seam needed.
 

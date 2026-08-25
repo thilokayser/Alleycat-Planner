@@ -483,7 +483,7 @@ function renderAfterpartyStatusLine(evt){
   `;
 }
 function renderBackupStatusLine(evt){
-  if(typeof hasSharedStorage !== 'undefined' && hasSharedStorage) return '';
+  if(!supportsLocalBackup()) return '';
   if(!evt.lastBackupAt && evt.status !== 'running') return '';
   const text = evt.lastBackupAt ? t('dataSafety.lastBackupLine', {time: formatMinutesAgo(evt.lastBackupAt)}) : t('dataSafety.noBackupYet');
   return `

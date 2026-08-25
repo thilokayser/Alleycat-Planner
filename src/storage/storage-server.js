@@ -111,6 +111,12 @@ async function exportBackupBlob(evt){
 }
 
 /* ---------------- storage capability seams (used by shared core/*.js) ---------------- */
+/* See the local variant for the full rationale: false under a shared
+   window.storage, where a per-device backup would be misleading. With the PHP
+   backend configured, backups are genuine JSON exports of the event. */
+function supportsLocalBackup(){
+  return !hasSharedStorage;
+}
 async function initStorageBackend(){
   if(!hasSharedStorage && !getPhpConfig()){
     renderPhpSetup();

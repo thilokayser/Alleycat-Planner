@@ -130,6 +130,14 @@ async function exportBackupBlob(evt){
 }
 
 /* ---------------- storage capability seams (used by shared core/*.js) ---------------- */
+/* Whether this install can write its own backup files at all. False under a
+   shared window.storage: there the data lives on someone else's server, so a
+   per-device backup would be both misleading and useless. Core modules ask
+   this instead of testing hasSharedStorage themselves — same reason
+   exportBackupBlob() returns null there. */
+function supportsLocalBackup(){
+  return !hasSharedStorage;
+}
 async function initStorageBackend(){
   await initSqliteStorage();
   return true;
