@@ -48,6 +48,7 @@ const CORE_FILES = [
   'command-palette.js',
   'splashscreen.js',
   'onboarding.js',
+  'documentation.js',
   'ui-headquarter.js'
 ];
 

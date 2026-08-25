@@ -2580,8 +2580,8 @@ async function runAlleycatTestSuite(){
      vorher direkt im HTML nach jeder Überschrift zu suchen. */
   {
     const allNavIds = SETTINGS_NAV_GROUPS.flatMap(g => g.items.map(i => i.id));
-    checkEqual('SETTINGS_NAV_GROUPS hat 3 Gruppen', SETTINGS_NAV_GROUPS.length, 3);
-    checkEqual('SETTINGS_NAV_GROUPS listet 7 Screens', allNavIds.length, 7);
+    checkEqual('SETTINGS_NAV_GROUPS hat 4 Gruppen', SETTINGS_NAV_GROUPS.length, 4);
+    checkEqual('SETTINGS_NAV_GROUPS listet 8 Screens', allNavIds.length, 8);
     checkEqual('Alle Nav-IDs sind eindeutig', new Set(allNavIds).size, allNavIds.length);
 
     const viewBeforeNav = state.view;
@@ -2956,6 +2956,36 @@ async function runAlleycatTestSuite(){
 
     setLanguage(langBeforeTest);
     checkEqual('Sprache nach Test zurückgesetzt', getCurrentLanguage(), langBeforeTest);
+  }
+
+  /* 19) Dokumentationsseite */
+  {
+    checkEqual('DOC_TOPICS hat 11 Einträge', DOC_TOPICS.length, 11);
+    checkEqual('filteredDocTopics() liefert ohne Suche alle Themen', filteredDocTopics().length, DOC_TOPICS.length);
+
+    const searchBefore = state.docSearch;
+    onDocSearchInput('Zonen');
+    checkEqual('onDocSearchInput() übernimmt den Suchbegriff', state.docSearch, 'Zonen');
+    const filtered = filteredDocTopics();
+    check('Suche nach "Zonen" findet das Zonen-Thema', filtered.some(topic => topic.id === 'zonesGameModes'));
+    check('Suche nach "Zonen" filtert nicht-passende Themen heraus', filtered.length < DOC_TOPICS.length);
+
+    onDocSearchInput('xyzxyz-nichts-passt-hier');
+    checkEqual('Suche ohne Treffer liefert leere Liste', filteredDocTopics().length, 0);
+    const emptyHtml = renderDocumentationSection();
+    check('Doku zeigt Hinweis bei keinem Treffer', emptyHtml.includes(t('docs.noMatches')));
+
+    onDocSearchInput(searchBefore || '');
+
+    const docHtml = renderDocumentationSection();
+    check('Doku-Sektion zeigt die Überschrift', docHtml.includes(t('docs.heading')));
+    check('Doku-Sektion zeigt alle Themen-Titel', DOC_TOPICS.every(topic => docHtml.includes(escapeHtml(t(topic.titleKey)))));
+
+    checkEqual('Neue Settings-Gruppe "Hilfe" ist registriert', !!settingsNavItem('documentation'), true);
+    const sidebarHtml = renderSettingsSidebar();
+    check('Settings-Sidebar zeigt den Dokumentation-Nav-Punkt', sidebarHtml.includes(t('settings.navDocumentation')));
+
+    checkEqual('settingsSectionContent("documentation") rendert die Doku-Sektion', settingsSectionContent('documentation').includes(t('docs.heading')), true);
   }
 
   /* Zusammenfassung */

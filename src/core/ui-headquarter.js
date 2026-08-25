@@ -25,6 +25,7 @@ let state = {
   manifestMobileDetailOpen: false,
   appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal', showSplashScreen: true, onboardingCompleted: false},
   featureRegistrySearch: '',
+  docSearch: '',
   settingsReturnView: 'dashboard',
   newTypeFormOpen: false,
   newTeamFormOpen: false,
@@ -578,6 +579,9 @@ const SETTINGS_NAV_GROUPS = [
   ]},
   {id: 'data', label: () => t('settings.groupData'), items: [
     {id: 'dataSafety', icon: '💾', label: () => t('settings.navDataSafety')}
+  ]},
+  {id: 'help', label: () => t('settings.groupHelp'), items: [
+    {id: 'documentation', icon: '📖', label: () => t('settings.navDocumentation')}
   ]}
 ];
 function settingsNavItem(id){
@@ -795,6 +799,7 @@ function settingsSectionContent(id){
     case 'units': return renderSettingsSectionUnits();
     case 'checkpointTypes': return renderSettingsSectionCheckpointTypes();
     case 'dataSafety': return renderDataSafetySection();
+    case 'documentation': return renderDocumentationSection();
     case 'features':
     default: return renderFeatureRegistrySection();
   }

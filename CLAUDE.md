@@ -72,6 +72,7 @@ Everything here must build **byte-identical** across both variants — order not
 | `command-palette.js` | Cmd/Ctrl+K fuzzy-search palette |
 | `splashscreen.js` | Hero-Startbildschirm vor dem Dashboard (jeder App-Start, per Setting abschaltbar) |
 | `onboarding.js` | Geführte Spotlight-Tour durchs Demo-Event (6 Views), Auto-Start nach dem Splashscreen |
+| `documentation.js` | In-App-Nachschlagewerk unter Settings → Hilfe (11 Themen, Suchfilter) |
 | `ui-headquarter.js` | `state`, `init()`, `render()` dispatcher, Settings-Hub sidebar |
 
 `src/storage/storage-{local,server}.js` (backend-specific), `src/styles/base.css`+`themes.css`, `templates/{local,server}.template.html`.
