@@ -49,6 +49,7 @@ const CORE_FILES = [
   'splashscreen.js',
   'onboarding.js',
   'documentation.js',
+  'rider-sync.js',
   'ui-headquarter.js'
 ];
 

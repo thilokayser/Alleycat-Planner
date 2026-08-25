@@ -10,7 +10,12 @@ function withRiderDefaults(rider){
     raceStatus: '',
     categories: {},
     checkpointOrderOverrides: [],
-    gameFlags: {}
+    gameFlags: {},
+    riderToken: '',
+    riderCode: '',
+    riderStatus: '',
+    pendingData: null,
+    gpsFlags: {}
   }, rider);
 }
 
@@ -30,11 +35,30 @@ function generateRiderSlots(){
   }))) return;
   const next = [];
   for(let i = 1; i <= n; i++){
-    next.push(existing.find(r => r.bib === i) || {bib: i, name: '', emergencyContact: '', finishTime: '', completed: [], scores: {}, checkpointTimes: {}});
+    /* Bestehende Slots werden wiederverwendet, nicht ersetzt — sonst würde ein
+       Regenerieren die riderToken wechseln und jede bereits gedruckte
+       Spokecard entwerten. */
+    next.push(existing.find(r => r.bib === i) || {
+      bib: i, name: '', emergencyContact: '', finishTime: '', completed: [], scores: {}, checkpointTimes: {},
+      riderToken: generateRiderToken(), riderCode: generateRiderCode(), riderStatus: '', pendingData: null, gpsFlags: {}
+    });
   }
   evt.riders = next;
+  ensureRiderTokens(evt);
   debouncedSave();
   renderRiders();
+}
+/* Rüstet Slots aus Events nach, die vor der Rider-App angelegt wurden. Statt
+   eines eigenen Migrationsschritts: läuft beim Publish und beim Slot-Erzeugen,
+   ergänzt nur Fehlendes und fasst vorhandene Token nie an. Gibt true zurück,
+   wenn etwas ergänzt wurde — der Aufrufer weiß dann, dass er speichern muss. */
+function ensureRiderTokens(evt){
+  let changed = false;
+  (evt.riders || []).forEach(r => {
+    if(!r.riderToken){ r.riderToken = generateRiderToken(); changed = true; }
+    if(!r.riderCode){ r.riderCode = generateRiderCode(); changed = true; }
+  });
+  return changed;
 }
 function onRiderNameInput(bib, value){
   const r = (state.currentEvent.riders || []).find(r => r.bib === bib);

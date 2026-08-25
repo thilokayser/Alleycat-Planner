@@ -13,8 +13,20 @@ function withCheckpointDefaults(cp){
     staff: [],
     gameHidden: false,
     gameRevealPrerequisiteCpId: '',
-    pairedDropoffCpId: ''
+    pairedDropoffCpId: '',
+    qrCheckinEnabled: false,
+    qrToken: ''
   }, cp);
+}
+/* Gegenstück zu ensureRiderTokens(): rüstet qrToken für Checkpoints nach, die
+   vor der Rider-App angelegt wurden. Fasst vorhandene Token nie an — ein
+   gewechseltes Token macht einen laminierten QR-Code vor Ort ungültig. */
+function ensureCheckpointTokens(evt){
+  let changed = false;
+  (evt.checkpoints || []).forEach(cp => {
+    if(!cp.qrToken){ cp.qrToken = generateRiderToken(); changed = true; }
+  });
+  return changed;
 }
 function withCpStaffDefaults(s){
   return Object.assign({id: uid('staff'), name: '', phone: '', role: '', shiftNote: '', notes: ''}, s);
