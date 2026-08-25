@@ -46,6 +46,8 @@ const CORE_FILES = [
   'offline-tiles.js',
   'data-safety.js',
   'command-palette.js',
+  'splashscreen.js',
+  'onboarding.js',
   'ui-headquarter.js'
 ];
 

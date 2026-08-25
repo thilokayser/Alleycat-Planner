@@ -23,6 +23,31 @@ const translations = {
       namePrompt: 'Bitte einen Team-Namen angeben.',
       deleteConfirm: 'Dieses Team wirklich löschen? Zugeordnete Fahrer verlieren die Team-Zuordnung.'
     },
+    splashscreen: {
+      title: 'Alleycat Dispatch',
+      claim: 'Checkpoints setzen. Rennen leiten. Alles im Griff.',
+      cta: 'Loslegen'
+    },
+    onboarding: {
+      noEventToast: 'Für die Tour wird mindestens ein Event benötigt.',
+      stepCounter: 'Schritt {current} von {total}',
+      back: '&larr; Zurück',
+      next: 'Weiter &rarr;',
+      finish: 'Fertig',
+      skip: 'Überspringen',
+      step1Title: 'Deine Events',
+      step1Text: 'Hier siehst du alle angelegten Rennen. Öffne eines, um Checkpoints, Fahrer und mehr zu bearbeiten.',
+      step2Title: 'Checkpoints planen',
+      step2Text: 'Auf der Karte platzierst du Checkpoints, hier in der Liste legst du Reihenfolge und Typ fest.',
+      step3Title: 'Fahrerliste',
+      step3Text: 'Fahrer anlegen, per CSV importieren oder in Teams/Kategorien einteilen.',
+      step4Title: 'Check-in',
+      step4Text: 'Am Renntag geben Marshals hier Startnummern ein, um Checkpoints zu bestätigen.',
+      step5Title: 'Leaderboard',
+      step5Text: 'Live-Ergebnisse und Rangliste, während das Rennen läuft.',
+      step6Title: 'Manifest & Export',
+      step6Text: 'Startlisten, Startnummern und Spokecards als PDF exportieren.'
+    },
     dashboard: {
       title: 'Deine Alleycats',
       sharedBoardHint: 'Geteiltes Headquarter-Board — sichtbar für alle mit Zugriff auf dieses Tool.',
@@ -515,6 +540,9 @@ const translations = {
       backToList: '&larr; Übersicht',
       themeHeading: 'Theme',
       themeDesc: 'Verändert die Farbpalette der gesamten App.',
+      splashscreenSubheading: 'Start',
+      splashscreenToggleLabel: 'Startbildschirm bei jedem App-Start anzeigen',
+      onboardingRestartButton: 'Einführung erneut anzeigen',
       iconPackHeading: 'Icon-Pack',
       iconPackDesc: 'Bestimmt, wie Checkpoint-Typen auf der Karte und in der Legende dargestellt werden. Font Awesome und Material Symbols werden bei Auswahl von einem CDN nachgeladen.',
       languageHeading: 'Sprache',

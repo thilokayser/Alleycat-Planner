@@ -2819,6 +2819,145 @@ async function runAlleycatTestSuite(){
     console.log('ℹ️  SQLite-Checks übersprungen (kein sqlDb im Scope — normale Variante).');
   }
 
+  /* 15) Splashscreen */
+  {
+    checkEqual('appSettings.showSplashScreen ist per Default aktiviert', state.appSettings.showSplashScreen !== false, true);
+
+    const splashHtml = renderSplashscreen();
+    check('renderSplashscreen zeigt den Titel', splashHtml.includes(t('splashscreen.title')));
+    check('renderSplashscreen zeigt den Claim', splashHtml.includes(t('splashscreen.claim')));
+    check('renderSplashscreen zeigt den Loslegen-Button mit dismissSplashscreen()', splashHtml.includes('dismissSplashscreen()'));
+
+    const viewBeforeDismiss = state.view;
+    const origStartOnboardingTour = window.startOnboardingTour;
+    window.startOnboardingTour = () => {};
+    state.view = 'splashscreen';
+    dismissSplashscreen();
+    checkEqual('dismissSplashscreen() navigiert zum Dashboard', state.view, 'dashboard');
+    state.view = viewBeforeDismiss;
+    window.startOnboardingTour = origStartOnboardingTour;
+
+    onShowSplashScreenChange(false);
+    checkEqual('onShowSplashScreenChange(false) deaktiviert den Splashscreen', state.appSettings.showSplashScreen, false);
+    onShowSplashScreenChange(true);
+    checkEqual('onShowSplashScreenChange(true) aktiviert ihn wieder', state.appSettings.showSplashScreen, true);
+  }
+
+  /* 16) Onboarding-Tour */
+  {
+    checkEqual('ONBOARDING_STEPS hat 6 Einträge', ONBOARDING_STEPS.length, 6);
+    checkEqual('ONBOARDING_STEPS-Reihenfolge stimmt', ONBOARDING_STEPS.map(s => s.view).join(','), 'dashboard,editor,riders,checkin,leaderboard,manifest');
+
+    const backupIndex = state.eventsIndex;
+    state.eventsIndex = [];
+    checkEqual('findOnboardingTargetEvent() liefert null bei leerem eventsIndex', findOnboardingTargetEvent(), null);
+
+    let toastCalls = 0;
+    const origShowToast = window.showToast;
+    window.showToast = () => { toastCalls++; };
+    const activeBeforeEmptyTest = !!(state.onboarding && state.onboarding.active);
+    startOnboardingTour();
+    checkEqual('startOnboardingTour() ohne Event zeigt Toast', toastCalls, 1);
+    checkEqual('startOnboardingTour() ohne Event lässt den Aktiv-Zustand unangetastet', !!(state.onboarding && state.onboarding.active), activeBeforeEmptyTest);
+
+    toastCalls = 0;
+    startOnboardingTour(true);
+    checkEqual('startOnboardingTour(true) ohne Event zeigt keinen Toast (Auto-Start-Fall)', toastCalls, 0);
+    window.showToast = origShowToast;
+    state.eventsIndex = backupIndex;
+
+    /* findOnboardingTargetEvent() bevorzugt immer das namentlich gefundene Demo-Event
+       (siehe Spec §4) — ein zusätzliches, frisch angelegtes Event würde es nie
+       verdrängen. Die folgenden Checks nutzen deshalb bewusst das echte Ziel-Event
+       statt eines eigens angelegten, statt eine falsche Erwartung zu testen. */
+    const targetEvt = findOnboardingTargetEvent();
+    if(targetEvt){
+      goDashboard();
+      startOnboardingTour();
+      checkEqual('startOnboardingTour() setzt onboarding.active', state.onboarding.active, true);
+      checkEqual('startOnboardingTour() startet bei Schritt 0', state.onboarding.stepIndex, 0);
+      checkEqual('startOnboardingTour() wählt das erwartete Ziel-Event', state.onboarding.eventId, targetEvt.id);
+
+      advanceOnboardingStep();
+      await wait(60);
+      checkEqual('advanceOnboardingStep() wechselt zu Schritt 1', state.onboarding.stepIndex, 1);
+      checkEqual('Schritt 1 navigiert zur Editor-View', state.view, 'editor');
+      checkEqual('Event bleibt beim Wechsel erhalten', state.currentEvent.id, targetEvt.id);
+
+      retreatOnboardingStep();
+      await wait(60);
+      checkEqual('retreatOnboardingStep() wechselt zurück zu Schritt 0', state.onboarding.stepIndex, 0);
+      checkEqual('Schritt 0 navigiert zurück zum Dashboard', state.view, 'dashboard');
+
+      const stepBeforeInvalid = state.onboarding.stepIndex;
+      goToTourStep(-1);
+      checkEqual('goToTourStep() ignoriert Index < 0', state.onboarding.stepIndex, stepBeforeInvalid);
+      goToTourStep(99);
+      checkEqual('goToTourStep() ignoriert Index >= Länge', state.onboarding.stepIndex, stepBeforeInvalid);
+
+      skipOnboardingTour();
+      checkEqual('skipOnboardingTour() beendet die Tour', state.onboarding.active, false);
+      checkEqual('skipOnboardingTour() setzt onboardingCompleted', state.appSettings.onboardingCompleted, true);
+
+      state.appSettings.onboardingCompleted = false;
+      startOnboardingTour();
+      for(let i = 0; i < ONBOARDING_STEPS.length - 1; i++){
+        advanceOnboardingStep();
+        await wait(60);
+      }
+      checkEqual('Sequenzielles Durchklicken erreicht den letzten Schritt', state.onboarding.stepIndex, ONBOARDING_STEPS.length - 1);
+      checkEqual('Letzter Schritt navigiert zur Manifest-View', state.view, 'manifest');
+      finishOnboardingTour();
+      checkEqual('finishOnboardingTour() beendet die Tour', state.onboarding.active, false);
+      checkEqual('finishOnboardingTour() setzt onboardingCompleted', state.appSettings.onboardingCompleted, true);
+
+      goDashboard();
+    } else {
+      console.log('ℹ️  Onboarding-Navigationschecks übersprungen (kein Event im Scope — z. B. Server-Variante ohne Demo-Seeding).');
+    }
+
+    const settingsHtml = renderSettingsSectionTheme();
+    check('Settings zeigt den "Einführung erneut anzeigen"-Button', settingsHtml.includes('startOnboardingTour()'));
+
+    state.appSettings.onboardingCompleted = false;
+    await saveAppSettings();
+  }
+
+  /* 17) Settings-Zurück-Button (Regressionstest) */
+  {
+    const viewBeforeSettings = state.view;
+    goDashboard();
+    openSettings();
+    checkEqual('openSettings() merkt sich Dashboard als Rückkehr-View', state.settingsReturnView, 'dashboard');
+
+    /* jumpToFeatureConfig('offline-settings') ruft openSettings() erneut auf,
+       während man schon in Settings ist — das darf settingsReturnView NICHT
+       auf 'settings' selbst umbiegen (sonst tut "Zurück" nichts mehr). */
+    jumpToFeatureConfig('offline-settings');
+    checkEqual('Erneutes openSettings() aus Settings heraus überschreibt settingsReturnView nicht', state.settingsReturnView, 'dashboard');
+
+    closeSettings();
+    checkEqual('closeSettings() kehrt zum echten Ursprungs-View zurück, nicht zu Settings selbst', state.view, 'dashboard');
+
+    if(viewBeforeSettings !== 'dashboard') goDashboard();
+  }
+
+  /* 18) Splashscreen-Sprachauswahl */
+  {
+    const langBeforeTest = getCurrentLanguage();
+    const switchHtml = renderSplashscreenLangSwitch();
+    check('renderSplashscreenLangSwitch() zeigt einen Button pro verfügbarer Sprache', availableLanguages().every(code => switchHtml.includes(`setLanguage('${code}')`)));
+    check('renderSplashscreenLangSwitch() markiert die aktive Sprache', switchHtml.includes(`splashscreen-lang-btn active`));
+
+    setLanguage('en');
+    checkEqual('setLanguage() im Splash wechselt getCurrentLanguage()', getCurrentLanguage(), 'en');
+    const splashHtmlEn = renderSplashscreen();
+    check('Splashscreen zeigt englischen Titel nach Sprachwechsel', splashHtmlEn.includes(t('splashscreen.title')));
+
+    setLanguage(langBeforeTest);
+    checkEqual('Sprache nach Test zurückgesetzt', getCurrentLanguage(), langBeforeTest);
+  }
+
   /* Zusammenfassung */
   const failed = results.filter(r => !r.pass);
   const color = failed.length ? 'color:#c0392b' : 'color:#2e7d32';

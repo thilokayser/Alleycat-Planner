@@ -1658,3 +1658,66 @@
   :root[data-theme="outdoor"] .toggle-switch-track::before{width:22px; height:22px;}
   :root[data-theme="outdoor"] .toggle-switch input:checked + .toggle-switch-track::before{transform:translateX(20px);}
   :root[data-theme="outdoor"] .settings-nav-item{min-height:44px; font-size:14.5px;}
+
+  /* ---------- Splashscreen ---------- */
+  .splashscreen{
+    position:relative;
+    height:100vh; width:100%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--asphalt);
+    padding:20px;
+  }
+  .splashscreen-lang-switch{
+    position:absolute; top:20px; right:20px;
+    display:flex; gap:6px;
+  }
+  .splashscreen-lang-btn{
+    background:transparent; border:1px solid var(--asphalt-3); border-radius:4px;
+    color:var(--steel); font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700;
+    padding:6px 10px; cursor:pointer; letter-spacing:0.04em;
+  }
+  .splashscreen-lang-btn:hover{border-color:var(--hivis); color:var(--hivis-2);}
+  .splashscreen-lang-btn.active{background:var(--hivis); border-color:var(--hivis); color:var(--ink);}
+  .splashscreen-card{
+    display:flex; flex-direction:column; align-items:center; gap:18px;
+    text-align:center;
+    max-width:420px;
+  }
+  .splashscreen-brand-mark{
+    width:64px; height:64px; border-radius:50%;
+    background:var(--stamp);
+    border:3px solid var(--chalk);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Oswald',sans-serif; font-weight:700; font-size:24px; color:var(--chalk);
+    transform:rotate(-6deg);
+  }
+  .splashscreen-title{font-size:30px; font-weight:700; color:var(--chalk);}
+  .splashscreen-claim{font-size:15px; color:var(--steel); line-height:1.5; margin:0;}
+  .splashscreen-cta{font-size:15px; padding:14px 32px;}
+
+  /* ---------- Onboarding-Tour ---------- */
+  #onboarding-root{position:fixed; inset:0; z-index:4000;}
+  .onboarding-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.55); pointer-events:all;}
+  .onboarding-spotlight{
+    position:fixed;
+    border-radius:6px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.72);
+    pointer-events:none;
+    transition:top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+  }
+  .onboarding-tooltip{
+    position:fixed;
+    width:320px;
+    max-width:calc(100vw - 32px);
+    background:var(--asphalt-2);
+    border:1px solid var(--asphalt-3);
+    border-left:4px solid var(--hivis);
+    border-radius:4px;
+    padding:16px 18px;
+    pointer-events:all;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  }
+  .onboarding-tooltip-step{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--steel); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:6px;}
+  .onboarding-tooltip h3{font-size:16px; color:var(--chalk); margin-bottom:8px;}
+  .onboarding-tooltip p{font-size:13.5px; color:var(--chalk); line-height:1.5; margin:0 0 14px;}
+  .onboarding-tooltip-actions{display:flex; align-items:center; gap:8px;}

@@ -23,7 +23,7 @@ let state = {
   qrScanError: '',
   manifestSection: 'anpassen',
   manifestMobileDetailOpen: false,
-  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal'},
+  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal', showSplashScreen: true, onboardingCompleted: false},
   featureRegistrySearch: '',
   settingsReturnView: 'dashboard',
   newTypeFormOpen: false,
@@ -235,6 +235,7 @@ async function init(){
   await loadEventsIndex();
   await seedDemoEventIfNeeded();
   state.loading = false;
+  if(state.appSettings.showSplashScreen) state.view = 'splashscreen';
   render();
   setInterval(checkStartDialog, 1000);
   startAutoBackup();
@@ -388,7 +389,7 @@ function typeIconHtml(key){
 async function loadAppSettings(){
   try{
     const res = await storageGet('app:settings');
-    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal'}, JSON.parse(res.value));
+    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal', showSplashScreen: true, onboardingCompleted: false}, JSON.parse(res.value));
   }catch(e){ /* keep defaults */ }
 }
 async function saveAppSettings(){
@@ -435,7 +436,7 @@ function setCoordFormat(fmt){
   render();
 }
 function openSettings(){
-  state.settingsReturnView = state.view;
+  if(state.view !== 'settings') state.settingsReturnView = state.view;
   state.view = 'settings';
   state.settingsMobileDetailOpen = false;
   render();
@@ -463,6 +464,16 @@ function closeSettingsMobileDetail(){
 
 /* ---------------- render: root ---------------- */
 function render(){
+  const appEl = document.getElementById('app');
+  const splashEl = document.getElementById('splashscreen-root');
+  if(state.view === 'splashscreen'){
+    if(appEl) appEl.style.display = 'none';
+    if(splashEl){ splashEl.style.display = 'flex'; splashEl.innerHTML = renderSplashscreen(); }
+    return;
+  }
+  if(appEl) appEl.style.display = '';
+  if(splashEl) splashEl.style.display = 'none';
+
   applyStaticTranslations();
   renderTopbar();
   document.getElementById('view-dashboard').classList.toggle('active', state.view === 'dashboard');
@@ -605,13 +616,30 @@ function renderSettingsSectionTheme(){
       <span class="option-card-desc">${th.desc()}</span>
     </button>
   `).join('');
+  const splashEnabled = state.appSettings.showSplashScreen !== false;
   return `
     <div class="settings-section">
       <h3>${t('settings.themeHeading')}</h3>
       <div class="settings-section-desc">${t('settings.themeDesc')}</div>
       <div class="option-grid">${themeCards}</div>
+      <div class="settings-subheading">${t('settings.splashscreenSubheading')}</div>
+      <div class="data-safety-row">
+        <label class="toggle-switch">
+          <input type="checkbox" ${splashEnabled ? 'checked' : ''} onchange="onShowSplashScreenChange(this.checked)">
+          <span class="toggle-switch-track"></span>
+        </label>
+        <span>${t('settings.splashscreenToggleLabel')}</span>
+      </div>
+      <div style="margin-top:12px;">
+        <button type="button" class="btn btn-sm" onclick="startOnboardingTour()">${t('settings.onboardingRestartButton')}</button>
+      </div>
     </div>
   `;
+}
+function onShowSplashScreenChange(checked){
+  state.appSettings.showSplashScreen = !!checked;
+  saveAppSettings();
+  render();
 }
 function renderSettingsSectionIconPack(){
   const iconCards = Object.entries(ICON_PACKS).map(([key, p]) => `
