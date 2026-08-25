@@ -4,6 +4,14 @@ Eine Single-File-Web-App zur Organisation von Alleycats (Fahrrad-Checkpoint-Renn
 
 Quellcode ist modular (`src/`), Ausgabe bleibt weiterhin eine einzelne HTML-Datei pro Variante — ein kleines Node-Build-Skript ohne Fremd-Dependencies fügt beides zusammen.
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Dashboard](docs/screenshots/01-dashboard.png) **Dashboard** — alle Events auf einen Blick, Import/Export als SQLite oder JSON | ![Übersicht](docs/screenshots/02-event-overview.png) **Event-Übersicht** — Status-Kacheln, Checkpoint-Auslastung, Countdown, Beamer-Zugang |
+| ![Karte](docs/screenshots/03-map-checkpoints.png) **Karten-Editor** — Checkpoints per Klick setzen, Typen (QR/Foto/Item/Rätsel/Challenge), Route mit Distanzen | ![Fahrer/Spokecards](docs/screenshots/04-riders.png) **Fahrerliste & Spokecards** — Startnummern, Teams, druckfertiger QR-Code-Export als PDF |
+| ![Leaderboard](docs/screenshots/05-leaderboard.png) **Leaderboard** — Live-Fortschritt pro Checkpoint, Status (im Ziel/DNF/DNS), Punkte bei aktiven Spielmodi | |
+
 ```bash
 node build.js
 ```
@@ -69,5 +77,10 @@ Alles in `src/core/` muss zwischen beiden Varianten byte-identisch bauen; Backen
 
 ## Roadmap
 
-- Fahrer-Selbstregistrierung (öffentlicher Anmeldelink statt nur organizer-generierter Startnummern-Slots)
-- Live-Multi-Checkpoint-Check-in / Live-Zuschauer-Leaderboard — geht nur über `alleycat-dispatch-server.html`, da einzige Variante mit echtem Server-Backend
+13 von 14 geplanten Arbeitspaketen sind abgeschlossen (Details: [`docs/alleycat-dispatch-roadmap-14-23.md`](docs/alleycat-dispatch-roadmap-14-23.md)). Offen:
+
+- **PHP-Backend auf echtem Hosting testen** — bisher nur gegen lokale MariaDB verifiziert, noch nicht auf realem Shared-Hosting installiert
+- **Fahrer-Selbstregistrierung** — öffentlicher Anmeldelink statt nur organizer-generierter Startnummern-Slots
+- **Live-Multi-Checkpoint-Check-in / Live-Zuschauer-Leaderboard** — nur über `alleycat-dispatch-server.html` möglich, blockiert aktuell noch am fehlenden Concurrency-Schutz im Storage-Protokoll (last writer wins)
+
+Bewusst zurückgestellt: Offline-Gerätesync per Screen-to-Camera-QR (nur Idee, kein aktives Paket).
