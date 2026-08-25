@@ -6,12 +6,58 @@ Branch: `feature/rider-fundament`. Zusammenführen nach `main` erst, wenn alle A
 
 ## Reihenfolge und ihre Begründung
 
-Sechs Pakete. Die Reihenfolge folgt zwei Regeln:
+Sieben Pakete. Die Reihenfolge folgt drei Regeln:
 
-1. **Reine Funktionen zuerst.** Paket 1 baut nur Dinge, die ohne Server und ohne Netz testbar sind — Token-Erzeugung, Parser, Merge-Logik. Damit steht die Testabdeckung, bevor irgendetwas Netzwerkabhängiges dazukommt, und Fehler in der Merge-Logik zeigen sich nicht erst beim Debuggen einer HTTP-Antwort.
-2. **Backend vor Verkabelung.** Die Pakete 2 und 3 machen `rider.php` per `curl` vollständig benutzbar, bevor die Organizer-App es aufruft. Ein Fehler ist dann eindeutig einer Seite zuzuordnen, statt zwischen zwei gleichzeitig neuen Schichten zu verschwinden.
+1. **Grenze vor Code.** Paket 0 erzwingt die Trennung zwischen geteiltem Kern und Servercode maschinell, bevor die erste Zeile Rider-Code entsteht. Ein Guard, der erst nachträglich eingeschaltet wird, findet Verstöße als Altlast statt als Fehler.
+2. **Reine Funktionen zuerst.** Paket 1 baut nur Dinge, die ohne Server und ohne Netz testbar sind — Token-Erzeugung, Parser, Merge-Logik. Damit steht die Testabdeckung, bevor irgendetwas Netzwerkabhängiges dazukommt, und Fehler in der Merge-Logik zeigen sich nicht erst beim Debuggen einer HTTP-Antwort.
+3. **Backend vor Verkabelung.** Die Pakete 2 und 3 machen `rider.php` per `curl` vollständig benutzbar, bevor die Organizer-App es aufruft. Ein Fehler ist dann eindeutig einer Seite zuzuordnen, statt zwischen zwei gleichzeitig neuen Schichten zu verschwinden.
 
-Paket 1 verändert den lokalen Build zwangsläufig (neue Felder, neues Modul in `CORE_FILES`). Es ist deshalb bewusst das einzige Paket, das das darf — danach ist der Build-Hash für den Rest des Teilprojekts eingefroren und dient als Leck-Detektor.
+Die Pakete 0 und 1 verändern den lokalen Build zwangsläufig (Seam-Bereinigung, neue Felder, neues Modul in `CORE_FILES`). Sie sind bewusst die einzigen Pakete, die das dürfen — die Build-Hash-Baseline wird am Ende von Paket 1 einmal gesetzt und ist danach für den Rest des Teilprojekts eingefroren.
+
+---
+
+## Paket 0 — Build-Guard
+
+**Ziel:** Servercode kann nicht mehr unbemerkt in `src/core/*` geraten. Der Build bricht ab, statt still eine aufgeblähte lokale Variante zu erzeugen.
+
+Begründung: die Trennung zwischen Varianten ist bisher eine Konvention, und Konventionen brechen still. Die beiden Varianten teilen rund 97,5 % ihres Codes (11.204 Zeilen `src/core/`, davon 289 Zeilen variantenspezifisch), eine physische Trennung in zwei Repos wäre also unverhältnismäßig teuer. Ein erzwungener Check liefert dieselbe Garantie zum Preis von etwa 20 Zeilen Node.
+
+### 0.1 Zwei bestehende Verstöße beheben
+
+`CLAUDE.md` behauptet, `src/core/*` verzweige nie auf `hasSharedStorage`. Das stimmt nicht — es gibt zwei Stellen:
+
+- [data-safety.js:126](../../../src/core/data-safety.js:126) (`renderDataSafetySection`)
+- [dashboard.js:486](../../../src/core/dashboard.js:486) (`renderBackupStatusLine`)
+
+Beide machen dasselbe: sie blenden die Auto-Backup-Oberfläche aus, wenn die App unter dem geteilten Artifact-Speicher läuft. Genau diese Frage beantwortet bereits ein Seam — `exportBackupBlob()` liefert dort `null`. Die beiden Stellen fragen nur daran vorbei.
+
+Behebung: neuer synchroner Seam `supportsLocalBackup()` in beiden `src/storage/*`-Dateien, der `!hasSharedStorage` zurückgibt. Die beiden Aufrufstellen fragen ihn statt der Variablen.
+
+Das muss **vor** dem Guard passieren, sonst startet er mit einer Ausnahmeliste — und eine Ausnahmeliste, die ab Tag eins existiert, wächst.
+
+### 0.2 Guard in `build.js`
+
+Neue Funktion `assertCoreIsBackendAgnostic()`, aufgerufen vor dem ersten `buildVariant()`. Prüft jede Datei aus `CORE_FILES` gegen vier Regeln:
+
+| Regel | Begründung |
+|---|---|
+| kein `hasSharedStorage` | Kapazitätsfragen gehören an einen Seam |
+| kein `sqlDb` | reines Local-Backend-Detail |
+| kein `rider.php`, kein `api.php` **als Zeichenkette im Code** | Endpunkt-Wissen gehört in `src/storage/*` |
+| kein Bezeichner aus `src/rider/` | Rider-Bundle darf nicht in den Kern lecken |
+
+Verstoß → `process.exit(1)` mit Dateiname, Zeilennummer und der verletzten Regel.
+
+**Die dritte Regel braucht eine Einschränkung:** `i18n.js` enthält legitim `api.php` und `install.php` in den Platzhaltertexten des PHP-Setup-Bildschirms ([i18n.js:1027](../../../src/core/i18n.js:1027)). Der Guard prüft deshalb nur Vorkommen außerhalb von Zeichenketten-Literalen — oder, einfacher und ausreichend: er nimmt `i18n.js` von genau dieser einen Regel aus, mit Kommentar im Code, warum. Übersetzungstexte sind Daten, kein Endpunkt-Wissen.
+
+Die Liste der Rider-Bezeichner wird aus `src/rider/` gelesen, sobald das Verzeichnis existiert; solange es fehlt, ist die vierte Regel wirkungslos statt fehlerhaft.
+
+### 0.3 Prüfung
+
+- `node build.js` läuft durch.
+- Testweise `hasSharedStorage` in ein Kernmodul schreiben → Build bricht mit korrekter Datei- und Zeilenangabe ab. Danach zurücknehmen.
+- Testsuite grün.
+- `CLAUDE.md`: die Behauptung über die Seams stimmt jetzt tatsächlich; `supportsLocalBackup()` in die Seam-Liste aufnehmen.
 
 ---
 
@@ -60,7 +106,7 @@ Neue Checks in `test-suite.js` gemäß Spec §10.1. Der Idempotenz-Test ist der 
 node build.js && shasum dist/alleycat-dispatch-local.html > .local-baseline
 ```
 
-Testsuite im lokalen Build grün. **Ab hier ist die Baseline eingefroren.**
+Testsuite im lokalen Build grün. **Ab hier ist die Baseline eingefroren** — sie deckt die Änderungen aus Paket 0 und Paket 1 gemeinsam ab.
 
 ---
 
@@ -213,8 +259,8 @@ Ablauf aus Spec §10.3: Event mit 10 Slots und 3 QR-Checkpoints anlegen, Status 
 
 ### 6.3 Dokumentation
 
-- `CLAUDE.md`: `rider-sync.js` in die Modultabelle, die drei neuen Seams in den Abschnitt „Storage-capability seams". Kein langer Warum-Text — der gehört nach `docs/implementation-notes.md`.
-- `docs/implementation-notes.md`: Begründung für die Log-Tabelle statt Blob-Schreiben und für den idempotenten Merge.
+- `CLAUDE.md`: `rider-sync.js` in die Modultabelle, die vier neuen Seams (`supportsLocalBackup`, `publishRiderConfig`, `pollRiderLog`, `confirmRiderSlot`) in den Abschnitt „Storage-capability seams", der Build-Guard als eigener Punkt unter „Architecture". Kein langer Warum-Text — der gehört nach `docs/implementation-notes.md`.
+- `docs/implementation-notes.md`: Begründung für die Log-Tabelle statt Blob-Schreiben, für den idempotenten Merge, und für den Build-Guard statt einer Repo-Trennung (mit den Zeilenzahlen, die die Entscheidung tragen).
 - `php-backend/COMPATIBILITY.md`: Ergebnisse aus den Paketen 2 und 3.
 - `docs/alleycat-dispatch-roadmap-14-23.md`: Rider-App-Initiative als neuer Abschnitt mit den drei Teilprojekten.
 
