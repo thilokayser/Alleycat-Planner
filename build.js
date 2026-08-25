@@ -14,6 +14,10 @@ const path = require('path');
 const CORE_FILES = [
   'i18n.js',
   'utils.js',
+  /* checkpoint-types.js vor checkpoint.js: CHECKPOINT_TYPES ist ein
+     let auf oberster Ebene, das withCheckpointDefaults() beim Aufruf
+     liest. Funktionsdeklarationen wären hoisted, diese Zuweisung nicht. */
+  'checkpoint-types.js',
   'checkpoint.js',
   'team.js',
   'category.js',
@@ -49,6 +53,7 @@ const CORE_FILES = [
   'splashscreen.js',
   'onboarding.js',
   'documentation.js',
+  'rider-qr.js',
   'rider-sync.js',
   'ui-headquarter.js'
 ];
