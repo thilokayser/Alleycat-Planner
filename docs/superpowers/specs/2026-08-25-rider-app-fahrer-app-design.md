@@ -16,7 +16,6 @@ Nach Teilprojekt 2 gilt:
 - Spokecards tragen die Token-URL statt der nackten Startnummer, plus einen abtippbaren Rückfallcode. Kein Name.
 - Checkpoint-QR-Codes lassen sich als PDF zum Laminieren drucken.
 - Check-ins ohne Empfang werden lokal gepuffert und automatisch nachgesendet.
-- Die App startet auch ohne Verbindung (Service Worker).
 
 ## 2. Nicht-Ziele
 
@@ -24,26 +23,18 @@ Nach Teilprojekt 2 gilt:
 - **Keine Checkpoint-Karte und kein Live-Leaderboard für Fahrer.** Die Schalter `evt.riderApp.map` und `.leaderboard` existieren seit Teilprojekt 1, bleiben aber wirkungslos. Eigener späterer Roadmap-Punkt.
 - **Keine öffentliche Online-Vorab-Registrierung.** Das ist Teilprojekt 3. Hier wird nur die Wildcard-Variante gebaut: Karte in der Hand, Formular in der App.
 - **Kein Beamer-Ping.** Teilprojekt 3.
-- **Keine Push-Benachrichtigungen.** Der Service Worker dient ausschließlich dem Offline-Start, nicht dem Zustellen von Nachrichten.
+- **Kein Service Worker, kein Offline-*Start*.** Zurückgestellt auf Nutzerwunsch (25.08.2026). Die Unterscheidung ist wichtig genug, um sie auszuschreiben: Check-ins **ohne Empfang** funktionieren (Queue, §7.4). Was nicht funktioniert, ist das **Neuladen** der Seite ohne Verbindung — dann kommt die Fehlerseite des Browsers, nicht die App. Solange der Tab offen bleibt, merkt der Fahrer davon nichts. Siehe §7.5 für das, was stattdessen dagegen hilft.
 - **Keine neue Funktion für die lokale Variante.** Sie bleibt eingefroren; der Spokecard-QR-Inhalt ändert sich dort ausdrücklich **nicht**.
 
-## 3. Die eine bewusste Prinzipienverletzung
+## 3. Eine Datei, wie der Rest des Projekts
 
-Das Projekt liefert bisher **selbstständige Einzeldateien**: `dist/alleycat-dispatch-local.html` und `-server.html` enthalten alles außer den CDN-Bibliotheken. Die Fahrer-App bricht damit, weil ein Service Worker per Spezifikation eine eigene, gleich- oder höherrangig platzierte Datei sein muss — er lässt sich nicht ins HTML einbetten.
+Die Fahrer-App ist **eine selbstständige HTML-Datei**, `dist/alleycat-rider.html`, wie die beiden bestehenden Varianten auch. Kein Service Worker, kein Web-Manifest, keine Beidateien.
 
-Die Fahrer-App besteht deshalb aus **drei** Dateien:
+Das ist keine Selbstverständlichkeit, sondern das Ergebnis der Entscheidung gegen den Offline-Start: ein Service Worker muss per Spezifikation eine eigene Datei sein und hätte die App auf drei Dateien aufgeteilt — die erste Ausnahme von einem Kernprinzip des Projekts. Ohne ihn bleibt das Prinzip unangetastet, und mit ihm entfallen Cache-Strategie, Update-Pfad und die Frage, wie ein Fahrer wieder von einer veralteten zwischengespeicherten Fassung loskommt.
 
-| Datei | Zweck |
-|---|---|
-| `alleycat-rider.html` | die App selbst, weiterhin in sich geschlossen |
-| `alleycat-rider-sw.js` | Service Worker, cacht die HTML-Datei für den Offline-Start |
-| `alleycat-rider.webmanifest` | „Zum Startbildschirm hinzufügen", Vollbild ohne Browserleiste |
+**Ausrollen.** `build.js` schreibt die Datei nach `dist/`, wie die anderen Ausgaben. Der Nutzer lädt sie irgendwohin unter seiner Domain und trägt die Adresse im Setup-Bildschirm als Fahrer-App-URL ein. Ein bestimmtes Verzeichnis ist nicht nötig — die App kennt `rider.php` aus der Konfiguration, nicht aus ihrem eigenen Pfad. Generierte Dateien werden **nicht** nach `php-backend/` geschrieben; das Verzeichnis liegt in Git, `dist/` bewusst nicht.
 
-Ohne die beiden Zusatzdateien funktioniert die App weiterhin — nur eben nicht offline startfähig. Das ist der Rückfallweg, wenn ein Hoster Probleme macht.
-
-**Ausrollen.** `build.js` schreibt alle drei nach `dist/`, wie die anderen Ausgaben auch. Der Nutzer lädt sie in **dasselbe Verzeichnis wie `rider.php`** hoch — nicht, weil die App den Endpunkt relativ auflöst (sie kennt ihn aus der Konfiguration), sondern weil ein Service Worker nur Anfragen unterhalb seines eigenen Pfads abfangen darf. Läge er woanders, cachte er die App nicht. `INSTALL.md` bekommt diesen Schritt plus den HTTPS-Hinweis. Generierte Dateien werden **nicht** nach `php-backend/` geschrieben — das Verzeichnis liegt in Git, `dist/` bewusst nicht.
-
-**Voraussetzung: HTTPS.** Service Worker laufen nur unter TLS (Ausnahme `localhost`). Ein Hoster ohne HTTPS bekommt die App ohne Offline-Start; `INSTALL.md` muss das benennen. Da die Fahrer-App ohnehin Token in der URL trägt, ist HTTPS auch unabhängig davon die richtige Anforderung.
+**HTTPS bleibt dringend empfohlen**, auch ohne Service Worker: Die Fahrer-App trägt Token in der URL und in jeder Anfrage. Über HTTP liest die das offene WLAN am Start mit. `INSTALL.md` benennt das — als Empfehlung, nicht mehr als technische Voraussetzung.
 
 ## 4. Bundle-Zuschnitt
 
@@ -66,7 +57,9 @@ RIDER_FILES = [
 ]
 ```
 
-Extern nur **jsQR**. Kein Leaflet, kein jsPDF, kein sql.js, kein QRCode.js — der Fahrer erzeugt keine QR-Codes, er liest sie.
+Kein Leaflet, kein jsPDF, kein sql.js, kein QRCode.js — der Fahrer erzeugt keine QR-Codes, er liest sie.
+
+**jsQR wird eingebettet, nicht vom CDN geladen** — als einzige Abweichung von der CDN-Praxis der beiden anderen Varianten. Grund: Wenn der Browser das HTML aus seinem eigenen Cache bedient, die CDN-Anfrage im Funkloch aber scheitert, wäre die App genau dann ohne Scanner, wenn sie gebraucht wird. Dafür kommt eine gepinnte Kopie von `jsQR.js` nach `vendor/` ins Repo, die `build.js` einbettet. Kein npm, keine Build-Werkzeuge — eine Datei mit Herkunftsvermerk und Version im Kopf. Kostet rund 45 KB im Bundle.
 
 ### 4.2 Zwei Extraktionen aus dem geteilten Kern
 
@@ -229,29 +222,33 @@ Antworten und ihre Behandlung:
 
 `409` dagegen ist ein *zeitlicher* Zustand — das Rennen startet gleich.
 
-### 7.5 Service Worker
+### 7.5 Was ohne Service Worker gegen das Funkloch hilft
 
-Cache-Strategie bewusst schlicht:
+Der Offline-*Start* ist zurückgestellt. Das Restrisiko ist eng umrissen: Verwirft das Handy die Seite aus dem Speicher (Akkusparen, Tab-Wechsel, Neustart) und der Fahrer lädt sie im Funkloch neu, sieht er die Browser-Fehlerseite. Die Queue im `localStorage` **überlebt das** — die gepufferten Check-ins gehen nicht verloren, sie werden nur erst gesendet, wenn die App wieder lädt.
 
-- Bei `install`: `alleycat-rider.html` und `alleycat-rider.webmanifest` in einen versionierten Cache legen.
-- Bei `fetch` auf das Dokument: **network-first mit Cache-Rückfall.** So bekommt ein Fahrer mit Netz immer die aktuelle Fassung, ein Fahrer ohne Netz die letzte bekannte.
-- `rider.php`-Aufrufe **nie** cachen — sie sind der Live-Zustand.
-- Cache-Name trägt einen beim Bauen eingesetzten Hash; `activate` löscht alle anderen. Damit gibt es keinen Weg, auf dem ein Fahrer wochenlang eine alte Fassung behält.
+Drei Maßnahmen, die im Rahmen dieses Teilprojekts dagegen helfen und nichts kosten:
+
+- **Wach bleiben.** `navigator.wakeLock` anfordern, solange die App im Vordergrund ist — dieselbe API, die `data-safety.js` im Organizer schon nutzt. Ein Bildschirm, der nicht schlafen geht, wird auch seltener verdrängt.
+- **Nichts nachladen.** Die App ist eine Datei; nach dem ersten Laden fordert sie außer `rider.php` nichts an. Kein Nachladen von Schriften, Symbolen oder Stilen, das im Funkloch hängen bliebe. jsQR ist die einzige externe Abhängigkeit und wird **eingebettet statt vom CDN geladen** — sonst wäre die App bei schlechter Verbindung genau dann kaputt, wenn sie gebraucht wird.
+- **Ehrlich sein.** Die Startbesprechung und die Doku-Seite sagen: App vor dem Start öffnen und offen lassen. Das ist kein Ersatz für Technik, aber es ist die Wahrheit über die aktuelle Fassung, und sie gehört gesagt statt verschwiegen.
+
+Der Service Worker bleibt als Idee vorgemerkt (§13) — er ist die richtige Lösung, nur nicht jetzt.
 
 ## 8. Fehlerfälle
 
 | Fall | Verhalten |
 |---|---|
 | Kamera verweigert | Code-Eingabe anbieten, Kameraknopf ausgrauen |
-| jsQR nicht geladen | Code-Eingabe als einziger Weg, Hinweis |
+| jsQR fehlt | Sollte nicht vorkommen, da eingebettet — trotzdem geprüft, dann Code-Eingabe als einziger Weg |
 | Token unbekannt | „Karte nicht erkannt", Code-Eingabe |
 | Fremdes Event gescannt | eigene Meldung, kein Serverruf |
 | Checkpoint-Code als Login gescannt | „Das ist ein Checkpoint-Code" |
 | Spokecard am Checkpoint gescannt | „Das ist deine eigene Karte" |
 | `429` Rate-Limit | „Zu viele Versuche, warte kurz" mit Countdown aus `Retry-After` |
 | Rennen noch nicht gestartet | Startzeit anzeigen, Scan trotzdem puffern |
-| Kein Netz beim App-Start | Cache anzeigen, Banner „offline — Stand von HH:MM" |
-| Kein Cache und kein Netz | ehrliche Fehlerseite mit Wiederholen-Knopf |
+| App geladen, aber `?a=me` scheitert | Cache anzeigen, Banner „offline — Stand von HH:MM" |
+| Weder Cache noch Netz (erster Start ohne Verbindung) | ehrliche Fehlerseite mit Wiederholen-Knopf |
+| Seite ohne Netz neu geladen | Browser-Fehlerseite, App hat keine Kontrolle darüber — bekannte Grenze ohne Service Worker (§7.5). Die Queue bleibt im `localStorage` erhalten |
 
 **Sitzung verloren** (Fahrer löscht Browserdaten): Spokecard erneut scannen. Deshalb behält der Fahrer die Karte während des Rennens — das gehört in die Startbesprechung und in die Doku-Seite.
 
@@ -292,9 +289,9 @@ Der Teil, den keine Testsuite ersetzt:
 
 1. App auf einem Handy öffnen, Spokecard vom Papier scannen.
 2. Flugmodus an, drei Checkpoint-Codes vom Papier scannen — alle drei müssen bestätigt werden.
-3. App schließen, erneut öffnen (immer noch Flugmodus): Fortschritt und Queue müssen da sein.
-4. Flugmodus aus, warten: alle drei erscheinen im Organizer.
-5. Zum Startbildschirm hinzufügen, im Flugmodus von dort starten.
+3. Tab wechseln und zurückkommen (Flugmodus bleibt an): Fortschritt und Queue müssen unverändert da sein.
+4. Flugmodus aus, warten: alle drei erscheinen im Organizer, ohne Duplikate.
+5. **Der ehrliche Gegentest:** Seite im Flugmodus neu laden. Erwartet wird die Browser-Fehlerseite — das ist die bekannte Grenze ohne Service Worker. Danach Flugmodus aus, neu laden: die drei gepufferten Check-ins müssen trotzdem noch in der Queue stehen und gesendet werden. Diese Prüfung belegt, dass die zurückgestellte Entscheidung Bequemlichkeit kostet, aber keine Daten.
 
 ### 10.4 Gate pro Paket
 
@@ -303,13 +300,13 @@ Der Teil, den keine Testsuite ersetzt:
 ## 11. Abnahmekriterien
 
 1. `node build.js` erzeugt drei Ausgaben; beide bestehenden Varianten laufen unverändert, `test-suite.js` grün.
-2. Das Rider-Bundle ist kleiner als 150 KB (ohne jsQR).
+2. Das Rider-Bundle ist kleiner als 200 KB, jsQR eingerechnet — und fordert nach dem Laden **keine externe Adresse** mehr an außer `rider.php` (im Netzwerk-Reiter nachprüfbar).
 3. Eine gedruckte Spokecard trägt QR, Startnummer und 8-Zeichen-Code — **keinen Namen**.
 4. Eine vor diesem Release gedruckte Karte (nackte Startnummer) funktioniert im Ziel-Check-in weiterhin.
 5. Fahrer scannt Spokecard, sieht Startnummer und Checkpoint-Liste.
 6. Fahrer scannt einen Checkpoint-Code, Check-in erscheint binnen 5 s im Organizer.
 7. Im Flugmodus gescannte Check-ins erscheinen nach Wiederverbindung vollständig, ohne Duplikate.
-8. App startet im Flugmodus und zeigt den letzten Stand.
+8. Ein Neuladen im Flugmodus scheitert (bekannte Grenze), aber die gepufferten Check-ins überleben es und werden nach Wiederverbindung gesendet.
 9. Wildcard-Fahrer trägt sich ein, erscheint beim Organizer als ausstehend, wird nach Bestätigung ohne erneutes Scannen freigeschaltet.
 10. Checkpoint-QR-PDF druckt eine Seite je QR-Checkpoint.
 11. In der lokalen Variante ist keine Rider-Funktion sichtbar, und der Spokecard-QR enthält weiterhin die nackte Startnummer.
@@ -319,9 +316,9 @@ Der Teil, den keine Testsuite ersetzt:
 Grobschnitt, Feinschliff im Implementierungsplan:
 
 1. **Extraktionen** (`checkpoint-types.js`, `rider-qr.js`) — reine Verschiebung, `test-suite.js` als Beweis. Danach Kern-Fingerabdruck neu setzen.
-2. **Build-Ausgabe drei** plus i18n-Zuschnitt, mit einer Platzhalter-App als „Hello World".
+2. **Build-Ausgabe drei** plus i18n-Zuschnitt und eingebettetes jsQR, mit einer Platzhalter-App als „Hello World". Sichtbarer Erfolg: eine geladene Seite ohne einen einzigen externen Netzwerkaufruf.
 3. **Fahrer-App ohne Netz-Feinheiten**: Login, Home, Scan, Bestätigung gegen echtes Backend.
-4. **Offline**: Queue, Cache, Service Worker, Manifest.
+4. **Offline**: Queue mit ihren fünf Antwortfällen, `localStorage`-Cache, Wake Lock.
 5. **Druckstücke**: Spokecard-Umstellung, Marshal-Parser, Checkpoint-QR-PDF.
 6. **Abnahme** auf echtem Gerät.
 
@@ -331,4 +328,8 @@ Paket 5 bewusst spät: solange die App nicht funktioniert, ändern die neuen Kar
 
 Teilprojekt 3: Beamer-Ping auf der Kartenansicht, öffentliche Online-Vorab-Registrierung mit selbst gewählter Startnummer.
 
-Später vorgemerkt, nicht terminiert: Checkpoint-Karte und Live-Leaderboard in der Fahrer-App (Schalter existieren), Liga-/Saison-Profile über mehrere Events hinweg.
+Später vorgemerkt, nicht terminiert:
+
+- **Service Worker für den Offline-Start** (zurückgestellt 25.08.2026). Die richtige Lösung für die in §7.5 beschriebene Grenze, nur nicht jetzt. Wenn er kommt, bringt er drei Fragen mit, die dieses Teilprojekt bewusst nicht beantwortet: Cache-Strategie, Update-Pfad, und wie ein Fahrer wieder von einer veralteten Fassung loskommt. Dazu HTTPS als harte Voraussetzung und das Ende des „eine Datei"-Prinzips für dieses Bundle.
+- Checkpoint-Karte und Live-Leaderboard in der Fahrer-App — die Schalter `evt.riderApp.map` und `.leaderboard` existieren seit Teilprojekt 1 und sind bis dahin wirkungslos.
+- Liga-/Saison-Profile über mehrere Events hinweg.
