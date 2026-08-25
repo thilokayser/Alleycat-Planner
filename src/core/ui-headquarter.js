@@ -737,7 +737,7 @@ function renderSettingsSectionUnits(){
   `;
 }
 function renderSettingsSectionCheckpointTypes(){
-  const typeRows = CHECKPOINT_TYPES.map(ct => {
+  const typeRows = getCheckpointTypes().map(ct => {
     const isBuiltin = BUILTIN_CHECKPOINT_TYPE_KEYS.includes(ct.key);
     const meta = ct.isScored ? t('settings.scoredMeta', {max: ct.scoreMax}) : ct.hasCustomQuestion ? t('settings.customQuestionMeta') : t('settings.checkboxMeta');
     return `

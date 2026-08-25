@@ -3,7 +3,7 @@ function withCheckpointDefaults(cp){
   return Object.assign({
     clue: '',
     mandatory: true,
-    type: CHECKPOINT_TYPES[0].key,
+    type: getCheckpointTypes()[0].key,
     customQuestion: '',
     punchCode: '',
     timeWindowEnabled: false,
@@ -39,13 +39,12 @@ function withCpStaffDefaults(s){
 async function loadCustomCheckpointTypes(){
   try{
     const res = await storageGet('checkpointTypes:custom');
-    const custom = res ? JSON.parse(res.value) : [];
-    CHECKPOINT_TYPES = [...CHECKPOINT_TYPES.filter(t => BUILTIN_CHECKPOINT_TYPE_KEYS.includes(t.key)), ...custom];
+    customCheckpointTypes = res ? JSON.parse(res.value) : [];
+    invalidateCheckpointTypes();
   }catch(e){ /* keep builtins only */ }
 }
 async function saveCustomCheckpointTypes(){
-  const custom = CHECKPOINT_TYPES.filter(t => !BUILTIN_CHECKPOINT_TYPE_KEYS.includes(t.key));
-  await storageSet('checkpointTypes:custom', JSON.stringify(custom));
+  await storageSet('checkpointTypes:custom', JSON.stringify(customCheckpointTypes));
 }
 function slugifyTypeKey(label){
   let base = 'custom-' + String(label).toLowerCase()
@@ -55,7 +54,7 @@ function slugifyTypeKey(label){
     .replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '');
   if(base === 'custom-' || base === 'custom') base = 'custom-typ';
   let key = base, i = 2;
-  while(CHECKPOINT_TYPES.some(t => t.key === key)){ key = base + '-' + i; i++; }
+  while(getCheckpointTypes().some(ct => ct.key === key)){ key = base + '-' + i; i++; }
   return key;
 }
 function toggleNewTypeForm(){
@@ -72,18 +71,20 @@ function addCustomCheckpointType(){
   if(!label){ alert(t('checkpoint.newTypeNamePrompt')); return; }
   const key = slugifyTypeKey(shortLabel || label);
   const manifestCell = isScored ? 'score-line' : (hasCustomQuestion ? 'answer-line' : 'punch-box');
-  CHECKPOINT_TYPES.push({
+  customCheckpointTypes.push({
     key, icon, shortLabel: (shortLabel || label.toUpperCase()).slice(0, 14), fullLabel: label,
     dropdownLabel: label, referenceFieldLabel: t('checkpoint.defaultRefFieldLabel'),
     hasCustomQuestion, isScored, scoreMax, manifestCell
   });
+  invalidateCheckpointTypes();
   saveCustomCheckpointTypes();
   state.newTypeFormOpen = false;
   renderSettings();
 }
 function deleteCustomCheckpointType(key){
   if(!confirm(t('checkpoint.deleteTypeConfirm'))) return;
-  CHECKPOINT_TYPES = CHECKPOINT_TYPES.filter(t => t.key !== key);
+  customCheckpointTypes = customCheckpointTypes.filter(ct => ct.key !== key);
+  invalidateCheckpointTypes();
   saveCustomCheckpointTypes();
   renderSettings();
 }
@@ -166,7 +167,7 @@ function bulkDeleteCheckpoints(){
 }
 function renderCpBulkActionsBar(){
   if(!state.cpBulkSelectedIds.length) return '';
-  const typeOptions = CHECKPOINT_TYPES.map(ct => `<option value="${ct.key}">${ct.dropdownLabel}</option>`).join('');
+  const typeOptions = getCheckpointTypes().map(ct => `<option value="${ct.key}">${ct.dropdownLabel}</option>`).join('');
   return `
     <div class="cp-bulk-bar">
       <span class="cp-bulk-count">${t('checkpoint.bulkSelectedCount', {count: state.cpBulkSelectedIds.length})}</span>
@@ -569,7 +570,7 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
                 <div>
                   <label>${t('checkpoint.checkpointTypeLabel')}</label>
                   <select onchange="onEditType('${cp.id}', this.value)">
-                    ${CHECKPOINT_TYPES.map(ct => `<option value="${ct.key}" ${cp.type === ct.key ? 'selected' : ''}>${ct.dropdownLabel}</option>`).join('')}
+                    ${getCheckpointTypes().map(ct => `<option value="${ct.key}" ${cp.type === ct.key ? 'selected' : ''}>${ct.dropdownLabel}</option>`).join('')}
                   </select>
                 </div>
                 ${riderAppBaseUrl() ? `
@@ -727,7 +728,7 @@ function renderCpListRows(evt, locked, routeInfo){
     primaryAction: {label: t('checkpoint.emptyStatePrimary'), onclick: 'toggleAddMode()'}
   });
   if(state.cpListGroupBy === 'type'){
-    return CHECKPOINT_TYPES.filter(ct => evt.checkpoints.some(cp => cp.type === ct.key)).map(ct => {
+    return getCheckpointTypes().filter(ct => evt.checkpoints.some(cp => cp.type === ct.key)).map(ct => {
       const group = evt.checkpoints.filter(cp => cp.type === ct.key).slice().sort((a, b) => a.order - b.order);
       return `
         <div class="cp-group-heading">${typeIconHtml(ct.key)} ${escapeHtml(ct.fullLabel)} <span class="cp-group-count">${group.length}</span></div>

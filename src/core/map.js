@@ -27,7 +27,7 @@ function initMap(){
     map.invalidateSize();
   }
   const legendTypes = document.getElementById('map-legend-types');
-  if(legendTypes) legendTypes.innerHTML = CHECKPOINT_TYPES.map(t => `${typeIconHtml(t.key)} ${t.shortLabel}`).join(' &middot; ');
+  if(legendTypes) legendTypes.innerHTML = getCheckpointTypes().map(t => `${typeIconHtml(t.key)} ${t.shortLabel}`).join(' &middot; ');
   const legendLocations = document.getElementById('map-legend-locations');
   if(legendLocations) legendLocations.innerHTML = `🏠 ${t('eventLocations.hqLabel')} &middot; 🎉 ${t('eventLocations.afterpartyLabel')}`;
   const legendStaffing = document.getElementById('map-legend-staffing');
@@ -793,7 +793,7 @@ function addCheckpointAt(lat, lng){
     name: t('map.defaultCheckpointName', {order}),
     clue: '',
     mandatory: true,
-    type: CHECKPOINT_TYPES[0].key,
+    type: getCheckpointTypes()[0].key,
     customQuestion: '',
     punchCode: String(Math.floor(1000 + Math.random()*9000)),
     timeWindowEnabled: false,
