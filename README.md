@@ -1,5 +1,7 @@
 # Alleycat Dispatch
 
+*[English](README.en.md)*
+
 ```
 ALLEYCAT DISPATCH
 Fahrrad-Checkpoint-Rennen organisieren, drucken, auswerten.
