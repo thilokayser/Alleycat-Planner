@@ -123,7 +123,7 @@ async function onRequestPersistentStorageClick(){
 /* ---------------- settings: data-safety section ---------------- */
 function renderDataSafetySection(){
   const autoBackupEnabled = !!state.appSettings.autoBackupEnabled;
-  const backupSection = (typeof hasSharedStorage !== 'undefined' && hasSharedStorage) ? '' : `
+  const backupSection = !supportsLocalBackup() ? '' : `
     <div class="settings-section">
       <h3>${t('dataSafety.backupHeading')}</h3>
       <div class="settings-section-desc">${t('dataSafety.backupDesc')}</div>

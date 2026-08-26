@@ -2988,6 +2988,194 @@ async function runAlleycatTestSuite(){
     checkEqual('settingsSectionContent("documentation") rendert die Doku-Sektion', settingsSectionContent('documentation').includes(t('docs.heading')), true);
   }
 
+  /* 20) Rider-App-Fundament (Teilprojekt 1, Paket 1) */
+  {
+    /* Zugangsdaten */
+    const tok = generateRiderToken();
+    const code = generateRiderCode();
+    checkEqual('generateRiderToken() liefert 32 Zeichen', tok.length, 32);
+    check('generateRiderToken() nutzt nur [a-z0-9]', /^[a-z0-9]{32}$/.test(tok));
+    checkEqual('generateRiderCode() liefert 8 Zeichen', code.length, 8);
+    check('generateRiderCode() nutzt nur [A-HJ-NP-Z2-9]', /^[A-HJ-NP-Z2-9]{8}$/.test(code));
+    check('generateRiderCode() meidet verwechselbare Zeichen O/0/I/1', !/[O0I1]/.test(code));
+
+    const tokens = new Set();
+    for(let i = 0; i < 5000; i++) tokens.add(generateRiderToken());
+    checkEqual('generateRiderToken() kollidiert nicht über 5000 Aufrufe', tokens.size, 5000);
+
+    checkEqual('sha256Hex() liefert den bekannten Hash von "abc"',
+      await sha256Hex('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+
+    /* QR-Nutzlast */
+    const pid = 'abcdefghijkl';
+    const rTok = 'a'.repeat(32);
+    const riderPayload = `https://x.tld/rider.html#r.${pid}.${rTok}`;
+    const parsedRider = parseRiderQrPayload(riderPayload);
+    checkEqual('parseRiderQrPayload() erkennt eine Spokecard', parsedRider && parsedRider.kind, 'rider');
+    checkEqual('parseRiderQrPayload() liest das riderToken', parsedRider && parsedRider.riderToken, rTok);
+
+    const cpPayload = `https://x.tld/rider.html#c.${pid}.cp-abc1234.${rTok}`;
+    const parsedCp = parseRiderQrPayload(cpPayload);
+    checkEqual('parseRiderQrPayload() erkennt einen Checkpoint', parsedCp && parsedCp.kind, 'checkpoint');
+    checkEqual('parseRiderQrPayload() liest die cpId', parsedCp && parsedCp.cpId, 'cp-abc1234');
+
+    const legacy = parseRiderQrPayload('42');
+    checkEqual('parseRiderQrPayload() erkennt die alte nackte Startnummer', legacy && legacy.kind, 'legacyBib');
+    checkEqual('parseRiderQrPayload() liest die alte Startnummer als Zahl', legacy && legacy.bib, 42);
+
+    check('parseRiderQrPayload() weist Müll ab', parseRiderQrPayload('hallo welt') === null);
+    check('parseRiderQrPayload() weist eine zu kurze publicId ab', parseRiderQrPayload(`#r.kurz.${rTok}`) === null);
+    check('parseRiderQrPayload() weist ein zu kurzes Token ab', parseRiderQrPayload(`#r.${pid}.abc`) === null);
+    check('parseRiderQrPayload() weist Leerstring ab', parseRiderQrPayload('') === null);
+
+    /* Slot-Status */
+    checkEqual('slotStatusToDb() bildet "" auf "free" ab', slotStatusToDb(''), 'free');
+    checkEqual('slotStatusToDb() lässt "pending" unverändert', slotStatusToDb('pending'), 'pending');
+    checkEqual('slotStatusFromDb() bildet "free" auf "" zurück', slotStatusFromDb('free'), '');
+    checkEqual('slotStatusFromDb() lässt "confirmed" unverändert', slotStatusFromDb('confirmed'), 'confirmed');
+
+    /* Defaults und Token-Nachrüstung */
+    const slotDefaults = withRiderDefaults({bib: 1});
+    checkEqual('withRiderDefaults() ergänzt riderStatus', slotDefaults.riderStatus, '');
+    checkEqual('withRiderDefaults() ergänzt gpsFlags', typeof slotDefaults.gpsFlags, 'object');
+    const keptToken = withRiderDefaults({bib: 1, riderToken: 'schon-da'});
+    checkEqual('withRiderDefaults() überschreibt ein vorhandenes Token nicht', keptToken.riderToken, 'schon-da');
+
+    const tokenEvt = {riders: [{bib: 1, riderToken: 'behalten', riderCode: 'BEHALTEN'}, {bib: 2}]};
+    const tokenChanged = ensureRiderTokens(tokenEvt);
+    checkEqual('ensureRiderTokens() meldet die Nachrüstung', tokenChanged, true);
+    checkEqual('ensureRiderTokens() fasst vorhandene Token nicht an', tokenEvt.riders[0].riderToken, 'behalten');
+    checkEqual('ensureRiderTokens() rüstet fehlende Token nach', tokenEvt.riders[1].riderToken.length, 32);
+    checkEqual('ensureRiderTokens() meldet beim zweiten Lauf nichts mehr', ensureRiderTokens(tokenEvt), false);
+
+    const cpEvt = {checkpoints: [{id: 'cp-1', qrToken: 'behalten'}, {id: 'cp-2'}]};
+    checkEqual('ensureCheckpointTokens() meldet die Nachrüstung', ensureCheckpointTokens(cpEvt), true);
+    checkEqual('ensureCheckpointTokens() fasst vorhandene Token nicht an', cpEvt.checkpoints[0].qrToken, 'behalten');
+    checkEqual('ensureCheckpointTokens() meldet beim zweiten Lauf nichts mehr', ensureCheckpointTokens(cpEvt), false);
+    checkEqual('withCheckpointDefaults() setzt qrCheckinEnabled auf false', withCheckpointDefaults({id: 'x'}).qrCheckinEnabled, false);
+
+    /* Freie Startnummern */
+    const bibEvt = {riders: [
+      {bib: 1, riderStatus: 'confirmed'}, {bib: 2, riderStatus: 'pending'},
+      {bib: 3, riderStatus: ''}, {bib: 4}
+    ]};
+    const freeBibs = computeFreeBibs(bibEvt);
+    checkEqual('computeFreeBibs() zählt bestätigte Slots', freeBibs.confirmed.join(','), '1');
+    checkEqual('computeFreeBibs() zählt ausstehende Slots', freeBibs.pending.join(','), '2');
+    checkEqual('computeFreeBibs() zählt freie Slots', freeBibs.free.join(','), '3,4');
+
+    /* Merge — die zentrale Zusage des Moduls */
+    const mergeEvt = {
+      riders: [withRiderDefaults({bib: 7}), withRiderDefaults({bib: 8})],
+      checkpoints: [{id: 'cp-a'}, {id: 'cp-b'}],
+      orphanCheckins: []
+    };
+    const rows = [
+      {id: 1, type: 'checkin', bib: 7, cp_id: 'cp-a', created_at: '2026-08-25 14:32:00'},
+      {id: 2, type: 'checkin', bib: 7, cp_id: 'cp-b', created_at: '2026-08-25 14:48:00', gps_distance_m: 1200},
+      {id: 3, type: 'register', bib: 8, cp_id: null, payload: '{"name":"Testfahrer"}'}
+    ];
+    const first = mergeRiderLogRows(mergeEvt, rows);
+    checkEqual('mergeRiderLogRows() meldet die erste Anwendung als Änderung', first.changed, true);
+    checkEqual('mergeRiderLogRows() trägt Check-ins in completed ein', mergeEvt.riders[0].completed.join(','), 'cp-a,cp-b');
+    checkEqual('mergeRiderLogRows() trägt die Check-in-Zeit ein', mergeEvt.riders[0].checkpointTimes['cp-a'], '2026-08-25 14:32:00');
+    checkEqual('mergeRiderLogRows() markiert auffällige GPS-Distanz', mergeEvt.riders[0].gpsFlags['cp-b'], 1200);
+    check('mergeRiderLogRows() markiert unauffällige GPS-Distanz nicht', mergeEvt.riders[0].gpsFlags['cp-a'] === undefined);
+    checkEqual('mergeRiderLogRows() setzt eine Anmeldung auf pending', mergeEvt.riders[1].riderStatus, 'pending');
+    checkEqual('mergeRiderLogRows() übernimmt die Anmeldedaten', mergeEvt.riders[1].pendingData.name, 'Testfahrer');
+
+    const snapshot = JSON.stringify(mergeEvt);
+    const second = mergeRiderLogRows(mergeEvt, rows);
+    checkEqual('mergeRiderLogRows() ist idempotent — zweiter Lauf ändert nichts', second.changed, false);
+    checkEqual('mergeRiderLogRows() ist idempotent — Zustand bleibt gleich', JSON.stringify(mergeEvt), snapshot);
+
+    /* Verwaiste Zeilen dürfen nie stillschweigend verschwinden */
+    const orphanRows = [
+      {id: 4, type: 'checkin', bib: 99, cp_id: 'cp-a', created_at: 'x'},
+      {id: 5, type: 'checkin', bib: 7, cp_id: 'cp-geloescht', created_at: 'x'}
+    ];
+    const orphanResult = mergeRiderLogRows(mergeEvt, orphanRows);
+    checkEqual('mergeRiderLogRows() erkennt eine unbekannte Startnummer als verwaist', orphanResult.orphans.length, 2);
+    checkEqual('mergeRiderLogRows() sammelt verwaiste Zeilen im Event', mergeEvt.orphanCheckins.length, 2);
+    checkEqual('mergeRiderLogRows() sammelt dieselbe verwaiste Zeile nicht doppelt',
+      mergeRiderLogRows(mergeEvt, orphanRows).changed, false);
+
+    /* Publish-Nutzlast: Positivliste, keine Klartext-Token, keine Namen */
+    const syncEvt = withEventDefaults({
+      id: 'evt-test', name: 'Sync-Test', publicId: generateEventPublicId(),
+      checkpoints: [{id: 'cp-a', name: 'Dom', lat: 50.94, lng: 6.96, qrToken: 'q'.repeat(32), qrCheckinEnabled: true}],
+      riders: [{bib: 1, name: 'Geheim Name', emergencyContact: '0170-123', riderToken: 'r'.repeat(32), riderCode: 'ABCDEFGH'}]
+    });
+    const payload = await buildRiderSyncPayload(syncEvt);
+    const payloadJson = JSON.stringify(payload);
+    check('buildRiderSyncPayload() sendet keinen Fahrernamen', !payloadJson.includes('Geheim Name'));
+    check('buildRiderSyncPayload() sendet keinen Notfallkontakt', !payloadJson.includes('0170-123'));
+    check('buildRiderSyncPayload() sendet kein Klartext-riderToken', !payloadJson.includes('r'.repeat(32)));
+    check('buildRiderSyncPayload() sendet kein Klartext-qrToken', !payloadJson.includes('q'.repeat(32)));
+    check('buildRiderSyncPayload() sendet keinen Klartext-riderCode', !payloadJson.includes('ABCDEFGH'));
+    checkEqual('buildRiderSyncPayload() hasht das riderToken', payload.slots[0].tokenHash, await sha256Hex('r'.repeat(32)));
+    checkEqual('buildRiderSyncPayload() bildet den Slot-Status auf die DB ab', payload.slots[0].status, 'free');
+    checkEqual('buildRiderSyncPayload() überträgt qrEnabled', payload.checkpoints[0].qrEnabled, true);
+    check('buildRiderSyncPayload() hält Koordinaten zurück, solange die Karte aus ist', payload.checkpoints[0].lat === null);
+
+    syncEvt.riderApp.map = true;
+    const payloadWithMap = await buildRiderSyncPayload(syncEvt);
+    checkEqual('buildRiderSyncPayload() sendet Koordinaten, wenn die Karte an ist', payloadWithMap.checkpoints[0].lat, 50.94);
+
+    /* Event-Defaults */
+    const defaultEvt = withEventDefaults({id: 'x', name: 'y'});
+    checkEqual('withEventDefaults() ergänzt riderLastLogId', defaultEvt.riderLastLogId, 0);
+    checkEqual('withEventDefaults() aktiviert die Fortschrittsansicht per Default', defaultEvt.riderApp.progress, true);
+    checkEqual('withEventDefaults() lässt die Selbstregistrierung per Default aus', defaultEvt.riderApp.selfRegister, false);
+    const partialRiderApp = withEventDefaults({id: 'x', name: 'y', riderApp: {map: true}});
+    checkEqual('withEventDefaults() ergänzt fehlende riderApp-Schalter', partialRiderApp.riderApp.progress, true);
+    checkEqual('withEventDefaults() behält gesetzte riderApp-Schalter', partialRiderApp.riderApp.map, true);
+
+    /* Ausstehende Anmeldungen */
+    const pendEvt = withEventDefaults({id: 'p', name: 'p', riders: [
+      {bib: 1, riderStatus: 'confirmed'}, {bib: 2, riderStatus: 'pending', pendingData: {name: 'Wartender'}},
+      {bib: 3, riderStatus: ''}
+    ]});
+    checkEqual('pendingRiderRegistrations() findet nur wartende Slots', pendingRiderRegistrations(pendEvt).length, 1);
+    checkEqual('pendingRiderRegistrations() liefert den richtigen Slot', pendingRiderRegistrations(pendEvt)[0].bib, 2);
+
+    /* In der lokalen Variante liefert riderAppBaseUrl() '' — daran hängt
+       die gesamte Rider-Oberfläche. Diese Prüfungen laufen deshalb im
+       lokalen Build und belegen genau das Ausblenden. */
+    checkEqual('riderAppBaseUrl() ist in der lokalen Variante leer', riderAppBaseUrl(), '');
+    check('Fahrer-Sidebar zeigt ohne Fahrer-App keinen Anmeldungs-Punkt',
+      !ridersNavGroups(pendEvt).some(g => g.items.some(i => i.id === 'pending')));
+
+    const pendHtml = renderRidersSectionPending(pendEvt);
+    check('Anmeldungs-Sektion zeigt die wartende Startnummer', pendHtml.includes('#2'));
+    check('Anmeldungs-Sektion zeigt den eingegebenen Namen', pendHtml.includes('Wartender'));
+    const emptyPendHtml = renderRidersSectionPending(withEventDefaults({id: 'q', name: 'q'}));
+    check('Anmeldungs-Sektion zeigt einen Empty State ohne Anmeldungen', emptyPendHtml.includes(t('riderApp.pendingEmptyTitle')));
+
+    /* Fahrer-eingegebene Namen dürfen nicht als HTML landen */
+    const xssEvt = withEventDefaults({id: 'x2', name: 'x2', riders: [
+      {bib: 5, riderStatus: 'pending', pendingData: {name: '<img src=x onerror=alert(1)>', contact: '<b>roh</b>'}}
+    ]});
+    const xssHtml = renderRidersSectionPending(xssEvt);
+    check('Anmeldungs-Sektion escapt einen eingegebenen Namen', !xssHtml.includes('<img src=x'));
+    check('Anmeldungs-Sektion escapt einen eingegebenen Kontakt', !xssHtml.includes('<b>roh</b>'));
+
+    /* Verwaiste Check-ins erscheinen im Leaderboard */
+    const orphanEvt = withEventDefaults({id: 'o', name: 'o',
+      riders: [withRiderDefaults({bib: 1, finishTime: '2026-08-25T12:00'})],
+      checkpoints: [withCheckpointDefaults({id: 'cp-x', name: 'X', order: 0})],
+      orphanCheckins: [{id: 9, bib: 42, cp_id: 'cp-weg', type: 'checkin'}]
+    });
+    const evtBefore = state.currentEvent, viewBefore = state.view;
+    state.currentEvent = orphanEvt;
+    renderLeaderboard();
+    const lbHtml = document.getElementById('view-leaderboard').innerHTML;
+    check('Leaderboard weist auf verwaiste Check-ins hin', lbHtml.includes(t('riderApp.orphanHeading', {count: 1})));
+    check('Leaderboard nennt die verwaiste Startnummer', lbHtml.includes('42'));
+    state.currentEvent = evtBefore; state.view = viewBefore;
+    render();
+  }
+
   /* Zusammenfassung */
   const failed = results.filter(r => !r.pass);
   const color = failed.length ? 'color:#c0392b' : 'color:#2e7d32';

@@ -1729,3 +1729,18 @@
   .doc-topic h4{font-size:15px; color:var(--chalk); margin-bottom:8px;}
   .doc-topic p{font-size:13.5px; color:var(--steel); line-height:1.6; margin:0 0 8px;}
   .doc-topic p:last-child{margin-bottom:0;}
+
+  /* ---- Rider-App: ausstehende Anmeldungen, QR-Häkchen, verwaiste Check-ins ---- */
+  .rider-pending-list{display:flex; flex-direction:column; gap:10px;}
+  .rider-pending-card{display:flex; align-items:center; gap:14px; padding:12px 14px; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-left:3px solid var(--hivis); border-radius:4px; flex-wrap:wrap;}
+  .rider-pending-bib{font-family:'JetBrains Mono',monospace; font-size:19px; font-weight:700; color:var(--hivis); min-width:52px;}
+  .rider-pending-body{flex:1; min-width:180px;}
+  .rider-pending-name{font-size:14px; color:var(--chalk); font-weight:600;}
+  .rider-pending-line{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--steel); margin-top:2px;}
+  .rider-pending-actions{display:flex; gap:8px; flex-shrink:0;}
+  .cp-qr-checkin{margin-bottom:14px;}
+  .cp-qr-checkin-row{display:flex; align-items:center; gap:8px; cursor:pointer;}
+  .cp-qr-checkin-row input{width:auto; margin:0;}
+  .leaderboard-orphan-note{background:rgba(230,168,42,0.12); border:1px solid var(--hivis); border-radius:4px; padding:12px 14px; margin-bottom:16px; font-size:12.5px; color:var(--chalk); line-height:1.55;}
+  .leaderboard-orphan-note div{color:var(--steel); margin-top:4px;}
+  .leaderboard-orphan-note ul{margin:8px 0 0; padding-left:18px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--steel);}

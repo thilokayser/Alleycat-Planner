@@ -7,6 +7,14 @@ php-backend/config.php
 # Build-Output — per `node build.js` aus src/ generiert, nicht versioniert.
 dist/
 
+# Referenz-Hash des lokalen Builds, gesetzt zu Beginn eines Arbeitspakets:
+#   node build.js && shasum dist/alleycat-dispatch-local.html > .local-baseline
+#   node build.js && shasum -c .local-baseline
+# Schlägt an, wenn Server-Code in den geteilten Kern leckt. Arbeitsgerüst pro
+# Arbeitskopie — der dauerhafte Schutz ist assertCoreIsBackendAgnostic() in
+# build.js, siehe CLAUDE.md.
+.local-baseline
+
 # Lokaler Cache/Config von Claude Code
 .impeccable/
 .agents/

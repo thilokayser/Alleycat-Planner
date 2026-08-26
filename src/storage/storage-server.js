@@ -72,7 +72,11 @@ function renderPhpSetup(error){
         style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
       <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('phpSetup.apiKeyLabel')}</label>
       <input type="text" id="php-setup-key" placeholder="${escapeHtml(t('phpSetup.apiKeyPlaceholder'))}"
-        style="width:100%; padding:9px 10px; margin-bottom:20px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+        style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('phpSetup.riderAppUrlLabel')}</label>
+      <input type="text" id="php-setup-rider-url" placeholder="${escapeHtml(t('phpSetup.riderAppUrlPlaceholder'))}"
+        style="width:100%; padding:9px 10px; margin-bottom:6px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <div style="color:var(--steel); font-size:11.5px; margin-bottom:20px; line-height:1.5;">${t('phpSetup.riderAppUrlHint')}</div>
       <button class="btn btn-primary" style="width:100%;" onclick="submitPhpSetup()">${t('phpSetup.connectButton')}</button>
       <div style="color:var(--steel); font-size:11.5px; margin-top:14px; line-height:1.5;">${t('phpSetup.installHint', {installPhp: '<code>install.php</code>', phpBackend: '<code>php-backend</code>', resetParam: '<code>?reset-php-config</code>'})}</div>
     </div>
@@ -81,8 +85,13 @@ function renderPhpSetup(error){
 async function submitPhpSetup(){
   const apiUrl = (document.getElementById('php-setup-url').value || '').trim().replace(/\/$/, '');
   const apiKey = (document.getElementById('php-setup-key').value || '').trim();
+  /* Optional: leer lassen heißt "keine Fahrer-App". Die Rider-Seams
+     liefern dann null und der geteilte Kern blendet alles Zugehörige
+     aus — eine bestehende Installation bleibt damit ohne Zutun
+     unverändert lauffähig. */
+  const riderAppUrl = (document.getElementById('php-setup-rider-url').value || '').trim();
   if(!apiUrl || !apiKey){ renderPhpSetup(t('phpSetup.errorFieldsRequired')); return; }
-  savePhpConfig({apiUrl, apiKey});
+  savePhpConfig({apiUrl, apiKey, riderAppUrl});
   try{
     const res = await phpRequest('GET', 'events:index');
     if(res.status === 401){
@@ -111,6 +120,71 @@ async function exportBackupBlob(evt){
 }
 
 /* ---------------- storage capability seams (used by shared core/*.js) ---------------- */
+/* See the local variant for the full rationale: false under a shared
+   window.storage, where a per-device backup would be misleading. With the PHP
+   backend configured, backups are genuine JSON exports of the event. */
+function supportsLocalBackup(){
+  return !hasSharedStorage;
+}
+
+/* ---------------- Rider-App-Seams ----------------
+   Alle drei liefern null, wenn es keine Fahrer-App geben kann: unter
+   einem geteilten window.storage gibt es kein PHP-Backend, und ohne
+   konfigurierte Rider-App-URL gibt es keine Adresse, auf die ein
+   QR-Code zeigen könnte. Der geteilte Kern wertet ausschließlich dieses
+   null aus und fragt nie selbst nach der Variante. */
+function riderAppBaseUrl(){
+  const cfg = getPhpConfig();
+  return (cfg && cfg.riderAppUrl) ? cfg.riderAppUrl : '';
+}
+function riderEndpointUrl(){
+  const cfg = getPhpConfig();
+  if(!cfg || !cfg.apiUrl) return '';
+  /* rider.php liegt neben api.php — der Nutzer konfiguriert nur einen
+     Endpunkt, und beide Dateien kommen aus demselben Ordner. */
+  return cfg.apiUrl.replace(/\/[^\/]*$/, '/rider.php');
+}
+function riderSeamsAvailable(){
+  return !hasSharedStorage && !!getPhpConfig() && !!riderAppBaseUrl();
+}
+async function riderRequest(method, query, body){
+  const cfg = getPhpConfig();
+  const res = await fetch(riderEndpointUrl() + '?' + query, {
+    method,
+    headers: Object.assign({'X-Api-Key': cfg.apiKey}, body ? {'Content-Type': 'application/json'} : {}),
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function publishRiderConfig(payload){
+  if(!riderSeamsAvailable()) return null;
+  try{
+    return await riderRequest('POST', 'a=sync', payload);
+  }catch(e){
+    console.error('rider sync failed', e);
+    return {ok: false, error: e.message};
+  }
+}
+async function pollRiderLog(publicId, sinceId){
+  if(!riderSeamsAvailable()) return null;
+  try{
+    return await riderRequest('GET', 'a=log&public_id=' + encodeURIComponent(publicId) + '&since=' + (sinceId || 0));
+  }catch(e){
+    console.error('rider log poll failed', e);
+    return {ok: false, error: e.message};
+  }
+}
+async function confirmRiderSlot(publicId, bib, status){
+  if(!riderSeamsAvailable()) return null;
+  try{
+    return await riderRequest('POST', 'a=slotstatus', {publicId, bib, status});
+  }catch(e){
+    console.error('rider slot status failed', e);
+    return {ok: false, error: e.message};
+  }
+}
 async function initStorageBackend(){
   if(!hasSharedStorage && !getPhpConfig()){
     renderPhpSetup();

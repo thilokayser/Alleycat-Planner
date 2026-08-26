@@ -25,6 +25,69 @@ Lebendiges Dokument (14.4 im Planungsdokument): wächst mit jeder Installation, 
 | Besonderheiten | Der PHP-eingebaute Entwicklungsserver (`php -S`) ist standardmäßig **einsträngig** und verarbeitet Anfragen nacheinander — für den Nebenläufigkeits-/Lasttest musste `PHP_CLI_SERVER_WORKERS=8` gesetzt werden, sonst serialisiert der Server selbst alle "gleichzeitigen" Anfragen und der Test misst nur den Entwicklungsserver, nicht die App. Ein echtes Shared-Hosting-Setup (Apache/nginx + PHP-FPM) ist von Haus aus mehrsträngig, insofern eher der Realität näher als der Default-Devserver |
 | Fazit | Pre-Flight-Check, Migrations-Runner und Backend-Endpunkte verhalten sich wie geplant. Kein Ersatz für einen echten Shared-Hosting-Test (siehe unten) |
 
+### Lokale Entwicklungsumgebung (macOS, Homebrew) — Migration 2, 25.08.2026
+
+**Kontext:** Schema-Prüfung für das Rider-App-Fundament (Teilprojekt 1, Paket 2). Migration `2` legt fünf neue Tabellen neben der kv-Tabelle an: `_rider_event`, `_rider_slot`, `_rider_checkpoint`, `_rider_log`, `_rider_ratelimit`. Geprüft wurde ausschließlich das Schema — `rider.php` existiert zu diesem Zeitpunkt noch nicht.
+
+| Punkt | Wert |
+|---|---|
+| Betriebssystem | macOS (Apple Silicon), Homebrew-Pakete |
+| PHP-Version | 8.5.9 (CLI) |
+| MySQL/MariaDB | MariaDB 12.3.2 |
+| Frische Datenbank | Migrationen 1 und 2 angewendet, `schema_version` = 2, alle fünf Tabellen vorhanden |
+| Erneuter Lauf | Wendet nichts an, Version bleibt 2 — idempotent wie Migration 1 |
+| Bestandsdatenbank auf Version 1 | Nur Migration 2 wird nachgeholt. Bestehender Event-Blob byte-identisch, beide kv-Zeilen erhalten, Umlaute und 4-Byte-Zeichen (Emoji) unversehrt — kein Datenverlust |
+| `utf8`-Rückfall | Migration 2 läuft auch mit `$charset = 'utf8'` durch, Tabellen erhalten `utf8mb3_uca1400_ai_ci`. Erwartete Einschränkung dieses Pfads: 4-Byte-Zeichen (Emoji) lassen sich dann nicht speichern, MariaDB weist sie mit Fehler 1366 ab statt sie stillschweigend zu verstümmeln |
+| `uq_scan` | Zweiter Check-in desselben Fahrers am selben Checkpoint wird mit SQLSTATE 23000 abgewiesen — Doppelscan-Schutz liegt in der Datenbank, nicht im Anwendungscode |
+| `uq_scan` mit `cp_id NULL` | Mehrere Registrierungszeilen desselben Fahrers kollidieren nicht. Bestätigt die tragende Annahme, dass MySQL NULL-Werte in einem UNIQUE-Index als jeweils verschieden behandelt |
+| `uq_client` | Wiederholter INSERT mit gleicher `client_uuid` wird abgewiesen — macht den Retry der Offline-Queue idempotent |
+| `uq_bib` / `uq_token` | Startnummer pro Event nur einmal belegbar, `token_hash` global eindeutig |
+| Ergebnis | 25 Prüfungen bestanden, 0 fehlgeschlagen (utf8-Rückfall separat: 24/24) |
+| Fazit | Schema und Index-Zusagen verhalten sich wie geplant, auf beiden Charset-Pfaden. Kein Ersatz für einen echten Shared-Hosting-Test |
+
+### Lokale Entwicklungsumgebung (macOS, Homebrew) — `rider.php`, 25.08.2026
+
+**Kontext:** Funktions- und Sicherheitsprüfung des neuen Rider-Endpunkts (Teilprojekt 1, Paket 3), 60 Prüfungen per `curl` gegen `php -S` mit `PHP_CLI_SERVER_WORKERS=8`. `rider.php` ist der erste Endpunkt des Projekts, der **ohne Admin-Key erreichbar** ist — Fahrer-Handys rufen ihn direkt auf.
+
+| Bereich | Ergebnis |
+|---|---|
+| Auth-Trennung | `?a=sync`, `?a=log`, `?a=slotstatus` weisen fehlenden und falschen Admin-Key mit 401 ab |
+| Publish | Zweiter identischer Publish erzeugt keine Duplikate; Umlaute im Eventnamen überstehen den Weg |
+| Fahrer-Sicht (`?a=me`) | Liefert eigene Startnummer, Checkpoints und eigenen Fortschritt. Antwort enthält nachweislich keinen fremden `token_hash` und keine fremde Startnummernbelegung. Koordinaten bleiben zurückgehalten, solange die Kartenansicht nicht freigeschaltet ist. Klartextcode wird auch kleingeschrieben akzeptiert |
+| Check-in | Gültiger Scan 200. Retry mit gleicher `clientUuid` → `duplicate:true`. Zweiter Scan mit anderer `clientUuid` → `already` mit Zeitstempel. Nach drei Versuchen existiert genau **eine** Log-Zeile |
+| Check-in-Abwehr | Falsches Checkpoint-Token, deaktiviertes QR-Check-In und nicht bestätigter Slot je 403 mit eigenem Fehlercode; Check-in vor Rennstart 409 |
+| Scan-Zeitpunkt | Eine Stunde alter `scannedAt` wird übernommen (Offline-Queue). Unplausible Zukunftszeit fällt auf die Serverzeit zurück |
+| GPS | Check-in aus 475 km Entfernung wird **angenommen** und die Distanz gespeichert — markiert, nie blockiert |
+| Registrierung | Wildcard belegen → `pending`. Zweiter Versuch 409. Ein anschließender Publish setzt `pending` **nicht** auf `free` zurück |
+| Nebenläufigkeit | 8 gleichzeitige Registrierungen auf dieselbe Startnummer: genau eine mit 200, sieben mit 409, genau eine Log-Zeile. Bestätigt, dass `status='free'` in der WHERE-Klausel das Belegen atomar macht |
+| Log-Cursor | 600 Zeilen über drei Seiten gelesen: vollständig, keine doppelt, aufsteigend. `limit` wird auf 500 gedeckelt |
+| `?a=freebibs` | Ohne freigeschaltete Selbstregistrierung 403; freigeschaltet nur Nummern, keine Namen |
+| Rate-Limit | Fehlversuche 1–10 → 403, ab dem 11. → 429. Erfolgreiche Authentifizierung setzt den Zähler zurück. **30 gültige Check-ins in Folge sperren nicht** — es zählen ausschließlich Fehlversuche |
+| Ergebnis | 60 Prüfungen bestanden, 0 fehlgeschlagen |
+| Fazit | Endpunkt verhält sich wie geplant, inklusive der drei Zusagen, die in der Datenbank statt im Anwendungscode liegen. Kein Ersatz für einen echten Shared-Hosting-Test — insbesondere das Rate-Limit sollte dort erneut geprüft werden, weil PHP-FPM mehrere Arbeitsprozesse parallel bedient |
+
+### Lokale Entwicklungsumgebung (macOS, Homebrew) — Abnahme Teilprojekt 1, 25.08.2026
+
+**Kontext:** Abschließender Durchlauf über alle neun Abnahmekriterien des Rider-App-Fundaments, diesmal bewusst über den **echten Installationsweg**: frische Datenbank, `install.php` per HTTP-POST aufgerufen, danach mit dem dort erzeugten API-Key gearbeitet. Die vorigen Einträge hatten die Migrationen direkt aufgerufen und diesen Pfad damit nie geprüft.
+
+| Punkt | Ergebnis |
+|---|---|
+| `install.php` auf frischer Datenbank | Legt alle sieben Tabellen an (`kv`, `db_meta`, fünf Rider-Tabellen), `schema_version` = 2, löscht sich anschließend selbst |
+| `config.php` nach der Installation | Enthält nur `ALLEYCAT_API_KEY_HASH` (bcrypt), keinen Klartext-Key. `password_verify()` gegen den einmalig angezeigten Key bestätigt |
+| Publish | 10 Slots, 3 Checkpoints; zweiter Publish erzeugt keine Duplikate |
+| Check-in per `curl` | Angenommen; erscheint binnen eines Poll-Durchlaufs (5 s) im Leaderboard der Organizer-App mit Haken und Fortschritt 2/3 |
+| Doppelscan / Queue-Retry | `duplicate:true` bzw. `already` mit Zeitstempel, beide HTTP 200; nach drei Versuchen genau eine Log-Zeile |
+| Selbstanmeldung | Wildcard-Slot auf `pending`, erscheint in der Fahrerliste; Bestätigen und Ablehnen schreiben den Status zurück auf den Server, beides rückholbar |
+| Datenschutz `?a=me` | Kein eigener und kein fremder Fahrername, kein Notfallkontakt, keine Rätsellösung, kein fremdes Klartext-Token; eigener Fortschritt vorhanden |
+| Datenschutz veröffentlichte Tabellen | Fahrername, Notfallkontakt, Rätsellösung und Klartext-Token in `_rider_slot`/`_rider_event`/`_rider_checkpoint` **nicht auffindbar** (geprüft per `mysqldump` + `grep`) |
+| `?a=freebibs` | Ohne freigeschaltete Selbstregistrierung 403 |
+| Rate-Limit | Fehlversuche 1–10 → 403, ab dem 11. → 429; 20 gültige Zugriffe in Folge sperren nicht |
+| Admin-Auth | `?a=log` ohne Key 401, mit Key 200 |
+| Lokale Variante | Kein QR-Häkchen, kein Anmeldungs-Nav-Punkt, keine `publicId`, **kein laufender Poll-Timer** |
+| Ergebnis | 24 Abnahmeprüfungen bestanden, 0 fehlgeschlagen; `test-suite.js` 905/905 |
+
+**Beobachtung am Rande:** `?reset-php-config` bleibt beim `location.reload()` nach dem Setup in der URL stehen und löscht die gerade gespeicherte Konfiguration sofort wieder. Kein neuer Fehler und kein Problem im normalen Ablauf (der Parameter wird bewusst manuell angehängt), aber verwirrend, wenn man ihn zum Neu-Einrichten benutzt — dann muss man ihn vor dem Absenden aus der URL entfernen.
+
 ### `hasencore.de` — noch offen
 
 Der im Planungsdokument (14.7) vorgesehene erste praktische Durchlauf auf einem echten Hoster steht noch aus — dafür wird Zugriff auf den dortigen Webspace benötigt (nur der Nutzer hat diesen Zugriff). Sobald durchgeführt: PHP-/MySQL-Version per `phpinfo()` bzw. `SELECT VERSION();` ermitteln (danach `phpinfo.php` sofort wieder löschen — zeigt sicherheitsrelevante Details), Pre-Flight-Check-Ausgabe hier dokumentieren, danach diesen Eintrag ergänzen.

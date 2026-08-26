@@ -1,1 +1,31 @@
-{"version":"0.0.1","configurations":[{"name":"alleycat-pdf-test","url":"http://localhost:8830"},{"name":"alleycat-static","runtimeExecutable":"python3","runtimeArgs":["-m","http.server","8831"],"port":8831}]}
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "alleycat-pdf-test",
+      "url": "http://localhost:8830"
+    },
+    {
+      "name": "alleycat-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8831"
+      ],
+      "port": 8831
+    },
+    {
+      "name": "alleycat-dist",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8777",
+        "--directory",
+        "dist"
+      ],
+      "port": 8777
+    }
+  ]
+}

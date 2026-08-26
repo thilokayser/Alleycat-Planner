@@ -15,6 +15,9 @@ let state = {
   checkinActiveBib: null,
   checkinNotFound: false,
   leaderboardSearch: '',
+  /* null = diese Installation hat keine Fahrer-App (Seam liefert null).
+     Sonst {ok, at, error} des letzten Publish-Versuchs. */
+  riderPublish: null,
   spokeCardsGenerating: false,
   riderSheetGenerating: false,
   printPopupBlocked: false,
@@ -167,7 +170,10 @@ async function saveCurrentEvent(){
   setSaveStatus('saving');
   const ok = await storageSet('event:' + state.currentEvent.id, JSON.stringify(state.currentEvent));
   setSaveStatus(ok ? 'saved' : 'error');
-  if(ok) broadcastEventUpdated(state.currentEvent.id);
+  if(ok){
+    broadcastEventUpdated(state.currentEvent.id);
+    schedulePublishRiderConfig();
+  }
 }
 function debouncedSave(){
   setSaveStatus('pending');
@@ -250,6 +256,7 @@ function goDashboard(){
   state.currentEvent = null;
   state.addMode = false;
   state.editingId = null;
+  stopRiderPolling();
   render();
 }
 async function openEditor(id){
@@ -262,6 +269,7 @@ async function openEditor(id){
   state.geoImportLayers = []; // "temporär" imported geo layers are session-only, tied to whichever event is currently open
   registerEventSounds(state.currentEvent);
   state.loading = false;
+  startRiderPolling();
   render();
   /* Guarded on state.view, same reasoning as the sidebar-collapse/mobile-map
      invalidateSize() gotcha already documented in CLAUDE.md: this is a
