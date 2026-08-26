@@ -129,7 +129,13 @@ function riderOnlySymbols(){
   const names = new Set();
   for(const file of fs.readdirSync(riderDir).filter(f => f.endsWith('.js'))){
     const src = fs.readFileSync(path.join(riderDir, file), 'utf8');
-    for(const m of src.matchAll(/^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm)){
+    /* Nur Deklarationen auf Modulebene (Spalte 0, kein führender
+       Leerraum). Verschachtelte Funktionen sind für andere Module gar
+       nicht sichtbar und können deshalb nicht lecken — sie mitzuzählen
+       erzeugte nur Fehlalarme auf generischen Namen. Genau das passierte
+       beim Bau von Paket 4: scanner.js hat ein inneres tick(), checkin.js
+       ebenfalls, und der Guard hielt das für ein Leck. */
+    for(const m of src.matchAll(/^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm)){
       names.add(m[1]);
     }
   }

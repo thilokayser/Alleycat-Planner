@@ -1028,8 +1028,63 @@ const translations = {
     riderScan: {
       appTitle: 'Alleycat — Fahrer',
       loading: 'Lade…',
-      placeholder: 'Fahrer-App — Platzhalter',
-      placeholderLead: 'Diese Seite wird in den nächsten Paketen zur echten Fahrer-App. Dass sie überhaupt lädt und dabei keine einzige externe Adresse anfragt, ist der Zweck dieses Schritts.'
+
+      loginTitle: 'Spokecard scannen',
+      loginLead: 'Halte den QR-Code auf deiner Spokecard vor die Kamera. Du bekommst die Karte am HQ.',
+      loginScanButton: '📷  Spokecard scannen',
+      loginCodeButton: 'Stattdessen Code eintippen',
+      codeTitle: 'Code eintippen',
+      codeLead: 'Der achtstellige Code steht auf deiner Spokecard unter dem QR-Code.',
+      codeLabel: 'Code von der Karte',
+      codeSubmit: 'Anmelden',
+      codeBackToScan: 'Zurück zum Scannen',
+
+      registerTitle: 'Startnummer {bib} — Anmeldung',
+      registerLead: 'Diese Karte ist noch keinem Fahrer zugeordnet. Trag dich ein, das Orga-Team bestätigt dich am HQ.',
+      registerName: 'Name',
+      registerContact: 'E-Mail oder Telefon',
+      registerEmergency: 'Notfallkontakt',
+      registerSubmit: 'Anmeldung abschicken',
+      registerNameRequired: 'Bitte gib deinen Namen ein.',
+
+      pendingTitle: 'Anmeldung läuft',
+      pendingLead: 'Deine Anmeldung liegt beim Orga-Team. Sobald sie bestätigt ist, geht es hier automatisch weiter.',
+      pendingBib: 'Deine Startnummer: {bib}',
+
+      homeOpenCheckpoints: '{done} von {total} Checkpoints',
+      homeScanButton: '📷  Checkpoint scannen',
+      homeHintScannable: 'Hier selbst einchecken',
+      homeHintMarshal: 'Beim Personal melden',
+      homeHintUnknownType: 'Siehe Papiermanifest',
+      homeQueueWaiting: '{count} wartet auf Übertragung',
+      homeQueueWaitingPlural: '{count} warten auf Übertragung',
+      homeOfflineBanner: 'Offline — Stand von {time}',
+
+      scanHint: 'QR-Code am Checkpoint anvisieren',
+      scanCancel: 'Abbrechen',
+      scanCameraDenied: 'Kein Kamerazugriff. Erlaube die Kamera in den Browser-Einstellungen oder tippe den Code ein.',
+      scanCameraUnsupported: 'Dieses Gerät stellt keine Kamera bereit. Nutze die Code-Eingabe.',
+      scanNoReader: 'Der QR-Leser konnte nicht geladen werden. Nutze die Code-Eingabe.',
+
+      confirmTitle: 'Eingecheckt',
+      confirmAlready: 'Schon eingecheckt',
+      confirmQueued: 'Gespeichert — wird gesendet, sobald du Empfang hast.',
+      confirmBack: 'Weiter',
+
+      errWrongEvent: 'Dieser Code gehört zu einem anderen Rennen.',
+      errIsCheckpoint: 'Das ist ein Checkpoint-Code, keine Spokecard.',
+      errIsSpokecard: 'Das ist deine eigene Spokecard, kein Checkpoint.',
+      errUnreadable: 'Dieser Code gehört nicht zu Alleycat Dispatch.',
+      errUnknownRider: 'Karte nicht erkannt. Prüfe den Code oder frag am HQ.',
+      errUnknownCheckpoint: 'Dieser Checkpoint gehört nicht zu deinem Rennen.',
+      errQrDisabled: 'An diesem Checkpoint wird nicht selbst eingecheckt — melde dich beim Personal.',
+      errNotConfirmed: 'Deine Anmeldung ist noch nicht bestätigt. Frag am HQ.',
+      errRaceNotRunning: 'Das Rennen läuft noch nicht.',
+      errRateLimited: 'Zu viele Versuche. Warte {seconds} Sekunden.',
+      errSlotTaken: 'Diese Startnummer ist inzwischen vergeben. Frag am HQ.',
+      errNetwork: 'Keine Verbindung zum Server.',
+      errRetry: 'Erneut versuchen',
+      errGeneric: 'Etwas ist schiefgelaufen.'
     },
     /* Organizer-Seite der Rider-Funktionen — siehe Kommentar über
        riderScan, die beiden Namen laden zur Verwechslung ein. */
