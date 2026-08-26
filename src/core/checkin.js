@@ -189,9 +189,50 @@ function stopQrScan(){
   state.qrScanError = '';
   renderCheckin();
 }
+/* Der Ziel-Check-in muss ZWEI Spokecard-Formate lesen: die nackte
+   Startnummer, die bis zur Fahrer-App auf jeder Karte stand, und die
+   neue Token-URL. Wäre das nicht so, entwertete das Release jede bereits
+   gedruckte Karte — die kritischste Zusage dieses Arbeitspakets.
+
+   Der Token-Fall wird LOKAL aufgelöst, gegen rider.riderToken im
+   geladenen Event, ohne Serverruf. Der Zieltisch muss auch dann
+   funktionieren, wenn der Orga-Laptop gerade kein Netz hat; alle Token
+   liegen ohnehin im Speicher. */
 function onQrScanSuccess(data){
   stopQrScan();
-  state.checkinBibInput = String(data).trim();
+  const raw = String(data).trim();
+  const parsed = parseRiderQrPayload(raw);
+
+  if(parsed && parsed.kind === 'rider'){
+    const evt = state.currentEvent;
+    const rider = (evt.riders || []).find(r => r.riderToken && r.riderToken === parsed.riderToken);
+    if(rider){
+      state.checkinBibInput = String(rider.bib);
+      findCheckinRider();
+      return;
+    }
+    /* Gültiges Format, aber kein Fahrer dazu: die Karte gehört zu einem
+       anderen Event. Das ist eine andere Lage als "unlesbar" und
+       verdient eine eigene Meldung. */
+    state.checkinBibInput = '';
+    state.checkinNotFound = true;
+    showToast({message: t('checkin.qrForeignEvent')});
+    renderCheckin();
+    return;
+  }
+
+  if(parsed && parsed.kind === 'checkpoint'){
+    state.checkinBibInput = '';
+    showToast({message: t('checkin.qrIsCheckpoint')});
+    renderCheckin();
+    return;
+  }
+
+  /* legacyBib und alles Unbekannte gehen den bisherigen Weg: rohe
+     Eingabe ins Feld, findCheckinRider() entscheidet. Damit bleibt auch
+     ein handgeschriebener Zettel oder ein Fremdcode so behandelt wie
+     bisher. */
+  state.checkinBibInput = parsed && parsed.kind === 'legacyBib' ? String(parsed.bib) : raw;
   findCheckinRider();
 }
 function clearCheckin(){

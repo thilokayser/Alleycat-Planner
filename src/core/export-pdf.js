@@ -363,6 +363,23 @@ function drawSpokeCardFront(doc, x, y, w, h, evt, rider){
   doc.setTextColor('#241f18');
   doc.text('#' + rider.bib, x + w / 2, y + h - 5, {align: 'center'});
 }
+/* Was tatsächlich auf eine gedruckte Spokecard kommt. Hängt am Seam:
+   ohne Fahrer-App gibt es keine Adresse, auf die ein Link zeigen könnte,
+   also bleibt es bei der nackten Startnummer wie bisher — die lokale
+   Variante druckt damit unverändert weiter.
+
+   Eine Funktion für beide Erzeugungsstellen (Spokecards und Bib-Blätter),
+   damit der Inhalt nicht an zwei Orten auseinander läuft.
+
+   Liegt hier und NICHT in rider-qr.js: die Fahrer-App druckt keine
+   Spokecards, und sie hätte auch keinen riderAppBaseUrl() — der Seam
+   lebt in src/storage/, das im Rider-Bundle fehlt. Maßstab aus Paket 1:
+   nur was das Fahrer-Bundle braucht, gehört nach rider-qr.js. */
+function spokecardQrPayload(evt, rider){
+  const base = riderAppBaseUrl();
+  return base ? buildRiderQrPayload(base, evt, rider) : String(rider.bib);
+}
+
 function drawSpokeCardBack(doc, x, y, w, h, evt, rider, qrDataUrl){
   doc.setFillColor('#eee5cd');
   doc.roundedRect(x, y, w, h, 3, 3, 'F');
@@ -379,10 +396,19 @@ function drawSpokeCardBack(doc, x, y, w, h, evt, rider, qrDataUrl){
   doc.setTextColor('#241f18');
   doc.text('#' + rider.bib, x + w / 2, y + h - 20, {align: 'center'});
 
-  if(rider.name){
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+  /* KEIN Fahrername auf der Karte. Karten werden vorgedruckt, bevor
+     feststeht, wer sie bekommt — ein Name darauf machte den Stapel
+     unbrauchbar und verriete außerdem, wem eine gefundene Karte gehört.
+     Ausdrückliche Nutzerentscheidung vom 25.08.2026, unabhängig von der
+     Fahrer-App, und deshalb in BEIDEN Varianten so. */
+
+  /* Der abtippbare Rückfallcode, wenn die Kamera streikt. Nur wo es eine
+     Fahrer-App gibt — sonst führte er ins Leere. Monospace und gesperrt,
+     damit sich Zeichen beim Eintippen einzeln abzählen lassen. */
+  if(riderAppBaseUrl() && rider.riderCode){
+    doc.setFont('courier', 'bold'); doc.setFontSize(9);
     doc.setTextColor('#5b5340');
-    doc.text(truncateText(rider.name, 26), x + w / 2, y + h - 15, {align: 'center', maxWidth: w - 10});
+    doc.text(rider.riderCode.split('').join(' '), x + w / 2, y + h - 14, {align: 'center'});
   }
 
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
@@ -416,7 +442,7 @@ async function buildSpokeCardsDoc(evt){
     drawSpokeCardFront(doc, x, y, cardW, cardH, evt, r);
   });
 
-  const qrCodes = await Promise.all(riders.map(r => renderQrDataUrl(String(r.bib), 300)));
+  const qrCodes = await Promise.all(riders.map(r => renderQrDataUrl(spokecardQrPayload(evt, r), 300)));
   doc.addPage();
   for(let i = 0; i < riders.length; i++){
     if(i > 0 && i % perPage === 0) doc.addPage();
@@ -457,6 +483,73 @@ async function printSpokeCardsPDF(){
   state.spokeCardsGenerating = false;
   renderRiders();
 }
+/* ---------------- Checkpoint-QR-Blätter ----------------
+   Eine Seite je Checkpoint mit aktivem QR-Check-In, zum Laminieren und
+   Aufstellen. Nichts wird nebeneinander gesetzt: der Code wird aus
+   Sattelhöhe, bei schlechtem Licht, mit einer Hand am Lenker gescannt —
+   dafür zählt Größe mehr als Papiersparen.
+
+   Checkpoints ohne QR-Check-In erscheinen nicht. Gibt es keinen
+   einzigen, wird gar kein PDF erzeugt; der Knopf sagt das vorher. */
+async function buildCheckpointQrDoc(evt){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit: 'mm', format: 'a4'});
+  const pageW = 210, pageH = 297;
+  const base = riderAppBaseUrl();
+
+  const cps = (evt.checkpoints || [])
+    .filter(cp => cp.qrCheckinEnabled)
+    .slice()
+    .sort((a, b) => a.order - b.order);
+
+  const codes = await Promise.all(cps.map(cp => renderQrDataUrl(buildCheckpointQrPayload(base, evt, cp), 900)));
+
+  cps.forEach((cp, i) => {
+    if(i > 0) doc.addPage();
+
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.setTextColor('#5b5340');
+    doc.text(truncateText(evt.name || '', 60), pageW / 2, 20, {align: 'center'});
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(30);
+    doc.setTextColor('#241f18');
+    doc.text(truncateText(cp.name || '', 28), pageW / 2, 36, {align: 'center', maxWidth: pageW - 30});
+
+    /* 130 mm Kantenlänge — deutlich über den 90 mm aus der Spec. Der
+       Platz ist auf A4 ohnehin da, und jeder Millimeter mehr hilft beim
+       Scannen aus Entfernung. */
+    const qrSize = 130;
+    if(codes[i]) doc.addImage(codes[i], 'PNG', (pageW - qrSize) / 2, 52, qrSize, qrSize);
+
+    doc.setFont('courier', 'bold'); doc.setFontSize(16);
+    doc.setTextColor('#241f18');
+    doc.text(getCheckpointType(cp.type).shortLabel, pageW / 2, 200, {align: 'center'});
+
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    doc.setTextColor('#5b5340');
+    doc.text(t('exportPdf.cpQrFooter'), pageW / 2, pageH - 24, {align: 'center', maxWidth: pageW - 30});
+
+    /* Kennung klein am Fuß: wenn ein Aufsteller vertauscht wird, lässt
+       sich am Papier nachvollziehen, wohin er gehört. */
+    doc.setFont('courier', 'normal'); doc.setFontSize(7);
+    doc.setTextColor('#8a8069');
+    doc.text(cp.id, pageW / 2, pageH - 12, {align: 'center'});
+  });
+
+  return doc;
+}
+
+async function exportCheckpointQrPDF(){
+  const evt = state.currentEvent;
+  if(!evt || !riderAppBaseUrl()) return;
+  const cps = (evt.checkpoints || []).filter(cp => cp.qrCheckinEnabled);
+  if(!cps.length){ alert(t('exportPdf.cpQrNone')); return; }
+
+  const doc = await buildCheckpointQrDoc(evt);
+  const slug = (evt.name || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'event';
+  showPdfPreview(doc, `${slug}-checkpoint-qr.pdf`);
+}
+
 async function buildRiderSheetDoc(evt){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit: 'mm', format: 'a4'});
@@ -464,7 +557,7 @@ async function buildRiderSheetDoc(evt){
   const {perPage, pos} = computeCardGrid(210, 297, cardW, cardH, 10, 8, 6, 5);
 
   const riders = evt.riders;
-  const qrCodes = await Promise.all(riders.map(r => renderQrDataUrl(String(r.bib), 300)));
+  const qrCodes = await Promise.all(riders.map(r => renderQrDataUrl(spokecardQrPayload(evt, r), 300)));
   for(let i = 0; i < riders.length; i++){
     if(i > 0 && i % perPage === 0) doc.addPage();
     const {x, y} = pos(i);
@@ -874,12 +967,25 @@ function renderManifestPanel(evt){
     return renderPdfBlocksPanel(evt);
   }
   if(section === 'drucken'){
+    /* Checkpoint-QR-Blätter nur, wo es eine Fahrer-App gibt — ohne sie
+       zeigen die Codes ins Leere. */
+    const qrCount = riderAppBaseUrl()
+      ? (evt.checkpoints || []).filter(cp => cp.qrCheckinEnabled).length
+      : -1;
     return `
       <div class="settings-section">
         <h3>${t('exportPdf.print')}</h3>
         <div class="settings-section-desc">${t('exportPdf.printDescription')}</div>
         <button class="btn btn-primary" onclick="printManifest()" style="margin-top:12px;">${t('exportPdf.print')}</button>
       </div>
+      ${qrCount >= 0 ? `
+      <div class="settings-section">
+        <h3>${t('exportPdf.cpQrHeading')}</h3>
+        <div class="settings-section-desc">${t('exportPdf.cpQrDescription')}</div>
+        ${qrCount === 0
+          ? `<div class="riders-hint warn" style="margin:12px 0 0;">${t('exportPdf.cpQrNone')}</div>`
+          : `<button class="btn btn-primary" style="margin-top:12px;" onclick="exportCheckpointQrPDF()">${t('exportPdf.cpQrButton', {count: qrCount})}</button>`}
+      </div>` : ''}
     `;
   }
   if(section === 'export'){

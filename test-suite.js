@@ -3204,6 +3204,110 @@ async function runAlleycatTestSuite(){
     check('Anmeldungs-Sektion escapt einen eingegebenen Namen', !xssHtml.includes('<img src=x'));
     check('Anmeldungs-Sektion escapt einen eingegebenen Kontakt', !xssHtml.includes('<b>roh</b>'));
 
+    /* Spokecard-QR-Inhalt hängt am Seam. In der lokalen Variante liefert
+       riderAppBaseUrl() '' — dort muss es bei der nackten Startnummer
+       bleiben, sonst zeigten gedruckte Karten ins Leere. */
+    {
+      const seamEvt = withEventDefaults({id: 's', name: 's', publicId: 'abcdefghijkl'});
+      const seamRider = withRiderDefaults({bib: 23, riderToken: 'k'.repeat(32), riderCode: 'ABCDEFGH'});
+      checkEqual('Spokecard-QR ohne Fahrer-App ist die nackte Startnummer', spokecardQrPayload(seamEvt, seamRider), '23');
+
+      /* Mit Fahrer-App die Token-URL — der Seam wird dafür kurz gestubbt,
+         weil die lokale Variante ihn nie liefert. */
+      const echterSeam = window.riderAppBaseUrl;
+      window.riderAppBaseUrl = () => 'https://x.tld/alleycat-rider.html';
+      const mitApp = spokecardQrPayload(seamEvt, seamRider);
+      window.riderAppBaseUrl = echterSeam;
+      check('Spokecard-QR mit Fahrer-App ist die Token-URL', mitApp === 'https://x.tld/alleycat-rider.html#r.abcdefghijkl.' + 'k'.repeat(32));
+      check('Token-URL ist wieder parsebar', parseRiderQrPayload(mitApp).kind === 'rider');
+    }
+
+    /* Ziel-Check-in liest BEIDE Spokecard-Formate. Das ist die
+       kritischste Zusage des Druckstück-Pakets: eine vor dem Release
+       gedruckte Karte trägt nur die Startnummer und muss weiter
+       funktionieren. */
+    {
+      const evtBefore2 = state.currentEvent, viewBefore2 = state.view;
+      const scanEvt = withEventDefaults({
+        id: 'q', name: 'q', publicId: 'abcdefghijkl', status: 'running',
+        riders: [
+          withRiderDefaults({bib: 11, name: 'Alt', riderToken: 'm'.repeat(32)}),
+          withRiderDefaults({bib: 12, name: 'Neu', riderToken: 'n'.repeat(32)})
+        ],
+        checkpoints: [withCheckpointDefaults({id: 'cp-q', name: 'Q', order: 0})]
+      });
+      state.currentEvent = scanEvt;
+      state.view = 'checkin';
+
+      onQrScanSuccess('11');
+      checkEqual('Alte Karte (nackte Startnummer) findet den Fahrer', state.checkinBibInput, '11');
+
+      state.checkinBibInput = '';
+      onQrScanSuccess('https://x.tld/alleycat-rider.html#r.abcdefghijkl.' + 'n'.repeat(32));
+      checkEqual('Neue Karte (Token-URL) wird lokal zur Startnummer aufgelöst', state.checkinBibInput, '12');
+
+      state.checkinBibInput = '';
+      onQrScanSuccess('https://x.tld/alleycat-rider.html#r.abcdefghijkl.' + 'z'.repeat(32));
+      checkEqual('Karte eines fremden Events füllt kein Startnummernfeld', state.checkinBibInput, '');
+
+      state.checkinBibInput = '';
+      onQrScanSuccess('https://x.tld/alleycat-rider.html#c.abcdefghijkl.cp-q.' + 'm'.repeat(32));
+      checkEqual('Checkpoint-Code am Zieltisch füllt kein Startnummernfeld', state.checkinBibInput, '');
+
+      state.currentEvent = evtBefore2; state.view = viewBefore2;
+      clearCheckin();
+    }
+
+    /* Checkpoint-QR-PDF: nur QR-Checkpoints, und nur mit Fahrer-App */
+    {
+      const qrEvt = withEventDefaults({
+        id: 'pdf', name: 'PDF-Test', publicId: 'abcdefghijkl',
+        checkpoints: [
+          withCheckpointDefaults({id: 'cp-1', name: 'A', order: 0, qrCheckinEnabled: true, qrToken: 'a'.repeat(32)}),
+          withCheckpointDefaults({id: 'cp-2', name: 'B', order: 1, qrCheckinEnabled: false, qrToken: 'b'.repeat(32)}),
+          withCheckpointDefaults({id: 'cp-3', name: 'C', order: 2, qrCheckinEnabled: true, qrToken: 'c'.repeat(32)})
+        ]
+      });
+      const mitQr = qrEvt.checkpoints.filter(cp => cp.qrCheckinEnabled).length;
+      checkEqual('Zwei der drei Checkpoints haben QR-Check-In', mitQr, 2);
+
+      const echterSeam2 = window.riderAppBaseUrl;
+      window.riderAppBaseUrl = () => 'https://x.tld/alleycat-rider.html';
+      const nutzlast = buildCheckpointQrPayload(riderAppBaseUrl(), qrEvt, qrEvt.checkpoints[0]);
+      window.riderAppBaseUrl = echterSeam2;
+
+      const zurueck = parseRiderQrPayload(nutzlast);
+      checkEqual('Checkpoint-Nutzlast ist als Checkpoint parsebar', zurueck.kind, 'checkpoint');
+      checkEqual('Checkpoint-Nutzlast trägt die richtige cpId', zurueck.cpId, 'cp-1');
+      checkEqual('Checkpoint-Nutzlast trägt das richtige Token', zurueck.qrToken, 'a'.repeat(32));
+
+      const evtBefore3 = state.currentEvent, sectionBefore = state.manifestSection;
+      state.currentEvent = qrEvt;
+      state.manifestSection = 'drucken';
+      const druckenLokal = renderManifestPanel(qrEvt);
+      check('Ohne Fahrer-App erscheint kein QR-Blätter-Abschnitt', !druckenLokal.includes(t('exportPdf.cpQrHeading')));
+
+      const echterSeam3 = window.riderAppBaseUrl;
+      window.riderAppBaseUrl = () => 'https://x.tld/alleycat-rider.html';
+      const druckenMitApp = renderManifestPanel(qrEvt);
+      window.riderAppBaseUrl = echterSeam3;
+      check('Mit Fahrer-App erscheint der QR-Blätter-Abschnitt', druckenMitApp.includes(t('exportPdf.cpQrHeading')));
+      check('Knopf nennt die Anzahl der QR-Checkpoints', druckenMitApp.includes(t('exportPdf.cpQrButton', {count: 2})));
+
+      /* Kein QR-Checkpoint: Hinweis statt Knopf, damit niemand ein leeres
+         PDF erzeugt. */
+      const ohneQr = withEventDefaults({id: 'p2', name: 'p2', publicId: 'abcdefghijkl',
+        checkpoints: [withCheckpointDefaults({id: 'cp-x', name: 'X', order: 0})]});
+      state.currentEvent = ohneQr;
+      window.riderAppBaseUrl = () => 'https://x.tld/alleycat-rider.html';
+      const leer = renderManifestPanel(ohneQr);
+      window.riderAppBaseUrl = echterSeam3;
+      check('Ohne QR-Checkpoint erscheint ein Hinweis', leer.includes(t('exportPdf.cpQrNone')));
+      check('Ohne QR-Checkpoint erscheint kein Erzeugen-Knopf', !leer.includes('exportCheckpointQrPDF()'));
+
+      state.currentEvent = evtBefore3; state.manifestSection = sectionBefore;
+    }
+
     /* Verwaiste Check-ins erscheinen im Leaderboard */
     const orphanEvt = withEventDefaults({id: 'o', name: 'o',
       riders: [withRiderDefaults({bib: 1, finishTime: '2026-08-25T12:00'})],
