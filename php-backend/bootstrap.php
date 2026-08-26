@@ -43,7 +43,7 @@ function apiLoadConfig(){
 
 function apiSendCorsHeaders(){
   header('Access-Control-Allow-Origin: ' . ALLEYCAT_ALLOWED_ORIGIN);
-  header('Access-Control-Allow-Headers: X-Api-Key, Content-Type');
+  header('Access-Control-Allow-Headers: X-Api-Key, X-Rider-Token, X-Rider-Code, Content-Type');
   header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
 }
 

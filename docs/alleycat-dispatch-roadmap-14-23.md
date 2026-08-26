@@ -35,8 +35,8 @@ Die beiden Übergabedokumente wurden nacheinander geschrieben und nummerieren di
 | 12 | Manifest-Sidebar-Redesign | nicht Teil der Übergabe-Doks | S–M | ✅ abgeschlossen (19.08.2026) — Ad-hoc-Nutzerwunsch |
 | 13 | Erstnutzer-Erfahrung (Splashscreen, Onboarding-Tour, Doku-Seite) | nicht Teil der Übergabe-Doks | M–L | ✅ abgeschlossen (25.08.2026) — Ad-hoc-Nutzerwunsch, alle drei Teile fertig |
 | **14** | **Rider-App — Teilprojekt 1: Fundament** | nicht Teil der Übergabe-Doks | L | ✅ abgeschlossen (25.08.2026) — Backend + Organizer-Verkabelung, ohne Fahrer-Oberfläche |
-| 15 | Rider-App — Teilprojekt 2: Fahrer-App | nicht Teil der Übergabe-Doks | L | ❌ offen — **nächster Schritt** |
-| 16 | Rider-App — Teilprojekt 3: Beamer-Ping + Online-Vorab-Registrierung | nicht Teil der Übergabe-Doks | M | ❌ offen |
+| **15** | **Rider-App — Teilprojekt 2: Fahrer-App** | nicht Teil der Übergabe-Doks | L | ✅ abgeschlossen (26.08.2026) — Gerätetest beim Nutzer offen |
+| 16 | Rider-App — Teilprojekt 3: Beamer-Ping + Online-Vorab-Registrierung | nicht Teil der Übergabe-Doks | M | ❌ offen — **nächster Schritt** |
 | — | *Idee, zurückgestellt:* Offline-Gerätesync (früher Paket 8) | Phase 22 komplett | L (unsicher) | ⚠️ Kamera/QR-Grundlage (jsQR) bereits vorhanden, Stream-Protokoll komplett offen — **kein aktives Arbeitspaket**, wandert zu den "vertagten Ideen" wie Kopfgeld-Modus/Service-Worker in der ursprünglichen Übergabe |
 
 Aufwand-Skala: S = klein (wenige, isolierte Änderungen), M = mittel (ein neues Modul oder mehrere verteilte Änderungen), L = groß (neues Modul + Umbau bestehender Kernlogik), XL = sehr groß (mehrere neue Module + Migration bestehender, produktiver Daten).
@@ -267,7 +267,7 @@ Die Initiative ist in drei Teilprojekte geschnitten, jedes mit eigener Spec → 
 | # | Teilprojekt | Inhalt | Status |
 |---|---|---|---|
 | **14** | Fundament | Token-Datenmodell, `rider.php` + fünf Tabellen, Publish, Merge-Polling, Anmeldungen bestätigen | ✅ 25.08.2026 |
-| 15 | Fahrer-App | eigenes Bundle `dist/alleycat-rider.html` (Login, Fortschritt, Checkpoint-Scan, Offline-Queue, Wildcard-Registrierung); dazu Spokecard-QR-Umstellung, Checkpoint-QR-PDF, `CHECKPOINT_TYPES` in ein geteiltes Modul extrahieren | ❌ offen |
+| **15** | Fahrer-App | eigenes Bundle `dist/alleycat-rider.html` (Login, Fortschritt, Checkpoint-Scan, Offline-Queue, Wildcard-Registrierung); dazu Spokecard-QR-Umstellung, Checkpoint-QR-PDF, `CHECKPOINT_TYPES` in ein geteiltes Modul extrahieren | ✅ 26.08.2026 |
 | 16 | Live + Vorab | Beamer-Ping auf der Kartenansicht, öffentliche Online-Vorab-Registrierung | ❌ offen |
 
 Später vorgemerkt, bewusst nicht in Teilprojekt 15: Checkpoint-Karte in der Fahrer-App, Live-Leaderboard für Fahrer, Liga-/Saison-Profile über mehrere Events hinweg. Die Sichtbarkeit ist bereits als `evt.riderApp`-Schalter angelegt (`progress`/`map`/`leaderboard`/`selfRegister`), der Admin entscheidet also pro Event — die beiden hinteren Schalter sind noch ohne Wirkung.
@@ -285,3 +285,19 @@ Spec: [`superpowers/specs/2026-08-25-rider-app-fundament-design.md`](superpowers
 - [x] **Paket 6 — Abnahme.** Alle neun Kriterien erfüllt, inklusive echtem `install.php`-Durchlauf. Ergebnisse in [`../php-backend/COMPATIBILITY.md`](../php-backend/COMPATIBILITY.md).
 
 **Weiterhin offen und nicht Teil dieses Teilprojekts:** der reale Testlauf auf `hasencore.de` (braucht Zugriff des Nutzers), ein Lasttest mit echten Handys statt `curl`, und die Prüfung des Rate-Limits unter PHP-FPM mit mehreren Arbeitsprozessen statt `php -S`.
+
+### Teilprojekt 15 (Fahrer-App) — was gebaut wurde
+
+Spec: [`superpowers/specs/2026-08-25-rider-app-fahrer-app-design.md`](superpowers/specs/2026-08-25-rider-app-fahrer-app-design.md), Plan: [`superpowers/plans/2026-08-25-rider-app-fahrer-app-plan.md`](superpowers/plans/2026-08-25-rider-app-fahrer-app-plan.md). Begründungen in [`implementation-notes.md`](implementation-notes.md).
+
+- [x] **Paket 1 — Extraktionen.** `checkpoint-types.js` und `rider-qr.js` aus dem geteilten Kern gezogen. Reine Verschiebung, bewiesen durch Vergleich der Builds vor/nach ohne Kommentare: 12.292 identische Codezeilen. Dabei ein **bestehender Fehler** gefunden und behoben: `CHECKPOINT_TYPES` fror die Beschriftungen auf die Ladesprache ein — dieselbe Klasse wie die Korrektur vom 19.08.2026, damals übersehen.
+- [x] **Paket 2 — Checkpoint-Typ veröffentlichen.** Migration `3` (`cp_type`), Publish und `?a=me` erweitert. 11 Prüfungen gegen MariaDB.
+- [x] **Paket 3 — Dritte Build-Ausgabe.** `dist/alleycat-rider.html`, i18n beim Bauen auf drei Namensräume gekürzt, jsQR aus `vendor/` eingebettet. Genau eine Netzwerkanfrage beim Laden.
+- [x] **Paket 4 — Fahrer-App-Kern.** Login per Spokecard, Fortschrittsliste, Checkpoint-Scan, Wildcard-Anmeldung. Token wird nach dem Login aus der Adresszeile entfernt.
+- [x] **Paket 5 — Offline.** Queue (erst puffern, dann senden), Cache, Wake Lock, zweite Testsuite `test-suite-rider.js` mit 68 Prüfungen.
+- [x] **Paket 6 — Druckstücke.** Spokecard trägt Token-QR plus Ausweichcode und **keinen Namen** mehr; Ziel-Check-in liest beide Formate; Checkpoint-QR-Blätter als PDF.
+- [x] **Paket 7 — Abnahme und Doku.** Sicherheitsdurchsicht mit einem echten Fund (siehe unten), Doku in `CLAUDE.md`, `implementation-notes.md`, `INSTALL.md` und der In-App-Hilfe.
+
+**Sicherheitsfund in Paket 7:** `?a=me` trug das Fahrer-Token in der URL-Query und damit ins Zugriffsprotokoll des Webservers — im Klartext, dauerhaft, beim Shared Hosting auch für den Anbieter lesbar. Umgestellt auf die Header `X-Rider-Token` / `X-Rider-Code`, ohne Rückfall auf die Query.
+
+**Offen und nur vom Nutzer zu erledigen:** der Test auf einem echten Handy mit ausgedruckten Codes, und der Installationslauf auf `hasencore.de`. Beides braucht Zugriff, den nur er hat. Ungeprüft bleiben außerdem iOS-Kameraeigenheiten und das Verhalten bei vierzig Fahrern gleichzeitig an einem Checkpoint.

@@ -24,6 +24,9 @@
        POST ?a=slotstatus  Anmeldung bestätigen oder zurücksetzen
      Token (Fahrer-Handy)
        GET  ?a=me          eigene Sicht: Event, Checkpoints, Fortschritt
+                           Token per Header X-Rider-Token bzw.
+                           X-Rider-Code — NICHT in der Query, sonst
+                           stünde es im Zugriffsprotokoll des Servers
        GET  ?a=freebibs    freie Startnummern (nur bei Selbstregistrierung)
        POST ?a=checkin     Check-in eintragen
        POST ?a=register    Wildcard-Slot belegen
@@ -227,8 +230,19 @@ riderCheckRateLimit($pdo);
 if($action === 'me'){
   riderRequireGet();
   $publicId = (string)($_GET['public_id'] ?? '');
-  $token = (string)($_GET['token'] ?? '');
-  $code = (string)($_GET['code'] ?? '');
+  /* Token und Code kommen aus HEADERN, nicht aus der Query. Alles, was
+     in der URL steht, landet im Zugriffsprotokoll des Webservers — im
+     Klartext und dauerhaft, lesbar für jeden mit Zugang zu den Logs
+     (beim Shared Hosting also auch für den Anbieter). Ein Token ist eine
+     vollständige Zugangsberechtigung und hat da nichts zu suchen.
+     `checkin` und `register` senden es ohnehin im POST-Body, der nicht
+     protokolliert wird; `me` war die letzte Stelle mit diesem Problem.
+
+     Bewusst KEIN Rückfall auf die Query: den zu behalten hieße, die
+     Lücke offen zu lassen. Die Fahrer-App und der Endpunkt gehören
+     ohnehin zusammen und werden gemeinsam ausgerollt. */
+  $token = (string)($_SERVER['HTTP_X_RIDER_TOKEN'] ?? '');
+  $code = (string)($_SERVER['HTTP_X_RIDER_CODE'] ?? '');
 
   $evt = riderLoadEvent($pdo, $publicId);
   if(!$evt) riderRejectAuth($pdo, 'unknown_event');

@@ -2960,7 +2960,7 @@ async function runAlleycatTestSuite(){
 
   /* 19) Dokumentationsseite */
   {
-    checkEqual('DOC_TOPICS hat 11 Einträge', DOC_TOPICS.length, 11);
+    checkEqual('DOC_TOPICS hat 12 Einträge', DOC_TOPICS.length, 12);
     checkEqual('filteredDocTopics() liefert ohne Suche alle Themen', filteredDocTopics().length, DOC_TOPICS.length);
 
     const searchBefore = state.docSearch;

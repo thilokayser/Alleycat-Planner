@@ -10,7 +10,8 @@ const DOC_TOPICS = [
   {id: 'pdfBuilder', icon: '🧱', titleKey: 'docs.pdfBuilderTitle', bodyKey: 'docs.pdfBuilderBody'},
   {id: 'beamer', icon: '📺', titleKey: 'docs.beamerTitle', bodyKey: 'docs.beamerBody'},
   {id: 'offline', icon: '📡', titleKey: 'docs.offlineTitle', bodyKey: 'docs.offlineBody'},
-  {id: 'delivery', icon: '📦', titleKey: 'docs.deliveryTitle', bodyKey: 'docs.deliveryBody'}
+  {id: 'delivery', icon: '📦', titleKey: 'docs.deliveryTitle', bodyKey: 'docs.deliveryBody'},
+  {id: 'riderApp', icon: '📱', titleKey: 'docs.riderAppTitle', bodyKey: 'docs.riderAppBody'}
 ];
 
 function filteredDocTopics(){

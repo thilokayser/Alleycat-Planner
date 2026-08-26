@@ -68,7 +68,25 @@ https://deinedomain.tld/php-backend/api.php
 
 Im Repo `node build.js` ausführen und `dist/alleycat-dispatch-server.html` öffnen — beim ersten Start erscheint ein Setup-Screen. Dort API-Endpunkt und API-Key aus Schritt 5 eintragen und auf **Verbinden** klicken. Die Zugangsdaten werden danach lokal im Browser gemerkt (nur der Zugang, nicht die Event-Daten selbst).
 
-Zum späteren Zurücksetzen (z. B. anderes Backend eintragen): die Seite mit `?reset-php-config` an der URL aufrufen.
+Zum späteren Zurücksetzen (z. B. anderes Backend eintragen): die Seite mit `?reset-php-config` an der URL aufrufen. **Danach den Parameter aus der Adresszeile entfernen**, bevor du das Setup abschickst — er wird beim Neuladen mitgenommen und würde die gerade gespeicherten Zugangsdaten sofort wieder löschen.
+
+---
+
+### Schritt 8 — Fahrer-App hochladen (optional)
+
+Nur nötig, wenn Fahrer an Checkpoints per QR-Code selbst einchecken sollen. Ohne diesen Schritt funktioniert alles andere unverändert; alle zugehörigen Funktionen bleiben in der Organizer-App einfach ausgeblendet.
+
+1. `node build.js` erzeugt neben den beiden Organizer-Varianten auch **`dist/alleycat-rider.html`**. Diese eine Datei irgendwohin unter deine Domain hochladen — ein bestimmtes Verzeichnis ist nicht nötig, die App kennt `rider.php` aus der Konfiguration.
+2. Im Setup-Screen der Server-Variante die **Fahrer-App-Adresse** eintragen (drittes Feld, z. B. `https://deinedomain.tld/alleycat-rider.html`). Auf diese Adresse zeigen die QR-Codes auf Spokecards und Checkpoint-Aufstellern.
+3. Im Checkpoint-Editor bei den Checkpoints das Häkchen **QR Check-In** setzen, an denen Fahrer selbst einchecken sollen.
+4. Unter *Manifest → Drucken* die **Checkpoint-QR-Blätter** erzeugen, ausdrucken und laminieren. Die Spokecards tragen ab dann automatisch den Fahrer-Link statt der nackten Startnummer.
+
+**Zwei Dinge, die der Hoster können sollte:**
+
+- **HTTPS** — dringend empfohlen. Die Fahrer-App trägt Zugangs-Token in Anfragen; über unverschlüsseltes HTTP liest die das offene WLAN am Start mit. Kein technischer Zwang, aber der Unterschied ist real.
+- **Kompression** (Apache `mod_deflate`, nginx `gzip on`) — bei Standard-Hosting üblich. Die Fahrer-App ist 331 KB groß, komprimiert aber nur 82 KB. Ohne Kompression lädt jedes Handy die vierfache Menge, und zwar dort, wo der Empfang am schlechtesten ist. Prüfen lässt sich das mit `curl -sI -H "Accept-Encoding: gzip" https://deinedomain.tld/alleycat-rider.html | grep -i content-encoding`.
+
+**Was heute noch nicht geht:** Die Fahrer-App muss einmal mit Verbindung geladen werden. Check-ins *ohne* Empfang funktionieren (sie werden gepuffert und automatisch nachgesendet), aber ein Neuladen der Seite im Funkloch zeigt die Fehlerseite des Browsers. Sag den Fahrern in der Startbesprechung, sie sollen die App vor dem Start öffnen und offen lassen.
 
 ---
 

@@ -19,13 +19,22 @@ function riderEndpoint(){
      {ok:false, status, error, retryAfter}
    status 0 heißt "gar nicht angekommen" — das ist der Fall, den die
    Offline-Queue später behandelt. */
-async function riderRequest(method, action, params, body){
+/* `auth` wandert in Header, nicht in die Query: URLs landen im
+   Zugriffsprotokoll des Webservers, ein Token gehört da nicht hin. POST-
+   Bodies werden nicht protokolliert, deshalb reisen checkin und register
+   ihre Token weiterhin im Body. */
+async function riderRequest(method, action, params, body, auth){
   const qs = new URLSearchParams(Object.assign({a: action}, params || {}));
+  const headers = {};
+  if(body) headers['Content-Type'] = 'application/json';
+  if(auth && auth.token) headers['X-Rider-Token'] = auth.token;
+  if(auth && auth.code) headers['X-Rider-Code'] = auth.code;
+
   let res;
   try{
     res = await fetch(riderEndpoint() + '?' + qs.toString(), {
       method,
-      headers: body ? {'Content-Type': 'application/json'} : undefined,
+      headers: Object.keys(headers).length ? headers : undefined,
       body: body ? JSON.stringify(body) : undefined
     });
   }catch(e){
@@ -47,10 +56,8 @@ async function riderRequest(method, action, params, body){
 }
 
 function riderApiMe(session){
-  const params = {public_id: session.publicId};
-  if(session.riderToken) params.token = session.riderToken;
-  else if(session.code) params.code = session.code;
-  return riderRequest('GET', 'me', params);
+  return riderRequest('GET', 'me', {public_id: session.publicId}, null,
+    {token: session.riderToken, code: session.code});
 }
 
 function riderApiCheckin(payload){
