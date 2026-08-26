@@ -1021,6 +1021,18 @@ const translations = {
       downloadButton: 'Herunterladen',
       shareButton: 'Teilen'
     },
+    /* NICHT mit riderApp verwechseln (direkt darunter): riderScan sind die
+       Strings der Fahrer-App auf dem Handy und wandern ins Rider-Bundle
+       (RIDER_I18N_NAMESPACES in build.js). riderApp ist die
+       Organizer-Seite und bleibt draußen. */
+    riderScan: {
+      appTitle: 'Alleycat — Fahrer',
+      loading: 'Lade…',
+      placeholder: 'Fahrer-App — Platzhalter',
+      placeholderLead: 'Diese Seite wird in den nächsten Paketen zur echten Fahrer-App. Dass sie überhaupt lädt und dabei keine einzige externe Adresse anfragt, ist der Zweck dieses Schritts.'
+    },
+    /* Organizer-Seite der Rider-Funktionen — siehe Kommentar über
+       riderScan, die beiden Namen laden zur Verwechslung ein. */
     riderApp: {
       navPending: 'Anmeldungen ({count})',
       pendingHeading: 'Ausstehende Anmeldungen',

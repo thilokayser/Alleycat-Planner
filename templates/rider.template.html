@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a1a">
+<title>ALLEYCAT — Fahrer</title>
+<!-- Bewusst KEINE externen Verweise. Die Fahrer-App wird an Checkpoints
+     benutzt, teils ohne Empfang: alles, was sie braucht, steht in dieser
+     Datei. jsQR kommt aus vendor/, siehe vendor/README.md. -->
+<style>
+{{THEMES_CSS}}
+{{RIDER_CSS}}
+</style>
+</head>
+<body>
+<div id="rider-app"></div>
+<script>
+{{JSQR_JS}}
+</script>
+<script>
+{{RIDER_JS}}
+initRider();
+</script>
+</body>
+</html>
