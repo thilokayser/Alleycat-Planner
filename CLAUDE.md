@@ -22,7 +22,8 @@ Plain JS (no framework, no bundler, no `npm install`) — single global `state` 
 
 - **Build**: `node build.js` — reads `src/` + `templates/`, writes `dist/alleycat-dispatch-local.html` and `dist/alleycat-dispatch-server.html`. Run after every source change, before testing in browser.
 - **Run**: open `dist/alleycat-dispatch-local.html` (or `-server.html`) directly in browser after building.
-- **Test**: paste `test-suite.js`'s contents into browser console of running `dist/` build, call `runAlleycatTestSuite()`. No CI — always manual, in-browser run. See Test coverage gaps below.
+- **Test (organizer)**: paste `test-suite.js` into the browser console of a running `dist/alleycat-dispatch-*.html`, call `runAlleycatTestSuite()`. No CI — always manual, in-browser. See Test coverage gaps below.
+- **Test (rider app)**: paste `test-suite-rider.js` into the console of `dist/alleycat-rider.html`, call `runRiderTestSuite()`. Needs **no server** — every network call is stubbed, deliberately: the promises it checks (the queue loses nothing, the cache carries offline, bad codes are rejected before any request) are exactly the ones that must hold without one. Two suites rather than one because the bundles share no runtime state — `state`, `render()`, and the storage layer do not exist in the rider app.
 - **PHP backend local testing**: no automated way — run `php-backend/` against local PHP+MySQL setup (e.g. XAMPP), point `dist/alleycat-dispatch-server.html`'s setup screen at it.
 
 ## Architecture

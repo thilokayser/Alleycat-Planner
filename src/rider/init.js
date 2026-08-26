@@ -21,6 +21,12 @@ async function initRider(){
     });
   }
 
+  /* Beide Wächter sind gegen Mehrfachstart abgesichert und dürfen
+     deshalb bei jedem initRider() laufen — auch beim erneuten Einstieg
+     über einen Hash-Wechsel. */
+  startRiderQueueWatch();
+  startRiderWakeLock();
+
   const fromUrl = parseRiderQrPayload(location.hash);
   if(fromUrl && fromUrl.kind === 'rider'){
     riderState.session = {publicId: fromUrl.publicId, riderToken: fromUrl.riderToken, bib: null};
@@ -59,6 +65,10 @@ async function riderLoadMe(){
     riderSaveCache(res.data);
     riderState.offlineSince = '';
     riderState.error = '';
+    /* Die Antwort beweist, dass Netz da ist — also gleich abarbeiten,
+       statt bis zum nächsten Intervall zu warten. Der Fahrer sieht seine
+       nachgereichten Checkpoints dann sofort abgehakt. */
+    await riderQueueFlush();
     riderRouteBySlotStatus();
     return;
   }
@@ -219,6 +229,7 @@ async function riderHandleCheckpointPayload(payload){
   if(p.publicId !== riderState.session.publicId){ return riderScanError(t('riderScan.errWrongEvent')); }
 
   const pos = await riderTryGetPosition();
+  const scannedAt = new Date().toISOString();
 
   const body = {
     publicId: p.publicId,
@@ -226,26 +237,53 @@ async function riderHandleCheckpointPayload(payload){
     cpId: p.cpId,
     qrToken: p.qrToken,
     clientUuid: riderUuid(),
-    scannedAt: new Date().toISOString()
+    scannedAt
   };
   if(pos){ body.lat = pos.lat; body.lon = pos.lon; }
 
-  const res = await riderApiCheckin(body);
+  /* ERST puffern, DANN senden. Bricht die App zwischen diesen beiden
+     Zeilen ab, ist der Scan gesichert; der uq_client-Index macht das
+     spätere Doppelsenden folgenlos. Andersherum wäre ein Absturz nach
+     dem Absenden ein verlorener Checkpoint. */
+  riderQueueAdd({clientUuid: body.clientUuid, body});
 
-  if(!res.ok){
-    /* 409 heißt "Rennen läuft noch nicht" — ein zeitlicher Zustand, kein
-       Fehler des Fahrers. Ab Paket 5 wandert der Eintrag dafür in die
-       Queue; bis dahin bleibt es eine Meldung. */
-    return riderScanError(riderErrorMessage(res));
+  const res = await riderApiCheckin(body);
+  const verdict = riderQueueVerdict(res);
+  if(verdict.done) riderQueueRemove(body.clientUuid);
+
+  /* Ein 403 heißt: dieser Scan wird nie gültig (falsches Token, QR-
+     Check-in aus, Slot nicht bestätigt). Dann gehört die Meldung dem
+     Fahrer, nicht der Queue. */
+  if(verdict.done && !res.ok){
+    return riderScanError(verdict.message || riderErrorMessage(res));
   }
 
-  const label = res.data.label || p.cpId;
-  const at = res.data.at || res.data.already || new Date().toISOString();
+  /* Alles andere bestätigt dem Fahrer den Scan — auch ohne Netz. Er
+     steht am Checkpoint und muss weiterfahren können; ob das Paket schon
+     beim Server ist, ist nicht seine Sorge. */
+  const label = res.ok
+    ? (res.data.label || p.cpId)
+    : (riderCheckpointLabel(p.cpId) || p.cpId);
+  const at = res.ok ? (res.data.at || res.data.already || scannedAt) : scannedAt;
+
   riderState.progress[p.cpId] = at;
-  riderState.confirm = {label, at, already: !!res.data.already && !res.data.at, queued: false};
+  riderState.confirm = {
+    label,
+    at,
+    already: res.ok && !!res.data.already && !res.data.at,
+    queued: !res.ok
+  };
   riderState.view = 'confirm';
   riderState.error = '';
   renderRider();
+}
+
+/* Ohne Netz kommt kein Label vom Server — dann aus der eigenen
+   Checkpoint-Liste nehmen. Der Fahrer soll auch offline lesen, WO er
+   eingecheckt hat, nicht bloß eine Kennung. */
+function riderCheckpointLabel(cpId){
+  const cp = riderState.checkpoints.find(c => c.cpId === cpId);
+  return cp ? cp.label : '';
 }
 
 function riderScanError(msg){
