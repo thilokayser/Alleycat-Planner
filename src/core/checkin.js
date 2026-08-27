@@ -343,6 +343,7 @@ function onCheckinToggleCheckpoint(cpId, checked){
       rider.completed.push(cpId);
       rider.checkpointTimes = rider.checkpointTimes || {};
       if(!rider.checkpointTimes[cpId]) rider.checkpointTimes[cpId] = timestamp;
+      broadcastCheckpointPing(evt, cpId);
     }
   } else {
     rider.completed = rider.completed.filter(id => id !== cpId);
@@ -367,7 +368,10 @@ function onCheckinSetScore(cpId, score){
     const ruleResult = evaluateRules(evt, 'on_checkin', {rider, checkpoint: cp, timestamp});
     if(ruleResult.blocked){ alert(ruleResult.message); renderCheckin(); return; }
     rider.scores[cpId] = score;
-    if(!rider.completed.includes(cpId)) rider.completed.push(cpId);
+    if(!rider.completed.includes(cpId)){
+      rider.completed.push(cpId);
+      broadcastCheckpointPing(evt, cpId);
+    }
     rider.checkpointTimes = rider.checkpointTimes || {};
     if(!rider.checkpointTimes[cpId]) rider.checkpointTimes[cpId] = timestamp;
   }

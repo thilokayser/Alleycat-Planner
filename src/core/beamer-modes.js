@@ -58,6 +58,7 @@ function renderBeamerTicker(evt){
    (isCpRevealed filtert diese schon vor dem Rendern raus). Nutzt
    denselben Offline-Kachel-Cache wie die Editor-Karte (map.js). */
 let beamerZoneMap = null;
+let beamerCpMarkerLatLngs = {};
 function beamerZoneCountdownText(evt, mode){
   const stages = (mode.config && mode.config.stages) || [];
   const currentIdx = evt.ruleRuntimeState && Number.isInteger(evt.ruleRuntimeState.zoneStage) ? evt.ruleRuntimeState.zoneStage : -1;
@@ -71,6 +72,7 @@ function updateBeamerZoneMap(evt){
   const container = document.getElementById('beamer-zone-map');
   if(!container) return;
   if(beamerZoneMap){ beamerZoneMap.remove(); beamerZoneMap = null; }
+  beamerCpMarkerLatLngs = {};
   const brMode = getGameMode(evt, 'zone_active');
   /* Draw every organizer-drawn zone generically (circle live-shrink-aware
      via effectiveZoneRadius(), polygon as-is) — this already covers a
@@ -105,6 +107,7 @@ function updateBeamerZoneMap(evt){
     const color = cp.locked ? '#888888' : (isCpClosedByZone(evt, cp) ? '#e0435b' : '#3fb950');
     L.circleMarker([cp.lat, cp.lng], {radius: 7, color, fillColor: color, fillOpacity: 0.9, weight: 2}).addTo(beamerZoneMap);
     bounds.push([cp.lat, cp.lng]);
+    beamerCpMarkerLatLngs[cp.id] = [cp.lat, cp.lng];
   });
   if(bounds.length) beamerZoneMap.fitBounds(L.latLngBounds(bounds).pad(0.2));
 }
@@ -152,7 +155,35 @@ function triggerBeamerEliminationOverlay(name){
    itself does the before/after elimination diff that decides whether
    to show the overlay, so this stays a single code path regardless of
    whether a reload was triggered by the broadcast or the poll fallback. */
+/* Ein wachsender, verblassender Ring über dem bestehenden Checkpoint-Marker
+   — JS-getrieben (requestAnimationFrame) statt CSS-Transition auf dem
+   Leaflet-SVG-Attribut "r", damit es auf jedem Browser zuverlässig
+   funktioniert (wichtig: das läuft live auf einem Beamer/Projektor,
+   niemand korrigiert das während des Rennens). No-op ohne Zonenkarte
+   (Events ohne Zonen/Battle-Royale zeigen gar keine Karte, siehe
+   getBeamerLayout().showZoneMap) oder ohne bekannte Koordinaten für den
+   Checkpoint. */
+function pingBeamerCheckpointMarker(checkpointId){
+  if(!beamerZoneMap) return;
+  const latlng = beamerCpMarkerLatLngs[checkpointId];
+  if(!latlng) return;
+  const ring = L.circleMarker(latlng, {radius: 7, color: '#f4762a', weight: 3, fillOpacity: 0, interactive: false}).addTo(beamerZoneMap);
+  const start = performance.now();
+  const duration = 900;
+  function step(now){
+    const t = Math.min(1, (now - start) / duration);
+    ring.setRadius(7 + t * 26);
+    ring.setStyle({opacity: 1 - t});
+    if(t < 1) requestAnimationFrame(step);
+    else ring.remove();
+  }
+  requestAnimationFrame(step);
+}
 function handleLiveEvent(entry){
   if(!beamerState) return;
+  if(entry && entry.type === 'checkpoint_ping'){
+    pingBeamerCheckpointMarker(entry.checkpointId);
+    return;
+  }
   loadBeamerEvent().then(renderBeamer);
 }

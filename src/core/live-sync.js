@@ -19,3 +19,12 @@ function broadcastLiveEvent(eventId, entry){
   const ch = getLiveSyncChannel();
   if(ch) ch.postMessage({eventId, entry, timestamp: Date.now()});
 }
+/* Checkpoint-Ping (Redesign-Roadmap, Teilprojekt 3): eigener, ungated
+   Broadcast-Typ statt über pushEventLog() — der ist an anyGameModeEnabled()
+   gebunden (rules-engine.js:63), ein Ping auf der Beamer-Zonenkarte soll
+   aber für jedes Event mit Checkpoints funktionieren, nicht nur mit
+   aktiven Spielmodi. handleLiveEvent() (beamer-modes.js) erkennt den Typ
+   und pingt nur den Marker statt eines vollen Reloads. */
+function broadcastCheckpointPing(evt, checkpointId){
+  broadcastLiveEvent(evt.id, {type: 'checkpoint_ping', checkpointId});
+}

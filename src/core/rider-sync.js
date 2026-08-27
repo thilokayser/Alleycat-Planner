@@ -64,6 +64,7 @@ function mergeRiderLogRows(evt, rows){
       if(!rider.completed.includes(row.cp_id)){
         rider.completed.push(row.cp_id);
         changed = true;
+        broadcastCheckpointPing(evt, row.cp_id);
       }
       if(rider.checkpointTimes[row.cp_id] !== row.created_at){
         rider.checkpointTimes[row.cp_id] = row.created_at;
