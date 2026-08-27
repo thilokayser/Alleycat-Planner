@@ -1578,6 +1578,13 @@
        Outdoor-Theme already handles the same problem (base.css's outdoor block,
        min-height:48px) but scoped to touch-relevant widths instead of a theme. */
     .btn-sm{min-height:44px; padding:8px 14px; display:inline-flex; align-items:center; justify-content:center;}
+    /* Check-in card header crammed bib+name+emergency-contact+save button into
+       one row — fine on desktop's 600px-wide card, overflowing on a phone.
+       Wrap it: bib+name stay together, save button drops to its own full-width
+       row (staff-mobile check-in, redesign Teilprojekt 4). */
+    .checkin-card-head{flex-wrap:wrap;}
+    .checkin-card-head .checkin-name-col{min-width:180px;}
+    .checkin-card-head .btn-primary{flex-basis:100%; min-height:44px;}
     /* Same touch-target gap as .btn-sm above, for the two icon-only delete
        affordances that aren't a .btn: the rider-card corner button and the
        category-option chip's remove button. Kept short of 44px on purpose —
