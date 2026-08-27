@@ -30,6 +30,8 @@
        GET  ?a=freebibs    freie Startnummern (nur bei Selbstregistrierung)
        POST ?a=checkin     Check-in eintragen
        POST ?a=register    Wildcard-Slot belegen
+     Kein Token (Online-Vorab-Registrierung, nur bei Selbstregistrierung)
+       POST ?a=claim       Freie Startnummer ohne bekannten Token belegen
    ------------------------------------------------------------------ */
 
 require __DIR__ . '/bootstrap.php';
@@ -315,6 +317,88 @@ if($action === 'freebibs'){
   }
   /* Nur Nummern, keine Namen — auch nicht für belegte Slots. */
   riderOut(['ok' => true, 'free' => $free]);
+}
+
+if($action === 'claim'){
+  riderRequirePost();
+  $body = riderJsonBody();
+  $publicId = (string)($body['publicId'] ?? '');
+  $bib = (int)($body['bib'] ?? 0);
+  $clientUuid = (string)($body['clientUuid'] ?? '');
+  if($clientUuid === '') apiSendJsonError(400, 'missing_client_uuid');
+  if($bib <= 0) apiSendJsonError(400, 'invalid_bib');
+
+  $evt = riderLoadEvent($pdo, $publicId);
+  if(!$evt) riderRejectAuth($pdo, 'unknown_event');
+
+  /* Gleiche Schranke wie ?a=freebibs — ohne freigeschaltete
+     Selbstregistrierung darf niemand ohne bekannten Token einen Slot
+     belegen können, sonst wäre der Wildcard-Weg aus ?a=register für
+     jedes Event offen, auch wo das nicht vorgesehen ist. */
+  $settings = json_decode($evt['settings'], true) ?: [];
+  if(empty($settings['selfRegister'])) apiSendJsonError(403, 'self_register_disabled');
+
+  /* Anders als bei ?a=register/?a=checkin gibt es hier keinen Token zu
+     prüfen — das ist der ganze Zweck dieser Aktion. Ein unbekanntes
+     Event zählt oben trotzdem als Fehlschlag (riderRejectAuth), ein
+     unbekannter/fremder Bib einfach als 404 ohne Zählung: das ist kein
+     Authentifizierungsversuch, sondern ein normaler Nutzerfehler (z. B.
+     zwei offene Tabs mit veralteter Freiplatz-Liste). */
+  $slotStmt = $pdo->prepare("SELECT `bib` FROM `" . riderTableName('slot') . "`
+                             WHERE `public_id` = ? AND `bib` = ?");
+  $slotStmt->execute([$publicId, $bib]);
+  if(!$slotStmt->fetch(PDO::FETCH_ASSOC)) apiSendJsonError(404, 'bib_not_found');
+
+  /* Ein frischer Token, denn den ursprünglich beim Anlegen des Slots
+     generierten Klartext-Token kennt der Server nie — nur seinen Hash
+     (riderHashToken-Kommentar oben). 16 Byte roh = 32 Hex-Zeichen,
+     Teilmenge von RIDER_TOKEN_RE ([a-z0-9]{32}) im Client, also mit dem
+     bestehenden Fragment-/Validierungsformat kompatibel. */
+  $newToken = bin2hex(random_bytes(16));
+  $tokenHash = riderHashToken($newToken);
+
+  /* Atomar wie bei ?a=register: die Bedingung `status='free'` gehört in
+     die WHERE-Klausel, nicht in eine vorherige Prüfung, sonst könnten
+     zwei gleichzeitige Anmeldungen denselben Slot doppelt belegen. */
+  $upd = $pdo->prepare("UPDATE `" . riderTableName('slot') . "`
+                        SET `status`='pending', `token_hash`=?
+                        WHERE `public_id` = ? AND `bib` = ? AND `status`='free'");
+  $upd->execute([$tokenHash, $publicId, $bib]);
+  if($upd->rowCount() !== 1) apiSendJsonError(409, 'slot_taken');
+
+  /* riderToken reist im Log-Payload mit, obwohl das Fahrer-Log sonst nie
+     Geheimnisse transportiert — hier gibt es keine Alternative: der
+     Organizer-Client kennt den neuen Token noch nicht (er hat ihn nicht
+     erzeugt) und würde ihn beim nächsten ?a=sync sonst mit dem alten,
+     jetzt ungültigen Token überschreiben. mergeRiderLogRows() auf der
+     Organizer-Seite übernimmt ihn aus genau diesem Feld in
+     rider.riderToken, bevor der nächste Publish-Zyklus läuft. Dieses
+     Log ist ausschließlich per Admin-Key abrufbar (?a=log), nie von
+     einem Fahrer-Gerät. */
+  $payload = json_encode([
+    'name' => (string)($body['name'] ?? ''),
+    'contact' => (string)($body['contact'] ?? ''),
+    'emergencyContact' => '',
+    'categories' => new stdClass(),
+    'riderToken' => $newToken
+  ]);
+
+  try {
+    $pdo->prepare("INSERT INTO `" . riderTableName('log') . "`
+                   (`public_id`,`type`,`bib`,`cp_id`,`client_uuid`,`payload`,`created_at`)
+                   VALUES (?,'register',?,NULL,?,?,?)")
+        ->execute([$publicId, $bib, $clientUuid, $payload, date('Y-m-d H:i:s')]);
+  } catch (PDOException $e) {
+    if($e->getCode() !== '23000') throw $e;
+    /* uq_client — gleiche Absicherung wie in ?a=register (dort
+       unkommentiert): fängt einen Absturz zwischen UPDATE und INSERT ab,
+       ohne den Client mit einem 500 hängen zu lassen. Die UPDATE oben ist
+       zu diesem Zeitpunkt bereits erfolgreich gelaufen (sonst wäre schon
+       die 409-Zeile davor gegriffen), $newToken ist also so oder so der
+       gültige — die Antwort unten stimmt in jedem Fall. */
+  }
+
+  riderOut(['ok' => true, 'bib' => $bib, 'riderToken' => $newToken]);
 }
 
 if($action === 'checkin'){

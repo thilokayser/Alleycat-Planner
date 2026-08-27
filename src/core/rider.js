@@ -97,7 +97,8 @@ function ridersNavGroups(evt){
     {id: 'config', label: () => t('rider.navGroupConfig'), items: [
       {id: 'teams', icon: '👥', label: () => t('rider.teamsHeading')},
       ...(categoriesEnabled ? [{id: 'categories', icon: '🎫', label: () => t('category.heading')}] : []),
-      {id: 'cardDesign', icon: '🎴', label: () => t('rider.cardDesignToggle')}
+      {id: 'cardDesign', icon: '🎴', label: () => t('rider.cardDesignToggle')},
+      ...(riderAppBaseUrl() ? [{id: 'selfRegister', icon: '📝', label: () => t('riderApp.selfRegisterNav')}] : [])
     ]}
   ];
 }
@@ -495,6 +496,52 @@ function renderRidersSectionCardDesign(evt){
     </div>
   `;
 }
+/* Erste organizer-seitige UI für evt.riderApp.* überhaupt — .progress/
+   .map/.leaderboard haben ebenfalls keine Oberfläche (Nebenfund während
+   der Design-Recherche, siehe Design-Doku §9), bleiben hier aber bewusst
+   unangetastet: nur .selfRegister gehört zu diesem Umbau. */
+function renderRidersSectionSelfRegister(evt){
+  const enabled = !!(evt.riderApp && evt.riderApp.selfRegister);
+  const link = (riderAppBaseUrl() && evt.publicId) ? buildSelfRegisterQrPayload(riderAppBaseUrl(), evt) : '';
+  return `
+    <div class="settings-section">
+      <h3>${t('riderApp.selfRegisterHeading')}</h3>
+      <div class="settings-section-desc">${t('riderApp.selfRegisterDesc')}</div>
+      <label class="checkbox-row">
+        <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggleSelfRegister(this.checked)">
+        ${t('riderApp.selfRegisterToggleLabel')}
+      </label>
+      ${enabled ? `
+        <div style="margin-top:14px;">
+          <label>${t('riderApp.selfRegisterLinkLabel')}</label>
+          ${link ? `
+            <div class="coord-edit-row">
+              <input type="text" class="mono" id="self-register-link-input" readonly value="${escapeHtml(link)}" onclick="this.select()">
+              <button type="button" class="btn btn-sm" onclick="copySelfRegisterLink()">${t('riderApp.selfRegisterCopyButton')}</button>
+            </div>
+          ` : `<div class="settings-hint">${t('riderApp.selfRegisterLinkPending')}</div>`}
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+function toggleSelfRegister(checked){
+  const evt = state.currentEvent; if(!evt) return;
+  evt.riderApp = evt.riderApp || {};
+  evt.riderApp.selfRegister = checked;
+  debouncedSave();
+  renderRiders();
+}
+function copySelfRegisterLink(){
+  const input = document.getElementById('self-register-link-input');
+  if(!input) return;
+  input.select();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(input.value)
+      .then(() => showToast({message: t('riderApp.selfRegisterCopiedToast')}))
+      .catch(() => {});
+  }
+}
 function ridersSectionContent(evt, id){
   switch(id){
     case 'pending': return renderRidersSectionPending(evt);
@@ -502,6 +549,7 @@ function ridersSectionContent(evt, id){
     case 'teams': return renderRidersSectionTeams(evt);
     case 'categories': return renderRidersSectionCategories(evt);
     case 'cardDesign': return renderRidersSectionCardDesign(evt);
+    case 'selfRegister': return renderRidersSectionSelfRegister(evt);
     case 'roster':
     default: return renderRidersSectionRoster(evt);
   }

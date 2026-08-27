@@ -88,6 +88,26 @@ Lebendiges Dokument (14.4 im Planungsdokument): wächst mit jeder Installation, 
 
 **Beobachtung am Rande:** `?reset-php-config` bleibt beim `location.reload()` nach dem Setup in der URL stehen und löscht die gerade gespeicherte Konfiguration sofort wieder. Kein neuer Fehler und kein Problem im normalen Ablauf (der Parameter wird bewusst manuell angehängt), aber verwirrend, wenn man ihn zum Neu-Einrichten benutzt — dann muss man ihn vor dem Absenden aus der URL entfernen.
 
+### Lokale Entwicklungsumgebung (macOS, Homebrew) — `?a=claim`, 27.08.2026
+
+**Kontext:** Funktionsprüfung des neuen `claim`-Endpunkts (Rider-App Teilprojekt 3, zweite Hälfte — öffentliche Online-Vorab-Registrierung, siehe [Design-Doku](../docs/superpowers/specs/2026-08-28-public-pre-registration-design.md)). Echter Durchlauf über `install.php` per HTTP-POST auf frischer Datenbank, danach `curl` gegen alle relevanten Aktionen sowie ein realer Browser-Durchlauf des neuen `#g.<publicId>`-Einstiegs im Fahrer-Bundle gegen denselben Server.
+
+| Punkt | Ergebnis |
+|---|---|
+| `install.php` auf frischer Datenbank | Wie in den vorigen Einträgen — alle Tabellen angelegt, Selbstlöschung, API-Key nur gehasht in `config.php` |
+| `?a=claim`, freier Slot | 200, neuer `riderToken` in der Antwort; `?a=freebibs` listet die Nummer danach nicht mehr |
+| `?a=claim`, bereits vergebene Nummer (Zweitversuch) | 409 `slot_taken` |
+| `?a=claim`, nicht existierende Nummer | 404 `bib_not_found` |
+| `?a=claim` ohne freigeschaltete Selbstregistrierung | 403 `self_register_disabled`, wie bei `?a=freebibs` |
+| Neuer Token sofort gültig | `?a=me` mit dem aus `claim` zurückgegebenen Token liefert `slotStatus:"pending"` ohne Umweg |
+| Log-Zeile trägt den neuen Token | `?a=log` (Admin-Key) zeigt `riderToken` im `register`-Payload — das ist der Weg, auf dem der Organizer-Client den Token nachträglich lernt, siehe unten |
+| **Kritischer Fund vor dem Bau, hier bestätigt** | `?a=sync` überschreibt `token_hash` bedingungslos aus dem Client-Payload (anders als `status`, das bei `pending` geschützt ist) — ein Organizer-Client, der den von `claim` neu erzeugten Token nicht kennt, würde ihn beim nächsten Publish sonst wieder ungültig machen. `mergeRiderLogRows()` (Organizer-Seite) direkt mit einer realen Log-Zeile aus diesem Testlauf aufgerufen: übernimmt `riderToken` korrekt in `rider.riderToken`, entfernt ihn aus `pendingData`, meldet `changed:true` |
+| Rate-Limit | Nach 10 `unknown_event`-Fehlversuchen auf `claim` greift dieselbe Sperre wie bei jeder anderen Aktion (429 ab dem 11.) — keine gesonderte Logik nötig, `claim` läuft durch dieselbe `riderCheckRateLimit()` |
+| Bestehende Slots bei leerem Sync geschützt | Zwei per `claim` belegte Slots (`pending`, mit Log-Zeile) überstehen einen `?a=sync` mit leerer `slots`-Liste unverändert — bestätigt, dass die bestehende Verwaisungslogik auch für neu geclaimte Slots greift |
+| Echter Browser-Durchlauf | `dist/alleycat-rider.html` mit `#g.<publicId>` geöffnet: Startnummernliste → Formular → Absenden → landet automatisch auf „Anmeldung läuft" mit korrekter Startnummer, keine Konsolenfehler |
+| Ergebnis | 11 Prüfungen bestanden, 0 fehlgeschlagen |
+| Fazit | Neuer Endpunkt verhält sich wie geplant, inklusive des vor dem Bau identifizierten Token-Synchronisations-Risikos, das mit einer gezielten Änderung in `mergeRiderLogRows()` behoben wurde. Kein Ersatz für einen echten Shared-Hosting-Test |
+
 ### `hasencore.de` — noch offen
 
 Der im Planungsdokument (14.7) vorgesehene erste praktische Durchlauf auf einem echten Hoster steht noch aus — dafür wird Zugriff auf den dortigen Webspace benötigt (nur der Nutzer hat diesen Zugriff). Sobald durchgeführt: PHP-/MySQL-Version per `phpinfo()` bzw. `SELECT VERSION();` ermitteln (danach `phpinfo.php` sofort wieder löschen — zeigt sicherheitsrelevante Details), Pre-Flight-Check-Ausgabe hier dokumentieren, danach diesen Eintrag ergänzen.

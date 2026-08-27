@@ -81,6 +81,20 @@ function mergeRiderLogRows(evt, rows){
     } else if(row.type === 'register'){
       const data = typeof row.payload === 'string' ? safeParseJson(row.payload) : row.payload;
       if(rider.riderStatus !== 'pending'){ rider.riderStatus = 'pending'; changed = true; }
+      /* Nur ?a=claim (öffentliche Vorab-Registrierung) legt riderToken ins
+         Payload — der Slot war frei, der Server musste einen neuen Token
+         erzeugen (er kennt den ursprünglichen nie, siehe rider.php:
+         riderHashToken-Kommentar), und dieser Client wusste bis jetzt
+         nichts davon. Ohne diese Übernahme würde der nächste
+         schedulePublishRiderConfig() den noch alten, jetzt falschen Hash
+         zurücksynchronisieren und den gerade erst vergebenen Token
+         serverseitig wieder ungültig machen. Muss VOR dem pendingData-
+         Vergleich unten laufen und aus dem Payload entfernt werden — der
+         Token gehört nicht in die Organizer-Anzeige der Anmeldung. */
+      if(data && data.riderToken){
+        if(rider.riderToken !== data.riderToken){ rider.riderToken = data.riderToken; changed = true; }
+        delete data.riderToken;
+      }
       if(JSON.stringify(rider.pendingData) !== JSON.stringify(data || null)){
         rider.pendingData = data || null;
         changed = true;

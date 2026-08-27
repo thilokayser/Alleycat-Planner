@@ -28,6 +28,17 @@ async function initRider(){
   startRiderWakeLock();
 
   const fromUrl = parseRiderQrPayload(location.hash);
+  /* Selbstregistrierung ist der einzige Einstieg ganz ohne Session — der
+     Besucher hat weder eine Startnummer noch einen Token, das ist ja
+     gerade der Zweck. Muss vor jeder Session-Prüfung abzweigen, sonst
+     würde eine zufällig noch gespeicherte alte Session dazwischenfunken.
+     Wie beim 'rider'-Zweig unten: ein expliziter Link überschreibt eine
+     vorhandene Sitzung bewusst, statt sie stillschweigend zu ignorieren. */
+  if(fromUrl && fromUrl.kind === 'selfRegister'){
+    try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+    riderStartSelfRegister(fromUrl.publicId);
+    return;
+  }
   if(fromUrl && fromUrl.kind === 'rider'){
     riderState.session = {publicId: fromUrl.publicId, riderToken: fromUrl.riderToken, bib: null};
     riderSaveSession(riderState.session);
@@ -142,6 +153,13 @@ function riderStartLoginScan(){
       riderGoLoginWithError(t('riderScan.errUnknownRider'));
       return;
     }
+    if(p.kind === 'selfRegister'){
+      /* Wer beim "Karte scannen" versehentlich den Registrierungs-QR
+         erwischt (z. B. beide auf demselben Flyer), landet trotzdem
+         richtig statt in einer Session mit riderToken:undefined. */
+      riderStartSelfRegister(p.publicId);
+      return;
+    }
     riderState.session = {publicId: p.publicId, riderToken: p.riderToken, bib: null};
     riderSaveSession(riderState.session);
     riderLoadMe();
@@ -208,6 +226,86 @@ async function riderSubmitRegistration(){
     renderRider();
     return;
   }
+  await riderLoadMe();
+}
+
+/* ---------------- Selbstregistrierung (Teilprojekt 3) ----------------
+   Eigener Einstieg neben riderLoadMe() oben: der Besucher hat noch keine
+   Session, also gibt es hier nichts zu laden außer der freien
+   Startnummernliste. riderState.session bleibt null, bis riderSubmitClaim()
+   erfolgreich eine Session erzeugt — genau wie beim Scan-Login (Zeile
+   145-165), nur ohne dass der Besucher je einen Token besessen hätte. */
+async function riderStartSelfRegister(publicId){
+  riderState.selfRegisterPublicId = publicId;
+  riderState.selfRegisterBib = null;
+  riderState.view = 'selfRegisterList';
+  riderState.error = '';
+  renderRider();
+  await riderReloadFreeBibs();
+}
+async function riderReloadFreeBibs(){
+  const res = await riderApiFreeBibs(riderState.selfRegisterPublicId);
+  if(!res.ok){
+    riderState.error = riderErrorMessage(res);
+    riderState.selfRegisterFreeBibs = [];
+    renderRider();
+    return;
+  }
+  riderState.selfRegisterFreeBibs = res.data.free || [];
+  renderRider();
+}
+function riderPickSelfRegisterBib(bib){
+  riderState.selfRegisterBib = bib;
+  riderState.error = '';
+  riderState.view = 'selfRegisterForm';
+  renderRider();
+}
+function riderGoSelfRegisterList(){
+  riderState.error = '';
+  riderState.view = 'selfRegisterList';
+  renderRider();
+  riderReloadFreeBibs();
+}
+async function riderSubmitClaim(){
+  /* Gleiche Reihenfolge-Regel wie riderSubmitRegistration() oben: alle
+     Felder VOR dem ersten renderRider() lesen. */
+  const form = {
+    name: ((document.getElementById('rider-reg-name') || {}).value || '').trim(),
+    contact: ((document.getElementById('rider-reg-contact') || {}).value || '').trim()
+  };
+  if(!form.name){
+    riderState.error = t('riderScan.registerNameRequired');
+    renderRider();
+    return;
+  }
+  riderState.busy = true;
+  riderState.error = '';
+  renderRider();
+
+  const res = await riderApiClaim({
+    publicId: riderState.selfRegisterPublicId,
+    bib: riderState.selfRegisterBib,
+    name: form.name,
+    contact: form.contact,
+    clientUuid: riderUuid()
+  });
+
+  riderState.busy = false;
+  if(!res.ok){
+    riderState.error = riderErrorMessage(res);
+    /* Vergeben, während der Besucher das Formular ausfüllt — zurück zur
+       (neu geladenen) Liste statt eines Fehlers, den ein erneuter
+       Versuch mit derselben Nummer nur wiederholen würde. */
+    if(res.error === 'bib_not_found' || res.error === 'slot_taken'){
+      riderState.view = 'selfRegisterList';
+      riderReloadFreeBibs();
+      return;
+    }
+    renderRider();
+    return;
+  }
+  riderState.session = {publicId: riderState.selfRegisterPublicId, riderToken: res.data.riderToken, bib: res.data.bib};
+  riderSaveSession(riderState.session);
   await riderLoadMe();
 }
 

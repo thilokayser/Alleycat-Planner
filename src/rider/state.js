@@ -15,7 +15,7 @@ const RIDER_LS_SESSION = 'alleycat-rider:session';
 const RIDER_LS_CACHE = 'alleycat-rider:cache';
 
 const riderState = {
-  view: 'loading',      // loading | login | code | register | pending | home | scanner | confirm | error
+  view: 'loading',      // loading | login | code | register | pending | home | scanner | confirm | error | selfRegisterList | selfRegisterForm
   session: null,        // {publicId, riderToken, bib}
   event: null,          // {name, status}
   settings: {},
@@ -26,7 +26,15 @@ const riderState = {
   error: '',
   errorRetry: null,     // Name der Ansicht, zu der "Erneut versuchen" zurückführt
   offlineSince: '',     // gesetzt, wenn aus dem Cache gerendert wird
-  busy: false
+  busy: false,
+  /* Nur für #g.<publicId> (Selbstregistrierung, Teilprojekt 3) — dieser
+     Einstieg hat noch keine riderState.session, also muss die publicId
+     irgendwo zwischengeparkt werden, bis ein Claim eine Session daraus
+     macht. selfRegisterFreeBibs kommt von ?a=freebibs, selfRegisterBib
+     merkt sich die Wahl zwischen Listen- und Formular-Ansicht. */
+  selfRegisterPublicId: null,
+  selfRegisterFreeBibs: [],
+  selfRegisterBib: null
 };
 
 function riderLoadJson(key){

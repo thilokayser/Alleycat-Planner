@@ -78,6 +78,16 @@
   .rider-cp.scannable{border-left-color:var(--hivis); cursor:pointer;}
   .rider-cp.marshal{border-left-color:var(--warn);}
 
+  /* ---- Vorab-Registrierung: freie Startnummern (Teilprojekt 3) ---- */
+  .rider-bib-grid{display:flex; flex-wrap:wrap; gap:10px;}
+  .rider-bib-chip{
+    min-width:64px; min-height:56px; padding:8px 12px;
+    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:6px;
+    color:var(--chalk); font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:18px; font-weight:700; cursor:pointer;
+  }
+  .rider-bib-chip:active{border-color:var(--hivis); color:var(--hivis);}
+
   /* ---- Knöpfe ---- */
   .rider-btn{
     display:flex; align-items:center; justify-content:center; gap:10px;

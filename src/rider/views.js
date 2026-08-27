@@ -17,6 +17,8 @@ function renderRider(){
     case 'scanner':  el.innerHTML = riderViewScanner(); break;
     case 'confirm':  el.innerHTML = riderViewConfirm(); break;
     case 'error':    el.innerHTML = riderViewError(); break;
+    case 'selfRegisterList': el.innerHTML = riderViewSelfRegisterList(); break;
+    case 'selfRegisterForm': el.innerHTML = riderViewSelfRegisterForm(); break;
     default:         el.innerHTML = riderViewLoading();
   }
 }
@@ -106,6 +108,52 @@ function riderViewRegister(){
     </div>
     <div class="rider-actions">
       <button type="button" class="rider-btn rider-btn-primary" ${riderState.busy ? 'disabled' : ''} onclick="riderSubmitRegistration()">${t('riderScan.registerSubmit')}</button>
+    </div>
+  `;
+}
+
+/* Einstieg über #g.<publicId> (Teilprojekt 3) — kein Scan, keine Session,
+   der Besucher kommt kalt von einem geteilten Link herein. riderHead()
+   zeigt hier "#—" und den generischen App-Titel statt eines Eventnamens
+   (den liefert ?a=freebibs bewusst nicht mit, siehe Design-Doku §5) —
+   gleiches Verhalten wie riderViewLogin() vor jeder Session. */
+function riderViewSelfRegisterList(){
+  const bibs = riderState.selfRegisterFreeBibs || [];
+  return `
+    ${riderHead()}
+    <div class="rider-body">
+      <div class="rider-title">${t('riderScan.selfRegisterListTitle')}</div>
+      <div class="rider-lead">${t('riderScan.selfRegisterListLead')}</div>
+      ${riderState.error ? `<div class="rider-note rider-note-error">${escapeHtml(riderState.error)}</div>` : ''}
+      ${bibs.length ? `
+        <div class="rider-bib-grid">
+          ${bibs.map(bib => `<button type="button" class="rider-bib-chip" onclick="riderPickSelfRegisterBib(${bib})">#${bib}</button>`).join('')}
+        </div>
+      ` : `<div class="rider-note rider-note-info">${t('riderScan.selfRegisterNoneFree')}</div>`}
+    </div>
+  `;
+}
+
+function riderViewSelfRegisterForm(){
+  const bib = riderState.selfRegisterBib;
+  return `
+    ${riderHead()}
+    <div class="rider-body">
+      <div class="rider-title">${escapeHtml(t('riderScan.registerTitle', {bib}))}</div>
+      <div class="rider-lead">${t('riderScan.selfRegisterFormLead')}</div>
+      ${riderState.error ? `<div class="rider-note rider-note-error">${escapeHtml(riderState.error)}</div>` : ''}
+      <div class="rider-field">
+        <label for="rider-reg-name">${t('riderScan.registerName')}</label>
+        <input type="text" id="rider-reg-name" autocomplete="name">
+      </div>
+      <div class="rider-field">
+        <label for="rider-reg-contact">${t('riderScan.registerContact')}</label>
+        <input type="text" id="rider-reg-contact" autocomplete="email">
+      </div>
+    </div>
+    <div class="rider-actions">
+      <button type="button" class="rider-btn rider-btn-primary" ${riderState.busy ? 'disabled' : ''} onclick="riderSubmitClaim()">${t('riderScan.registerSubmit')}</button>
+      <button type="button" class="rider-btn rider-btn-ghost" onclick="riderGoSelfRegisterList()">${t('riderScan.selfRegisterBackToList')}</button>
     </div>
   `;
 }

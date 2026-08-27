@@ -68,6 +68,14 @@ function riderApiRegister(payload){
   return riderRequest('POST', 'register', null, payload);
 }
 
+function riderApiFreeBibs(publicId){
+  return riderRequest('GET', 'freebibs', {public_id: publicId}, null);
+}
+
+function riderApiClaim(payload){
+  return riderRequest('POST', 'claim', null, payload);
+}
+
 /* Serverfehlercodes in Sätze, die am Checkpoint weiterhelfen. Bewusst
    eine Tabelle statt verstreuter if-Ketten: die Codes kommen aus
    rider.php und sollen dort und hier nebeneinander lesbar bleiben. */
@@ -82,6 +90,8 @@ function riderErrorMessage(res){
     case 'slot_not_confirmed':   return t('riderScan.errNotConfirmed');
     case 'race_not_running':     return t('riderScan.errRaceNotRunning');
     case 'slot_taken':           return t('riderScan.errSlotTaken');
+    case 'self_register_disabled': return t('riderScan.errSelfRegisterDisabled');
+    case 'bib_not_found':        return t('riderScan.errSelfRegisterBibTaken');
     default:                     return t('riderScan.errGeneric');
   }
 }

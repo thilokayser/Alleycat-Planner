@@ -1077,6 +1077,14 @@ const translations = {
       registerSubmit: 'Anmeldung abschicken',
       registerNameRequired: 'Bitte gib deinen Namen ein.',
 
+      selfRegisterListTitle: 'Startnummer wählen',
+      selfRegisterListLead: 'Wähle eine freie Startnummer, um dich für dieses Rennen anzumelden.',
+      selfRegisterNoneFree: 'Gerade sind keine Startnummern mehr frei.',
+      selfRegisterFormLead: 'Trag dich ein, das Orga-Team bestätigt dich am HQ.',
+      selfRegisterBackToList: 'Andere Nummer wählen',
+      errSelfRegisterDisabled: 'Für dieses Rennen ist die Online-Anmeldung nicht geöffnet.',
+      errSelfRegisterBibTaken: 'Diese Startnummer wurde gerade eben vergeben. Wähle eine andere.',
+
       pendingTitle: 'Anmeldung läuft',
       pendingLead: 'Deine Anmeldung liegt beim Orga-Team. Sobald sie bestätigt ist, geht es hier automatisch weiter.',
       pendingBib: 'Deine Startnummer: {bib}',
@@ -1137,7 +1145,15 @@ const translations = {
       cpToggleHintScored: 'Fahrer checken hier selbst per QR-Code ein. Die Bewertung trägt weiterhin das Personal vor Ort auf dem Papiermanifest ein — der Selbst-Check-in ersetzt nur die Anwesenheit, nicht die Punktzahl.',
       orphanHeading: 'Verwaiste Check-ins ({count})',
       orphanDesc: 'Diese Check-ins gehören zu Startnummern oder Checkpoints, die es im Event nicht mehr gibt. Sie werden nicht gewertet, aber auch nicht gelöscht — prüfe, ob hier jemand aus der Wertung fällt.',
-      orphanRow: 'Startnummer {bib} an Checkpoint {cp}'
+      orphanRow: 'Startnummer {bib} an Checkpoint {cp}',
+      selfRegisterNav: 'Online-Anmeldung',
+      selfRegisterHeading: 'Öffentliche Online-Vorab-Registrierung',
+      selfRegisterDesc: 'Besucher können sich über einen öffentlichen Link selbst für eine freie Startnummer anmelden, ganz ohne Spokecard. Jede Anmeldung landet trotzdem zuerst in den ausstehenden Anmeldungen — nichts wird automatisch bestätigt.',
+      selfRegisterToggleLabel: 'Online-Anmeldung offen',
+      selfRegisterLinkLabel: 'Öffentlicher Anmelde-Link',
+      selfRegisterLinkPending: 'Link erscheint hier, sobald das Event einmal gespeichert wurde.',
+      selfRegisterCopyButton: 'Link kopieren',
+      selfRegisterCopiedToast: 'Link kopiert.'
     },
     phpSetup: {
       subtitle: 'Server-Verbindung einrichten',

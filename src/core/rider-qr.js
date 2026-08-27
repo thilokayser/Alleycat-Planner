@@ -7,13 +7,20 @@
 const RIDER_PUBLIC_ID_RE = /^[a-z0-9]{12}$/;
 const RIDER_TOKEN_RE = /^[a-z0-9]{32}$/;
 /* ---------------- QR-Nutzlast ----------------
-   Zwei Formate, beide als URL, damit ein Scan mit der System-Kamera in der
+   Drei Formate, alle als URL, damit ein Scan mit der System-Kamera in der
    App landet statt in einer Fehlermeldung:
 
      <riderAppUrl>#r.<publicId>.<riderToken>
      <riderAppUrl>#c.<publicId>.<cpId>.<qrToken>
+     <riderAppUrl>#g.<publicId>
 
-   Das dritte erkannte Format ist die nackte Startnummer. Die stand bis zur
+   `g` (Selbstregistrierung, Teilprojekt 3) trägt bewusst keinen Token —
+   der Sinn ist ja gerade, ohne bereits bekannten Token reinzukommen.
+   Dasselbe Fragment funktioniert als geteilter Link (Flyer, Social Media)
+   wie auch als gedruckter/angezeigter QR-Code, genau wie die anderen
+   beiden — initRider() liest location.hash direkt, ganz ohne Kamera.
+
+   Das vierte erkannte Format ist die nackte Startnummer. Die stand bis zur
    Rider-App auf jeder Spokecard, und der Marshal-Check-in scannt sie heute
    noch. Sie muss erkannt bleiben, sonst entwertet dieses Release jede
    bereits gedruckte Karte.                                              */
@@ -38,6 +45,11 @@ function parseRiderQrPayload(text){
     if(!RIDER_PUBLIC_ID_RE.test(publicId) || !RIDER_TOKEN_RE.test(qrToken) || !cpId) return null;
     return {kind: 'checkpoint', publicId, cpId, qrToken};
   }
+  if(parts[0] === 'g' && parts.length === 2){
+    const [, publicId] = parts;
+    if(!RIDER_PUBLIC_ID_RE.test(publicId)) return null;
+    return {kind: 'selfRegister', publicId};
+  }
   return null;
 }
 
@@ -46,4 +58,7 @@ function buildRiderQrPayload(baseUrl, evt, rider){
 }
 function buildCheckpointQrPayload(baseUrl, evt, cp){
   return `${baseUrl}#c.${evt.publicId}.${cp.id}.${cp.qrToken}`;
+}
+function buildSelfRegisterQrPayload(baseUrl, evt){
+  return `${baseUrl}#g.${evt.publicId}`;
 }
