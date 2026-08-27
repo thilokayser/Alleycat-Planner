@@ -24,8 +24,13 @@ function enterRacedayMode(){
   if(racedayEl) racedayEl.style.display = 'flex';
   startRacedayTick();
   syncWakeLockForView();
+  /* Mockup's raceday scanner is permanently live, not a click-to-open
+     modal (the modal stays for normal check-in) — start it as soon as
+     the chrome exists so the camera panel has something to show. */
+  startQrScan();
 }
 function exitRacedayMode(){
+  if(state.qrScannerActive) stopQrScan();
   state.racedayActive = false;
   stopRacedayTick();
   const appEl = document.getElementById('app');
@@ -37,6 +42,16 @@ function exitRacedayMode(){
   if(appEl) appEl.style.display = 'flex';
   render();
   syncWakeLockForView();
+}
+function updateRacedayScannerHint(){
+  const hintEl = document.getElementById('raceday-scanner-hint');
+  const wrapEl = document.getElementById('raceday-scan-video-wrap');
+  const retryEl = document.getElementById('raceday-scanner-retry');
+  if(!hintEl) return;
+  hintEl.textContent = state.qrScanError || t('raceday.scannerHint');
+  hintEl.classList.toggle('error', !!state.qrScanError);
+  if(wrapEl) wrapEl.style.display = state.qrScanError ? 'none' : '';
+  if(retryEl) retryEl.style.display = state.qrScanError ? '' : 'none';
 }
 let racedayTickInterval = null;
 function startRacedayTick(){
@@ -130,7 +145,23 @@ function renderRacedayChrome(){
       <button type="button" class="btn btn-ghost btn-sm" onclick="exitRacedayMode()">${t('raceday.exitButton')}</button>
     </div>
     <div class="raceday-body">
-      <div class="raceday-checkin-slot" id="raceday-checkin-slot"></div>
+      <div class="raceday-checkin-slot" id="raceday-checkin-slot">
+        <div class="raceday-scanner-panel">
+          <div class="raceday-scanner-label">${t('raceday.scannerActive')}</div>
+          <div class="qr-scan-video-wrap raceday-scan-video-wrap" id="raceday-scan-video-wrap">
+            <video id="qr-scan-video" autoplay playsinline muted></video>
+            <div class="qr-scan-frame">
+              <span class="qr-scan-corner tl"></span>
+              <span class="qr-scan-corner tr"></span>
+              <span class="qr-scan-corner bl"></span>
+              <span class="qr-scan-corner br"></span>
+              <span class="qr-scan-line"></span>
+            </div>
+          </div>
+          <div class="raceday-scanner-hint" id="raceday-scanner-hint">${t('raceday.scannerHint')}</div>
+          <button type="button" class="btn btn-sm" id="raceday-scanner-retry" onclick="startQrScan()" style="display:none;">${t('checkin.retry')}</button>
+        </div>
+      </div>
       <div class="raceday-stats" id="raceday-stats"></div>
     </div>
   `;

@@ -138,14 +138,17 @@ async function startQrScan(){
   state.qrScanError = '';
   state.qrScannerActive = true;
   renderCheckin();
+  if(state.racedayActive) updateRacedayScannerHint();
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     state.qrScanError = t('checkin.cameraUnsupported');
     renderCheckin();
+    if(state.racedayActive) updateRacedayScannerHint();
     return;
   }
   if(typeof jsQR !== 'function'){
     state.qrScanError = t('checkin.qrLibFailed');
     renderCheckin();
+    if(state.racedayActive) updateRacedayScannerHint();
     return;
   }
   try{
@@ -153,6 +156,7 @@ async function startQrScan(){
   }catch(e){
     state.qrScanError = t('checkin.cameraAccessDenied');
     renderCheckin();
+    if(state.racedayActive) updateRacedayScannerHint();
     return;
   }
   const video = document.getElementById('qr-scan-video');
@@ -200,6 +204,15 @@ function stopQrScan(){
    liegen ohnehin im Speicher. */
 function onQrScanSuccess(data){
   stopQrScan();
+  handleScannedQrPayload(data);
+  /* Raceday-Vollbild: the scanner is a permanently-live panel (mockup's
+     "Scanner aktiv"), not a one-shot modal — restart right after loading
+     whatever was scanned so staff can hold up the next spokecard without
+     touching the screen. Normal check-in keeps the click-to-scan/auto-close
+     modal behavior (state.racedayActive is false there). */
+  if(state.racedayActive) startQrScan();
+}
+function handleScannedQrPayload(data){
   const raw = String(data).trim();
   const parsed = parseRiderQrPayload(raw);
 
@@ -546,7 +559,7 @@ function buildCheckinViewHtml(evt){
           <div class="checkin-search-row">
             <input type="text" id="checkin-bib-input" inputmode="numeric" placeholder="${t('checkin.bibPlaceholder')}" value="${escapeHtml(state.checkinBibInput)}" oninput="onCheckinBibInput(this.value)" onkeydown="if(event.key==='Enter') findCheckinRider()">
             <button class="btn btn-primary" onclick="findCheckinRider()">${t('checkin.search')}</button>
-            <button class="btn" onclick="startQrScan()" title="${t('checkin.scanQrTitle')}">${t('checkin.scan')}</button>
+            ${state.racedayActive ? '' : `<button class="btn" onclick="startQrScan()" title="${t('checkin.scanQrTitle')}">${t('checkin.scan')}</button>`}
           </div>
         </div>
         ${body}
@@ -559,7 +572,7 @@ function buildCheckinViewHtml(evt){
       </div>
       ${riders.length ? `<div class="checkin-overview-list">${overviewRows}</div>` : `<div class="checkin-side-empty">${t('checkin.noRiderListYet')}</div>`}
     </div>
-    ${state.qrScannerActive ? `
+    ${state.qrScannerActive && !state.racedayActive ? `
       <div class="qr-scan-overlay">
         ${state.qrScanError ? `
           <div class="qr-scan-status error">${escapeHtml(state.qrScanError)}</div>

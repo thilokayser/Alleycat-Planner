@@ -758,7 +758,9 @@ const translations = {
       exitButton: 'Verlassen',
       eyebrow: 'Raceday',
       tickerTitle: 'Ticker',
-      statusFooter: 'Wake Lock aktiv — Bildschirm bleibt an'
+      statusFooter: 'Wake Lock aktiv — Bildschirm bleibt an',
+      scannerActive: 'Scanner aktiv',
+      scannerHint: 'Spokecard vor die Kamera halten — oder Nummer eintippen'
     },
     beamer: {
       openButton: '🖥️ Beamer-Ansicht öffnen',
