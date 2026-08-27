@@ -36,7 +36,7 @@ Die beiden Übergabedokumente wurden nacheinander geschrieben und nummerieren di
 | 13 | Erstnutzer-Erfahrung (Splashscreen, Onboarding-Tour, Doku-Seite) | nicht Teil der Übergabe-Doks | M–L | ✅ abgeschlossen (25.08.2026) — Ad-hoc-Nutzerwunsch, alle drei Teile fertig |
 | **14** | **Rider-App — Teilprojekt 1: Fundament** | nicht Teil der Übergabe-Doks | L | ✅ abgeschlossen (25.08.2026) — Backend + Organizer-Verkabelung, ohne Fahrer-Oberfläche |
 | **15** | **Rider-App — Teilprojekt 2: Fahrer-App** | nicht Teil der Übergabe-Doks | L | ✅ abgeschlossen (26.08.2026) — Gerätetest beim Nutzer offen |
-| 16 | Rider-App — Teilprojekt 3: Beamer-Ping + Online-Vorab-Registrierung | nicht Teil der Übergabe-Doks | M | ❌ offen — **nächster Schritt** |
+| 16 | Rider-App — Teilprojekt 3: Beamer-Ping + Online-Vorab-Registrierung | nicht Teil der Übergabe-Doks | M | ⚠️ teilweise (27.08.2026) — Beamer-Ping fertig; Online-Vorab-Registrierung bewusst zurückgestellt (echte Sicherheitsfläche auf einem nie live getesteten Backend), **nächster Schritt** |
 | — | *Idee, zurückgestellt:* Offline-Gerätesync (früher Paket 8) | Phase 22 komplett | L (unsicher) | ⚠️ Kamera/QR-Grundlage (jsQR) bereits vorhanden, Stream-Protokoll komplett offen — **kein aktives Arbeitspaket**, wandert zu den "vertagten Ideen" wie Kopfgeld-Modus/Service-Worker in der ursprünglichen Übergabe |
 
 Aufwand-Skala: S = klein (wenige, isolierte Änderungen), M = mittel (ein neues Modul oder mehrere verteilte Änderungen), L = groß (neues Modul + Umbau bestehender Kernlogik), XL = sehr groß (mehrere neue Module + Migration bestehender, produktiver Daten).
