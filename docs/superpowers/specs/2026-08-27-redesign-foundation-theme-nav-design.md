@@ -11,6 +11,7 @@ Die Mockup-Bildsprache (Barlow/Barlow Condensed/IBM Plex Mono, Graphit-Hintergru
 - Keine inhaltliche Neugestaltung einzelner Screens (Dashboard-KPI-Grid, Karten-Inspector, Check-in-Karte, Leaderboard-Tabelle) — das ist Teilprojekt 2.
 - Kein neues Feature „Raceday-Vollbild" — Teilprojekt 3.
 - Keine mobile Neugestaltung — die bestehende `.bottom-nav` (Icon+Label-Leiste, `ui-headquarter.js:551`) bleibt unverändert; ihr Redesign ist Teil von Teilprojekt 4 (Staff-Mobile).
+- **Korrektur während der Umsetzung**: `renderTopbar()` ist Core-Code, gemeinsam für beide Varianten — die Nav-Buttons dort zu entfernen hätte der lokalen Variante jede Desktop-Navigation genommen (Bottom-Nav erscheint nur unter 700px). `templates/local.template.html` bekommt deshalb denselben `#icon-sidebar`+`.app-body`-Umbau wie die Server-Variante (§5) — keine neue Funktion, sondern notwendig, um die bestehende Navigation zu erhalten (CLAUDE.md: „lokale Variante darf nicht regressieren").
 - Keine Änderung an den 4 bestehenden Nicht-Standard-Themes (`hell`/`dunkel`/`dracula`/`outdoor`) außer der Font- und Layout-Änderung, die ohnehin themenübergreifend gilt.
 - Keine neuen CSS-Variablen für Fonts — Font-Familien bleiben wie heute direkt in Selektoren hartkodiert (siehe §4), da sie nicht pro Theme variieren.
 
@@ -104,8 +105,8 @@ Zur Abgrenzung, was in diesem Teilprojekt *nicht* angefasst wird, weil es bereit
 | `src/styles/themes.css` | neuer `:root[data-theme="signal"]`-Block |
 | `src/styles/base.css` | Font-`@import` + alle `font-family`-Literale ersetzt; `#app` → `flex-direction:row`; neue `.icon-sidebar`/`.icon-sidebar-item`-Klassen; `.status-badge.status-*`-Farben; `.icon-sidebar{display:none}` in bestehender 700px-Media-Query |
 | `templates/server.template.html` | `#icon-sidebar`-Element + `.app-body`-Wrapper um Topbar/Main/Bottom-Nav; `#settings-gear-btn` entfernt |
-| `src/core/i18n.js` | `settings.themeSignalLabel`/`themeSignalDesc` |
-| `templates/local.template.html` | **nicht geändert** — lokale Variante bleibt feature-frozen (siehe Nicht-Ziele) |
+| `templates/local.template.html` | dieselbe `#icon-sidebar`+`.app-body`-Struktur wie oben (Regressionsfix, siehe Nicht-Ziele) — sonst unverändert, lokale Variante bleibt ansonsten feature-frozen |
+| `src/core/i18n.js` | `settings.themeSignalLabel`/`themeSignalDesc`, `commandPalette.shortcutHint` |
 
 ## 9. Testing
 

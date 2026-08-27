@@ -550,6 +550,7 @@ const translations = {
       iconPackMaterialLabel: 'Material Symbols', iconPackMaterialDesc: 'Lädt Material Symbols von Google Fonts nach'
     },
     commandPalette: {
+      shortcutHint: 'Befehlspalette (&#8984;K / Strg+K)',
       placeholder: 'Suche Navigation, Fahrer, Checkpoints, Aktionen… (Esc zum Schließen)',
       noResults: 'Keine Treffer.',
       catNav: 'Navigation',
@@ -626,7 +627,8 @@ const translations = {
       maxScoreLabel: 'Maximalpunktzahl',
       createType: 'Checkpoint-Typ anlegen',
       newType: '+ Neuer Checkpoint-Typ',
-      themeFeldpostLabel: 'Feldpost', themeFeldpostDesc: 'Rally-Stempel-Look — dunkles Chrome, warmes Papier (Standard)',
+      themeSignalLabel: 'Signal', themeSignalDesc: 'Graphit mit Signal-Orange, Papier-Flächen für Gedrucktes (Standard)',
+      themeFeldpostLabel: 'Feldpost', themeFeldpostDesc: 'Rally-Stempel-Look — dunkles Chrome, warmes Papier',
       themeHellLabel: 'Hell', themeHellDesc: 'Helles Chrome, klassisches Papier',
       themeDunkelLabel: 'Dunkel', themeDunkelDesc: 'Durchgehend dunkel, ruhiger blauer Akzent',
       themeDraculaLabel: 'Dracula', themeDraculaDesc: 'Pink/Lila-Akzente auf klassischem Dracula-Dunkel',
