@@ -567,7 +567,13 @@ function buildCheckinViewHtml(evt){
         ` : `
           <div class="qr-scan-video-wrap">
             <video id="qr-scan-video" autoplay playsinline muted></video>
-            <div class="qr-scan-frame"></div>
+            <div class="qr-scan-frame">
+              <span class="qr-scan-corner tl"></span>
+              <span class="qr-scan-corner tr"></span>
+              <span class="qr-scan-corner bl"></span>
+              <span class="qr-scan-corner br"></span>
+              <span class="qr-scan-line"></span>
+            </div>
           </div>
           <div class="qr-scan-status">${t('checkin.holdQrToCamera')}</div>
         `}

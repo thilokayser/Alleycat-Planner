@@ -1085,7 +1085,21 @@
     border:2px solid var(--hivis); background:#000;
   }
   .qr-scan-video-wrap video{width:100%; height:100%; object-fit:cover; display:block;}
-  .qr-scan-frame{position:absolute; inset:12%; border:2px dashed var(--chalk); border-radius:8px; pointer-events:none;}
+  .qr-scan-frame{position:absolute; inset:12%; pointer-events:none; overflow:hidden;}
+  .qr-scan-corner{position:absolute; width:32px; height:32px; border:3px solid var(--hivis);}
+  .qr-scan-corner.tl{top:0; left:0; border-right:none; border-bottom:none; border-radius:8px 0 0 0;}
+  .qr-scan-corner.tr{top:0; right:0; border-left:none; border-bottom:none; border-radius:0 8px 0 0;}
+  .qr-scan-corner.bl{bottom:0; left:0; border-right:none; border-top:none; border-radius:0 0 0 8px;}
+  .qr-scan-corner.br{bottom:0; right:0; border-left:none; border-top:none; border-radius:0 0 8px 0;}
+  .qr-scan-line{
+    position:absolute; left:0; right:0; top:50%; height:2px;
+    background:linear-gradient(90deg, transparent, var(--hivis), transparent);
+    animation:qr-scan-line-sweep 2.4s ease-in-out infinite alternate;
+  }
+  @keyframes qr-scan-line-sweep{
+    0%{transform:translateY(-46%);}
+    100%{transform:translateY(46%);}
+  }
   .qr-scan-status{font-family:'IBM Plex Mono',monospace; color:var(--chalk); font-size:12.5px; text-align:center; max-width:360px; line-height:1.5;}
   .qr-scan-status.error{color:var(--hivis-2); font-weight:700;}
 
