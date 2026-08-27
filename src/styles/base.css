@@ -1132,6 +1132,16 @@
   }
   .lb-tab-btn:hover{color:var(--chalk); border-color:var(--steel);}
   .lb-tab-btn.active{background:var(--hivis); border-color:var(--hivis); color:var(--ink);}
+  .lb-sort-segmented{
+    display:inline-flex; border:1px solid var(--asphalt-3); border-radius:6px; overflow:hidden; flex-shrink:0;
+  }
+  .lb-sort-segmented button{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.04em;
+    padding:8px 12px; border:none; border-right:1px solid var(--asphalt-3); background:var(--asphalt-2); color:var(--steel); cursor:pointer;
+  }
+  .lb-sort-segmented button:last-child{border-right:none;}
+  .lb-sort-segmented button:hover{color:var(--chalk);}
+  .lb-sort-segmented button.active{background:color-mix(in srgb, var(--hivis) 16%, var(--asphalt-2)); color:var(--hivis);}
   .leaderboard-team-filter, .leaderboard-status-filter, .leaderboard-category-filter, .leaderboard-csv-split{
     font-family:'IBM Plex Mono',monospace; font-size:12px; background:var(--asphalt); color:var(--chalk);
     border:1px solid var(--asphalt-3); border-radius:3px; padding:8px 10px;

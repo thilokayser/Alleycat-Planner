@@ -15,6 +15,28 @@ function sortRidersByPoints(riders, evt){
     return a.bib - b.bib;
   });
 }
+function sortRidersByCpCount(riders){
+  return riders.slice().sort((a, b) => {
+    const ca = (a.completed || []).length, cb = (b.completed || []).length;
+    if(ca !== cb) return cb - ca;
+    if(!!a.finishTime !== !!b.finishTime) return a.finishTime ? -1 : 1;
+    if(a.finishTime && b.finishTime) return new Date(a.finishTime) - new Date(b.finishTime);
+    return a.bib - b.bib;
+  });
+}
+/* Leaderboard-Ansichts-Sortierung (Punkte/Zeit/CP-Anzahl, Redesign-Mockup
+   "Screen E"): unabhängig von evt.scoringMode, das nur bestimmt, welche
+   Bewertung offiziell zählt (Spalten, Podium-Vorbelegung beim Öffnen). Die
+   Sortierung hier ist reine Browsing-Ansicht, transient, nicht gespeichert. */
+function sortRidersForLeaderboardView(riders, evt, mode){
+  if(mode === 'points') return sortRidersByPoints(riders, evt);
+  if(mode === 'cpCount') return sortRidersByCpCount(riders);
+  return sortRidersForOverview(riders);
+}
+function setLeaderboardSortMode(mode){
+  state.leaderboardSortMode = mode;
+  renderLeaderboard();
+}
 /* ---------------- leaderboard side panel: podium + class winners ----------------
    Independent of the toolbar's search/filter state on purpose (a marshal
    filtering for one rider shouldn't watch the overall podium disappear) —
@@ -171,7 +193,8 @@ function renderLeaderboard(){
     riderMatchesStatusFilter(r, state.leaderboardStatusFilter) &&
     groups.every(g => !catFilters[g.id] || (r.categories && r.categories[g.id] === catFilters[g.id]))
   );
-  const riders = evt.scoringMode === 'points' ? sortRidersByPoints(filteredRiders, evt) : sortRidersForOverview(filteredRiders);
+  const sortMode = state.leaderboardSortMode || (evt.scoringMode === 'points' ? 'points' : 'time');
+  const riders = sortRidersForLeaderboardView(filteredRiders, evt, sortMode);
 
   const activeFilters = [];
   if(state.leaderboardTeamFilter){
@@ -293,14 +316,17 @@ function renderLeaderboard(){
   }
 
   const pointsScoring = evt.scoringMode === 'points';
-  let rankMap;
-  if(pointsScoring){
-    const rankedRiders = sortRidersByPoints(allRiders.filter(r => (r.name || '').trim()), evt);
-    rankMap = new Map(rankedRiders.map((r, i) => [r.bib, i + 1]));
-  } else {
-    const arrivedSorted = allRiders.filter(r => r.finishTime).sort((a, b) => new Date(a.finishTime) - new Date(b.finishTime));
-    rankMap = new Map(arrivedSorted.map((r, i) => [r.bib, i + 1]));
-  }
+  /* Rank badges follow the view's sort toggle (sortMode), not necessarily
+     evt.scoringMode — a marshal sorting by CP-count should see #1/#2/#3
+     match what's actually on top of the table. The extra Punkte/Zielzeit
+     *columns* below stay tied to pointsScoring (the event's real scoring
+     mode) since those are structural, not a view preference. */
+  const rankedForBadges = sortMode === 'cpCount'
+    ? sortRidersByCpCount(allRiders.filter(r => (r.name || '').trim() && r.finishTime))
+    : sortMode === 'points'
+    ? sortRidersByPoints(allRiders.filter(r => (r.name || '').trim()), evt)
+    : allRiders.filter(r => r.finishTime).sort((a, b) => new Date(a.finishTime) - new Date(b.finishTime));
+  const rankMap = new Map(rankedForBadges.map((r, i) => [r.bib, i + 1]));
 
   const hasScoredCheckpoints = cps.some(cp => getCheckpointType(cp.type).isScored);
   const headCps = cps.map(cp => `<th class="lb-cp ${cp.mandatory ? '' : 'optional'}" title="${escapeHtml(cp.name || '')}">${t('leaderboard.cpPrefix')}${String(cp.order).padStart(2,'0')}</th>`).join('');
@@ -356,6 +382,11 @@ function renderLeaderboard(){
     <div class="leaderboard-layout">
     <div class="leaderboard-main">
     <div class="leaderboard-toolbar">
+      <div class="lb-sort-segmented">
+        <button type="button" class="${sortMode === 'points' ? 'active' : ''}" onclick="setLeaderboardSortMode('points')">${t('leaderboard.sortByPoints')}</button>
+        <button type="button" class="${sortMode === 'time' ? 'active' : ''}" onclick="setLeaderboardSortMode('time')">${t('leaderboard.sortByTime')}</button>
+        <button type="button" class="${sortMode === 'cpCount' ? 'active' : ''}" onclick="setLeaderboardSortMode('cpCount')">${t('leaderboard.sortByCpCount')}</button>
+      </div>
       <div class="leaderboard-search">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" class="leaderboard-search-input" placeholder="${t('leaderboard.searchPlaceholder')}" value="${escapeHtml(state.leaderboardSearch)}" oninput="onLeaderboardSearchInput(this.value)">

@@ -38,6 +38,7 @@ let state = {
   leaderboardCategoryFilters: {},
   leaderboardCsvSplitKey: '',
   leaderboardTab: 'individual',
+  leaderboardSortMode: 'time',
   leaderboardTeamFilter: '',
   overviewSettingsOpen: false,
   cpListGroupBy: 'order',
@@ -324,6 +325,7 @@ function openCheckin(){
 function openLeaderboard(){
   state.view = 'leaderboard';
   state.leaderboardSearch = '';
+  state.leaderboardSortMode = (state.currentEvent && state.currentEvent.scoringMode === 'points') ? 'points' : 'time';
   render();
 }
 
