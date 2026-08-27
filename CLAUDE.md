@@ -4,7 +4,7 @@ Guidance for Claude Code (claude.ai/code) on this repo. Kept under ~5k tokens on
 
 ## What this is
 
-Alleycat Dispatch: organizer tool for alleycat races (bike checkpoint races) — create events, place checkpoints on map, print bib numbers/spokecards, run finish-line check-in, keep leaderboard, export manifest as PDF. Ships as two self-contained HTML files (local/server storage variants), opened directly in browser — files are **generated**, not hand-edited. See Architecture below before touching anything.
+Alleycat Dispatch: organizer tool for alleycat races (bike checkpoint races) — create events, place checkpoints on map, print bib numbers/spokecards, run finish-line check-in, keep leaderboard, export manifest as PDF. Ships as three self-contained HTML files (two organizer variants — local/server storage — plus a separate rider app for the server variant), opened directly in browser — files are **generated**, not hand-edited. See Architecture below before touching anything.
 
 ## Project docs
 
@@ -16,13 +16,14 @@ Alleycat Dispatch: organizer tool for alleycat races (bike checkpoint races) —
 
 ## Tech stack
 
-Plain JS (no framework, no bundler, no `npm install`) — single global `state` object; `render()` re-renders active view on every state change. Third-party libraries CDN-loaded in templates: **Leaflet** + **Leaflet.draw** (map + zone editor — the one deliberate dependency exception, see `docs/archive/PROJEKT-UEBERSICHT.md` §9), **jsPDF** (all PDF export), **sql.js** (WASM SQLite, local-storage variant only), **QRCode.js** (bib/spokecard QR codes). Server variant's backend: plain **PHP + MySQL/MariaDB**, no framework, in `php-backend/`. `build.js` is plain Node, zero dependencies.
+Plain JS (no framework, no bundler, no `npm install`) — single global `state` object; `render()` re-renders active view on every state change. Third-party libraries CDN-loaded in templates: **Leaflet** + **Leaflet.draw** (map + zone editor — the one deliberate dependency exception, see `docs/archive/PROJEKT-UEBERSICHT.md` §9), **jsPDF** (all PDF export), **sql.js** (WASM SQLite, local-storage variant only), **QRCode.js** (generating bib/spokecard/checkpoint QR codes), **jsQR** (reading them). jsQR is CDN-loaded in the organizer variants but **embedded from `vendor/`** in the rider app, see Rider bundle below. Server variant's backend: plain **PHP + MySQL/MariaDB**, no framework, in `php-backend/`. `build.js` is plain Node, zero dependencies.
 
 ## Commands
 
-- **Build**: `node build.js` — reads `src/` + `templates/`, writes `dist/alleycat-dispatch-local.html` and `dist/alleycat-dispatch-server.html`. Run after every source change, before testing in browser.
+- **Build**: `node build.js` — reads `src/` + `templates/` + `vendor/`, writes **three** files: `dist/alleycat-dispatch-local.html`, `-server.html`, and `dist/alleycat-rider.html`. Run after every source change, before testing in browser. `node build.js --core-hash` prints only the `CORE_FILES` fingerprint (leak detector, see Core guard).
 - **Run**: open `dist/alleycat-dispatch-local.html` (or `-server.html`) directly in browser after building.
-- **Test**: paste `test-suite.js`'s contents into browser console of running `dist/` build, call `runAlleycatTestSuite()`. No CI — always manual, in-browser run. See Test coverage gaps below.
+- **Test (organizer)**: paste `test-suite.js` into the browser console of a running `dist/alleycat-dispatch-*.html`, call `runAlleycatTestSuite()`. No CI — always manual, in-browser. See Test coverage gaps below.
+- **Test (rider app)**: paste `test-suite-rider.js` into the console of `dist/alleycat-rider.html`, call `runRiderTestSuite()`. Needs **no server** — every network call is stubbed, deliberately: the promises it checks (the queue loses nothing, the cache carries offline, bad codes are rejected before any request) are exactly the ones that must hold without one. Two suites rather than one because the bundles share no runtime state — `state`, `render()`, and the storage layer do not exist in the rider app.
 - **PHP backend local testing**: no automated way — run `php-backend/` against local PHP+MySQL setup (e.g. XAMPP), point `dist/alleycat-dispatch-server.html`'s setup screen at it.
 
 ## Architecture
@@ -39,7 +40,7 @@ Everything here must build **byte-identical** across both variants — order not
 |---|---|
 | `i18n.js` | translations dict (`de` source), `t(key, params)`, `BUILTIN_LANGS`, community language packs |
 | `utils.js` | formatters (distance/time/coords), `escapeHtml`, `uid`, `haversineDistanceKm`, `computeRouteLegs` |
-| `checkpoint.js` | `CHECKPOINT_TYPES`, checkpoint CRUD/edit/drag/personnel, editor sidebar render |
+| `checkpoint.js` | checkpoint CRUD/edit/drag/personnel, editor sidebar render, custom-type persistence (the type table itself lives in `checkpoint-types.js`) |
 | `team.js` | `evt.teams` CRUD, `computeTeamStats` (scoring modes) |
 | `category.js` | `evt.categoryGroups` CRUD, rider category assignment, JSON export/import |
 | `zones.js` | zone data model (circle/polygon) + geometry helpers |
@@ -72,11 +73,23 @@ Everything here must build **byte-identical** across both variants — order not
 | `command-palette.js` | Cmd/Ctrl+K fuzzy-search palette |
 | `splashscreen.js` | Hero-Startbildschirm vor dem Dashboard (jeder App-Start, per Setting abschaltbar) |
 | `onboarding.js` | Geführte Spotlight-Tour durchs Demo-Event (6 Views), Auto-Start nach dem Splashscreen |
-| `documentation.js` | In-App-Nachschlagewerk unter Settings → Hilfe (11 Themen, Suchfilter) |
-| `rider-sync.js` | Rider-App-Fundament: QR-Payload-Parser, Publish, Log-Merge, Anmeldungen bestätigen. Alles Netzabhängige läuft über Seams |
+| `documentation.js` | In-App-Nachschlagewerk unter Settings → Hilfe (12 Themen, Suchfilter) |
+| `checkpoint-types.js` | `CHECKPOINT_TYPES` + `getCheckpointTypes()`. **Fabrik, keine Konstante** — Beschriftungen kommen aus `t()` und müssen dem Sprachwechsel folgen; memoisiert pro Sprache. Auch im Rider-Bundle |
+| `rider-qr.js` | QR-Nutzlast erzeugen und zerlegen (`parseRiderQrPayload` u. a.). Auch im Rider-Bundle — deshalb liegt hier **nur**, was die Fahrer-App braucht |
+| `rider-sync.js` | Rider-App-Fundament: Publish, Log-Merge, Anmeldungen bestätigen. Alles Netzabhängige läuft über Seams. **Nicht** im Rider-Bundle (hängt an `state`/`debouncedSave`) |
 | `ui-headquarter.js` | `state`, `init()`, `render()` dispatcher, Settings-Hub sidebar |
 
 `src/storage/storage-{local,server}.js` (backend-specific), `src/styles/base.css`+`themes.css`, `templates/{local,server}.template.html`.
+
+### Rider bundle (`dist/alleycat-rider.html`)
+
+Third build output, **server variant only**, driven by `RIDER_FILES` in `build.js` instead of `CORE_FILES`. One self-contained HTML file like the other two: `templates/rider.template.html` + `src/styles/rider.css` (own stylesheet — `base.css` is organizer layout and dead weight here) + `src/rider/*.js` + a short shared subset of `src/core/`.
+
+- **jsQR is embedded, not CDN-loaded** — the one departure from the other variants. A QR reader that depends on a network request is wrong for an app used in dead spots. Pinned copy in `vendor/`, provenance and checksum in [`vendor/README.md`](vendor/README.md).
+- **Translations are trimmed at build time** to `RIDER_I18N_NAMESPACES`. Whole `i18n.js` + `en.json` would be ~121KB for a few dozen strings.
+- **`riderApp` vs `riderScan`**: `riderApp` is *organizer-side* (pending registrations, the QR checkbox) and stays out of the bundle. The rider app's own strings live under `riderScan`. The names invite exactly the wrong assumption.
+- **What may live in a shared `src/core/` file**: only what the rider bundle actually needs. `src/storage/*` is absent there, so anything calling a seam (`riderAppBaseUrl()`, `storageGet`) must not be in a file `RIDER_FILES` pulls in.
+- **No offline start.** Check-ins without signal work (queue in `localStorage`); *reloading* without a connection shows the browser's error page. Service worker deliberately deferred — see the rider-app spec §7.5.
 
 ### Storage-capability seams
 

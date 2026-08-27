@@ -14,6 +14,10 @@ const path = require('path');
 const CORE_FILES = [
   'i18n.js',
   'utils.js',
+  /* checkpoint-types.js vor checkpoint.js: CHECKPOINT_TYPES ist ein
+     let auf oberster Ebene, das withCheckpointDefaults() beim Aufruf
+     liest. Funktionsdeklarationen wären hoisted, diese Zuweisung nicht. */
+  'checkpoint-types.js',
   'checkpoint.js',
   'team.js',
   'category.js',
@@ -29,6 +33,7 @@ const CORE_FILES = [
   'map.js',
   'rider.js',
   'checkin.js',
+  'raceday.js',
   'leaderboard.js',
   'export-csv.js',
   'export-gpx.js',
@@ -49,9 +54,39 @@ const CORE_FILES = [
   'splashscreen.js',
   'onboarding.js',
   'documentation.js',
+  'rider-qr.js',
   'rider-sync.js',
   'ui-headquarter.js'
 ];
+
+/* ---------------- Fahrer-App (Teilprojekt 2) ----------------
+   Dritte Ausgabe, eigene Dateiliste. Bewusst kurz: die Fahrer-App teilt
+   mit dem Organizer nur, was sie wirklich braucht. Alles unter
+   src/rider/ ist ausschließlich hier drin und wird vom Kern-Guard nicht
+   geprüft — umgekehrt darf der Kern nichts davon aufrufen (vierte
+   Guard-Regel).                                                        */
+const RIDER_FILES = [
+  'src/core/i18n.js',            // beim Bauen auf RIDER_I18N_NAMESPACES gekürzt
+  'src/core/utils.js',
+  'src/core/checkpoint-types.js',
+  'src/core/rider-qr.js',
+  'src/rider/state.js',
+  'src/rider/api.js',
+  'src/rider/queue.js',
+  'src/rider/scanner.js',
+  'src/rider/views.js',
+  'src/rider/init.js'
+];
+
+/* Nur diese Namensräume wandern ins Fahrer-Bundle. i18n.js hat rund 1100
+   Zeilen und en.json 55 KB — beides vollständig mitzunehmen wären ~110 KB
+   für ein paar Dutzend Strings, geladen genau dort, wo die Verbindung am
+   schlechtesten ist.
+
+   Nicht verwechseln: `riderApp` ist die ORGANIZER-Seite (ausstehende
+   Anmeldungen, QR-Häkchen) und gehört hier NICHT dazu. Die Strings der
+   Fahrer-App liegen unter `riderScan`. */
+const RIDER_I18N_NAMESPACES = ['common', 'checkpoint', 'riderScan'];
 
 function read(relPath){
   return fs.readFileSync(path.join(__dirname, relPath), 'utf8');
@@ -95,7 +130,13 @@ function riderOnlySymbols(){
   const names = new Set();
   for(const file of fs.readdirSync(riderDir).filter(f => f.endsWith('.js'))){
     const src = fs.readFileSync(path.join(riderDir, file), 'utf8');
-    for(const m of src.matchAll(/^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm)){
+    /* Nur Deklarationen auf Modulebene (Spalte 0, kein führender
+       Leerraum). Verschachtelte Funktionen sind für andere Module gar
+       nicht sichtbar und können deshalb nicht lecken — sie mitzuzählen
+       erzeugte nur Fehlalarme auf generischen Namen. Genau das passierte
+       beim Bau von Paket 4: scanner.js hat ein inneres tick(), checkin.js
+       ebenfalls, und der Guard hielt das für ein Leck. */
+    for(const m of src.matchAll(/^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm)){
       names.add(m[1]);
     }
   }
@@ -194,6 +235,74 @@ function coreFingerprint(){
   return h.digest('hex');
 }
 
+/* Wertet das translations-Literal aus i18n.js aus und gibt nur die
+   gewünschten Namensräume zurück. Das Literal ist reine Daten (keine
+   Funktionsaufrufe), deshalb genügt eine Auswertung ohne Parser.
+
+   Fehlt ein hier nicht gelisteter Namensraum, den die App benutzt, gibt
+   t() den Schlüssel im Klartext zurück — sichtbar genug, um beim ersten
+   Ausprobieren aufzufallen, aber kein Absturz. */
+function trimTranslations(){
+  const src = read('src/core/i18n.js');
+  const start = src.indexOf('const translations = {');
+  if(start === -1) throw new Error('translations-Literal in i18n.js nicht gefunden');
+  const open = src.indexOf('{', start);
+  let depth = 0, end = -1;
+  for(let i = open; i < src.length; i++){
+    if(src[i] === '{') depth++;
+    else if(src[i] === '}'){ depth--; if(depth === 0){ end = i; break; } }
+  }
+  if(end === -1) throw new Error('translations-Literal in i18n.js nicht geschlossen');
+
+  const full = new Function('return ' + src.slice(open, end + 1))();
+  const en = JSON.parse(read('src/i18n/en.json'));
+
+  const pick = (dict) => {
+    const out = {};
+    for(const ns of RIDER_I18N_NAMESPACES) if(dict && dict[ns]) out[ns] = dict[ns];
+    return out;
+  };
+  const missing = RIDER_I18N_NAMESPACES.filter(ns => !full.de || !full.de[ns]);
+  if(missing.length) throw new Error('RIDER_I18N_NAMESPACES kennt i18n.js nicht: ' + missing.join(', '));
+
+  return {de: pick(full.de), en: pick(en)};
+}
+
+function buildRiderVariant(){
+  const trimmed = trimTranslations();
+  /* i18n.js kommt NICHT als Quelltext mit — nur seine Funktionen. Das
+     Literal wird durch die gekürzte Fassung ersetzt, sonst läge die
+     komplette Übersetzung doppelt im Bundle. */
+  const i18nSrc = read('src/core/i18n.js');
+  const litStart = i18nSrc.indexOf('const translations = {');
+  const litOpen = i18nSrc.indexOf('{', litStart);
+  let d = 0, litEnd = -1;
+  for(let i = litOpen; i < i18nSrc.length; i++){
+    if(i18nSrc[i] === '{') d++;
+    else if(i18nSrc[i] === '}'){ d--; if(d === 0){ litEnd = i; break; } }
+  }
+  const i18nTrimmed = i18nSrc.slice(0, litStart)
+    + 'const translations = ' + JSON.stringify(trimmed).replace(/</g, '\\u003c')
+    + i18nSrc.slice(litEnd + 1);
+
+  const js = RIDER_FILES
+    .map(rel => rel === 'src/core/i18n.js' ? i18nTrimmed : read(rel))
+    .join('\n\n');
+
+  const output = read('templates/rider.template.html')
+    .replace('{{THEMES_CSS}}', read('src/styles/themes.css'))
+    .replace('{{RIDER_CSS}}', read('src/styles/rider.css'))
+    .replace('{{JSQR_JS}}', read('vendor/jsQR-1.4.0.js'))
+    .replace('{{RIDER_JS}}', js);
+
+  const distDir = path.join(__dirname, 'dist');
+  if(!fs.existsSync(distDir)) fs.mkdirSync(distDir);
+  fs.writeFileSync(path.join(distDir, 'alleycat-rider.html'), output);
+
+  const gz = require('zlib').gzipSync(Buffer.from(output, 'utf8'), {level: 9}).length;
+  console.log(`gebaut: dist/alleycat-rider.html (${(Buffer.byteLength(output) / 1024).toFixed(0)} KB roh, ${(gz / 1024).toFixed(0)} KB über die Leitung)`);
+}
+
 if(process.argv.includes('--core-hash')){
   assertCoreIsBackendAgnostic();
   console.log(coreFingerprint());
@@ -203,4 +312,5 @@ if(process.argv.includes('--core-hash')){
 assertCoreIsBackendAgnostic();
 buildVariant('storage-local.js', 'local.template.html', 'alleycat-dispatch-local.html');
 buildVariant('storage-server.js', 'server.template.html', 'alleycat-dispatch-server.html');
+buildRiderVariant();
 console.log(`Kern-Fingerabdruck: ${coreFingerprint().slice(0, 16)}…`);

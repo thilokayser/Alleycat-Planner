@@ -24,9 +24,10 @@ let state = {
   saveStatus: 'idle',
   qrScannerActive: false,
   qrScanError: '',
+  racedayActive: false,
   manifestSection: 'anpassen',
   manifestMobileDetailOpen: false,
-  appSettings: {theme: 'feldpost', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal', showSplashScreen: true, onboardingCompleted: false},
+  appSettings: {theme: 'signal', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal', showSplashScreen: true, onboardingCompleted: false},
   featureRegistrySearch: '',
   docSearch: '',
   settingsReturnView: 'dashboard',
@@ -37,6 +38,7 @@ let state = {
   leaderboardCategoryFilters: {},
   leaderboardCsvSplitKey: '',
   leaderboardTab: 'individual',
+  leaderboardSortMode: 'time',
   leaderboardTeamFilter: '',
   overviewSettingsOpen: false,
   cpListGroupBy: 'order',
@@ -323,6 +325,7 @@ function openCheckin(){
 function openLeaderboard(){
   state.view = 'leaderboard';
   state.leaderboardSearch = '';
+  state.leaderboardSortMode = (state.currentEvent && state.currentEvent.scoringMode === 'points') ? 'points' : 'time';
   render();
 }
 
@@ -362,6 +365,7 @@ function initGlobalShortcuts(){
     }
     if(isTypingTarget(e.target)) return;
     if(e.metaKey || e.ctrlKey || e.altKey) return;
+    if(state.racedayActive) return;
     if(!state.currentEvent || state.view === 'dashboard' || state.view === 'settings') return;
     const fn = NAV_SHORTCUT_KEYS[e.key];
     if(fn){ e.preventDefault(); fn(); }
@@ -395,7 +399,7 @@ function typeIconHtml(key){
 async function loadAppSettings(){
   try{
     const res = await storageGet('app:settings');
-    if(res) state.appSettings = Object.assign({theme: 'feldpost', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal', showSplashScreen: true, onboardingCompleted: false}, JSON.parse(res.value));
+    if(res) state.appSettings = Object.assign({theme: 'signal', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal', showSplashScreen: true, onboardingCompleted: false}, JSON.parse(res.value));
   }catch(e){ /* keep defaults */ }
 }
 async function saveAppSettings(){
@@ -518,15 +522,38 @@ function getNavItems(){
       icon: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M9.5 12.5h5"/><path d="M9.5 16h5"/>'}
   ];
 }
+function renderIconSidebar(navItems, evtId){
+  const iconSidebar = document.getElementById('icon-sidebar');
+  const navBtn = item => `
+    <button class="icon-sidebar-item ${state.view === item.view ? 'active' : ''}" onclick="${item.onclick(evtId)}">
+      <svg viewBox="0 0 24 24">${item.icon}</svg>
+      <span>${item.shortLabel}</span>
+    </button>
+  `;
+  iconSidebar.innerHTML = `
+    <div class="icon-sidebar-mark">AC</div>
+    ${navItems.map(navBtn).join('')}
+    <div class="icon-sidebar-spacer"></div>
+    <button class="icon-sidebar-item" onclick="openCommandPalette()" title="${t('commandPalette.shortcutHint')}">
+      <span class="icon-sidebar-kbd">&#8984;K</span>
+    </button>
+    <button class="icon-sidebar-item" onclick="openSettings()" title="${t('settings.title')}">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>${t('settings.title')}</span>
+    </button>
+  `;
+}
 function renderTopbar(){
   const sub = document.getElementById('topbar-sub');
   const actions = document.getElementById('topbar-actions');
   const bottomNav = document.getElementById('bottom-nav');
+  const iconSidebar = document.getElementById('icon-sidebar');
 
   if(state.view === 'settings'){
     sub.textContent = t('settings.title');
     actions.innerHTML = `<button class="btn btn-ghost" onclick="closeSettings()">${t('settings.back')}</button>`;
     bottomNav.innerHTML = '';
+    if(iconSidebar) iconSidebar.innerHTML = `<div class="icon-sidebar-mark">AC</div>`;
     return;
   }
 
@@ -534,31 +561,31 @@ function renderTopbar(){
     sub.textContent = t('ui.headquarter');
     actions.innerHTML = '';
     bottomNav.innerHTML = '';
+    if(iconSidebar) iconSidebar.innerHTML = `<div class="icon-sidebar-mark">AC</div>`;
     return;
   }
 
   sub.textContent = state.currentEvent.name || t('common.unnamedEvent');
   const evtId = state.currentEvent.id;
   const navItems = getNavItems();
-  const navBtn = item =>
-    `<button class="btn ${state.view === item.view ? 'btn-primary' : ''}" onclick="${item.onclick(evtId)}">${item.label}</button>`;
   actions.innerHTML = `
     <button class="btn btn-ghost" onclick="goDashboard()">${t('ui.backToAllEvents')}</button>
     ${state.currentEvent.status === 'running' ? `<span class="running-hint">${t('dataSafety.keepTabOpenHint')}</span>` : ''}
     ${renderStatusControl(state.currentEvent)}
-    <span class="topbar-nav-buttons">${navItems.map(navBtn).join('')}</span>
   `;
   bottomNav.innerHTML = navItems.map(item => `
-    <button class="bottom-nav-item ${state.view === item.view ? 'active' : ''}" onclick="${item.onclick(evtId)}">
+    <button class="bottom-nav-item ${state.view === item.view ? 'active' : ''}" data-nav-view="${item.view}" onclick="${item.onclick(evtId)}">
       <svg viewBox="0 0 24 24">${item.icon}</svg>
       <span>${item.shortLabel}</span>
     </button>
   `).join('');
+  if(iconSidebar) renderIconSidebar(navItems, evtId);
 }
 
 
 /* ---------------- render: settings ---------------- */
 const THEMES = {
+  signal: {label: () => t('settings.themeSignalLabel'), desc: () => t('settings.themeSignalDesc'), swatch: ['#0e1113', '#f5f2ec', '#f4762a', '#e05540']},
   feldpost: {label: () => t('settings.themeFeldpostLabel'), desc: () => t('settings.themeFeldpostDesc'), swatch: ['#17191a', '#eee5cd', '#ff5f1f', '#b23a2e']},
   hell: {label: () => t('settings.themeHellLabel'), desc: () => t('settings.themeHellDesc'), swatch: ['#f4f1ea', '#fffdf7', '#e0551c', '#b23a2e']},
   dunkel: {label: () => t('settings.themeDunkelLabel'), desc: () => t('settings.themeDunkelDesc'), swatch: ['#121212', '#1e1e1e', '#5b8cff', '#e05a4e']},
@@ -737,7 +764,7 @@ function renderSettingsSectionUnits(){
   `;
 }
 function renderSettingsSectionCheckpointTypes(){
-  const typeRows = CHECKPOINT_TYPES.map(ct => {
+  const typeRows = getCheckpointTypes().map(ct => {
     const isBuiltin = BUILTIN_CHECKPOINT_TYPE_KEYS.includes(ct.key);
     const meta = ct.isScored ? t('settings.scoredMeta', {max: ct.scoreMax}) : ct.hasCustomQuestion ? t('settings.customQuestionMeta') : t('settings.checkboxMeta');
     return `

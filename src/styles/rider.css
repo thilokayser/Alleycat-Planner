@@ -1,0 +1,180 @@
+  /* ---------------- Fahrer-App ----------------
+     Eigenes Stylesheet, nicht base.css: das ist Organizer-Layout
+     (.settings-layout und Verwandte) und im Fahrer-Bundle toter Ballast.
+     Die Farbtoken kommen dagegen aus themes.css — die Fahrer-App soll
+     wie dasselbe Produkt aussehen.
+
+     Auslegung: eine Spalte, große Tippflächen, hoher Kontrast. Bedient
+     wird sie bei Sonne, in Bewegung, mit kalten Fingern — nicht am
+     Schreibtisch. Deshalb durchgängig min. 48px Tippfläche und kein
+     Element, das eine ruhige Hand voraussetzt.                        */
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{height:100%;}
+  body{
+    background:var(--asphalt);
+    color:var(--chalk);
+    font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size:16px;
+    line-height:1.5;
+    -webkit-text-size-adjust:100%;
+    /* Randbereiche moderner Handys (Notch, Home-Indikator) */
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #rider-app{max-width:560px; margin:0 auto; min-height:100%; display:flex; flex-direction:column;}
+
+  /* ---- Kopf ---- */
+  .rider-head{
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px;
+    border-bottom:2px solid var(--hivis);
+    background:var(--asphalt-2);
+  }
+  .rider-head-bib{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:30px; font-weight:800; color:var(--hivis);
+    line-height:1;
+  }
+  .rider-head-meta{flex:1; min-width:0;}
+  .rider-head-event{
+    font-size:13px; color:var(--steel);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .rider-head-status{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--chalk);
+  }
+
+  /* ---- Inhalt ---- */
+  .rider-body{flex:1; padding:16px;}
+  .rider-title{font-size:20px; font-weight:700; margin-bottom:6px;}
+  .rider-lead{font-size:14px; color:var(--steel); margin-bottom:20px;}
+
+  /* ---- Checkpoint-Liste ---- */
+  .rider-cp-list{display:flex; flex-direction:column; gap:10px;}
+  .rider-cp{
+    display:flex; align-items:center; gap:12px;
+    min-height:60px; padding:12px 14px;
+    background:var(--asphalt-2);
+    border:1px solid var(--asphalt-3);
+    border-left:4px solid var(--asphalt-3);
+    border-radius:6px;
+    text-align:left; width:100%;
+    color:inherit; font:inherit;
+  }
+  .rider-cp-icon{font-size:24px; line-height:1; flex-shrink:0;}
+  .rider-cp-main{flex:1; min-width:0;}
+  .rider-cp-name{font-size:16px; font-weight:600;}
+  .rider-cp-hint{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11px; color:var(--steel); margin-top:2px;
+  }
+  .rider-cp-time{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:13px; color:var(--ok); flex-shrink:0;
+  }
+  .rider-cp.done{border-left-color:var(--ok);}
+  .rider-cp.done .rider-cp-name{color:var(--steel);}
+  .rider-cp.scannable{border-left-color:var(--hivis); cursor:pointer;}
+  .rider-cp.marshal{border-left-color:var(--warn);}
+
+  /* ---- Knöpfe ---- */
+  .rider-btn{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    width:100%; min-height:56px; padding:14px 18px;
+    border:none; border-radius:6px;
+    font-size:17px; font-weight:700; font-family:inherit;
+    cursor:pointer;
+  }
+  .rider-btn-primary{background:var(--hivis); color:#fff;}
+  .rider-btn-primary:active{background:var(--hivis-2);}
+  .rider-btn-ghost{
+    background:transparent; color:var(--chalk);
+    border:1px solid var(--asphalt-3);
+    font-size:15px; font-weight:600; min-height:48px;
+  }
+  .rider-actions{
+    position:sticky; bottom:0;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, var(--asphalt) 60%, transparent);
+    display:flex; flex-direction:column; gap:8px;
+  }
+
+  /* ---- Formular ---- */
+  .rider-field{margin-bottom:16px;}
+  .rider-field label{
+    display:block; font-size:12px; text-transform:uppercase;
+    letter-spacing:0.06em; color:var(--steel); margin-bottom:6px;
+  }
+  .rider-field input{
+    width:100%; min-height:52px; padding:12px 14px;
+    background:var(--asphalt-2); color:var(--chalk);
+    border:1px solid var(--asphalt-3); border-radius:5px;
+    font-size:17px; font-family:inherit;
+  }
+  .rider-field input:focus{outline:2px solid var(--hivis); outline-offset:-1px;}
+  /* Der abgetippte Rückfallcode: Monospace und gesperrt, damit sich
+     Zeichen beim Vergleich mit der Karte einzeln abzählen lassen. */
+  .rider-field input.code{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:22px; letter-spacing:0.18em; text-align:center;
+    text-transform:uppercase;
+  }
+
+  /* ---- Scanner ---- */
+  .rider-scanner{
+    position:fixed; inset:0; z-index:50;
+    background:#000; display:flex; flex-direction:column;
+  }
+  .rider-scanner video{flex:1; width:100%; object-fit:cover;}
+  .rider-scanner-frame{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:min(74vw, 320px); aspect-ratio:1;
+    border:3px solid var(--hivis); border-radius:14px;
+    box-shadow:0 0 0 100vmax rgba(0,0,0,0.55);
+    pointer-events:none;
+  }
+  .rider-scanner-hint{
+    position:absolute; left:0; right:0; bottom:calc(96px + env(safe-area-inset-bottom));
+    text-align:center; color:#fff; font-size:15px; padding:0 24px;
+    text-shadow:0 1px 3px rgba(0,0,0,0.8);
+  }
+  .rider-scanner-close{
+    position:absolute; left:16px; right:16px;
+    bottom:calc(20px + env(safe-area-inset-bottom));
+  }
+
+  /* ---- Meldungen ---- */
+  .rider-note{
+    padding:12px 14px; border-radius:6px; margin-bottom:16px;
+    font-size:14px; line-height:1.5;
+  }
+  .rider-note-info{background:var(--asphalt-2); border-left:4px solid var(--steel);}
+  .rider-note-warn{background:rgba(217,164,6,0.14); border-left:4px solid var(--warn);}
+  .rider-note-error{background:rgba(178,58,46,0.16); border-left:4px solid var(--stamp);}
+  .rider-note-ok{background:rgba(92,138,92,0.16); border-left:4px solid var(--ok);}
+
+  .rider-queue-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11px; color:var(--warn);
+  }
+
+  /* ---- Bestätigung nach dem Scan ---- */
+  .rider-confirm{
+    flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; padding:32px 20px; gap:10px;
+  }
+  .rider-confirm-mark{font-size:72px; line-height:1;}
+  .rider-confirm-name{font-size:24px; font-weight:700;}
+  .rider-confirm-time{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:16px; color:var(--steel);
+  }
+
+  /* Sehr kleine Geräte: Kopf und Tippflächen behalten Vorrang vor Prosa. */
+  @media (max-height: 560px){
+    .rider-lead{display:none;}
+    .rider-confirm-mark{font-size:48px;}
+  }

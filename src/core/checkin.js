@@ -32,6 +32,7 @@ function playConfirmFeedback(){
 }
 function confirmRiderAtFinish(){
   const rider = getActiveCheckinRider(); if(!rider) return;
+  const bib = rider.bib;
   rider.finishTime = toLocalDateTimeInputValue(new Date());
   rider.raceStatus = '';
   evaluateRules(state.currentEvent, 'on_finish', {rider});
@@ -39,6 +40,23 @@ function confirmRiderAtFinish(){
   debouncedSave();
   renderCheckin();
   playConfirmFeedback();
+  /* Mockup's confirm button carries "Enter · rückgängig innerhalb von 30 s"
+     as a caption — showToast() defaults to 6s (ui-headquarter.js:95), too
+     short for a marshal glancing away from a phone mid-scan-queue, so this
+     passes an explicit 30s window instead. */
+  showToast({
+    message: t('checkin.confirmedToast', {bib}),
+    actionLabel: t('checkin.undo'),
+    duration: 30000,
+    onAction: () => {
+      const r = (state.currentEvent.riders || []).find(x => x.bib === bib);
+      if(!r) return;
+      r.finishTime = '';
+      removeLedgerEntries(state.currentEvent, p => p.riderBib === bib && p.source === 'sequence_match');
+      debouncedSave();
+      renderCheckin();
+    }
+  });
 }
 function assignJokerCheckpoint(cpId){
   const rider = getActiveCheckinRider(); if(!rider) return;
@@ -138,14 +156,17 @@ async function startQrScan(){
   state.qrScanError = '';
   state.qrScannerActive = true;
   renderCheckin();
+  if(state.racedayActive) updateRacedayScannerHint();
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     state.qrScanError = t('checkin.cameraUnsupported');
     renderCheckin();
+    if(state.racedayActive) updateRacedayScannerHint();
     return;
   }
   if(typeof jsQR !== 'function'){
     state.qrScanError = t('checkin.qrLibFailed');
     renderCheckin();
+    if(state.racedayActive) updateRacedayScannerHint();
     return;
   }
   try{
@@ -153,6 +174,7 @@ async function startQrScan(){
   }catch(e){
     state.qrScanError = t('checkin.cameraAccessDenied');
     renderCheckin();
+    if(state.racedayActive) updateRacedayScannerHint();
     return;
   }
   const video = document.getElementById('qr-scan-video');
@@ -189,9 +211,59 @@ function stopQrScan(){
   state.qrScanError = '';
   renderCheckin();
 }
+/* Der Ziel-Check-in muss ZWEI Spokecard-Formate lesen: die nackte
+   Startnummer, die bis zur Fahrer-App auf jeder Karte stand, und die
+   neue Token-URL. Wäre das nicht so, entwertete das Release jede bereits
+   gedruckte Karte — die kritischste Zusage dieses Arbeitspakets.
+
+   Der Token-Fall wird LOKAL aufgelöst, gegen rider.riderToken im
+   geladenen Event, ohne Serverruf. Der Zieltisch muss auch dann
+   funktionieren, wenn der Orga-Laptop gerade kein Netz hat; alle Token
+   liegen ohnehin im Speicher. */
 function onQrScanSuccess(data){
   stopQrScan();
-  state.checkinBibInput = String(data).trim();
+  handleScannedQrPayload(data);
+  /* Raceday-Vollbild: the scanner is a permanently-live panel (mockup's
+     "Scanner aktiv"), not a one-shot modal — restart right after loading
+     whatever was scanned so staff can hold up the next spokecard without
+     touching the screen. Normal check-in keeps the click-to-scan/auto-close
+     modal behavior (state.racedayActive is false there). */
+  if(state.racedayActive) startQrScan();
+}
+function handleScannedQrPayload(data){
+  const raw = String(data).trim();
+  const parsed = parseRiderQrPayload(raw);
+
+  if(parsed && parsed.kind === 'rider'){
+    const evt = state.currentEvent;
+    const rider = (evt.riders || []).find(r => r.riderToken && r.riderToken === parsed.riderToken);
+    if(rider){
+      state.checkinBibInput = String(rider.bib);
+      findCheckinRider();
+      return;
+    }
+    /* Gültiges Format, aber kein Fahrer dazu: die Karte gehört zu einem
+       anderen Event. Das ist eine andere Lage als "unlesbar" und
+       verdient eine eigene Meldung. */
+    state.checkinBibInput = '';
+    state.checkinNotFound = true;
+    showToast({message: t('checkin.qrForeignEvent')});
+    renderCheckin();
+    return;
+  }
+
+  if(parsed && parsed.kind === 'checkpoint'){
+    state.checkinBibInput = '';
+    showToast({message: t('checkin.qrIsCheckpoint')});
+    renderCheckin();
+    return;
+  }
+
+  /* legacyBib und alles Unbekannte gehen den bisherigen Weg: rohe
+     Eingabe ins Feld, findCheckinRider() entscheidet. Damit bleibt auch
+     ein handgeschriebener Zettel oder ein Fremdcode so behandelt wie
+     bisher. */
+  state.checkinBibInput = parsed && parsed.kind === 'legacyBib' ? String(parsed.bib) : raw;
   findCheckinRider();
 }
 function clearCheckin(){
@@ -343,22 +415,7 @@ function computeTimeWindowResult(cp, timeValue){
 
 
 /* ---------------- render: check-in ---------------- */
-function renderCheckin(){
-  const el = document.getElementById('view-checkin');
-  const evt = state.currentEvent;
-  if(!evt){
-    el.innerHTML = `<div class="loading-row">${t('checkin.noEventSelected')}</div>`;
-    return;
-  }
-  const rider = getActiveCheckinRider();
-  const riders = evt.riders || [];
-  let body = '';
-
-  if(!rider){
-    body = `
-      <div class="checkin-search-hint">${state.checkinNotFound ? t('checkin.riderNotFound', {bib: escapeHtml(state.checkinBibInput)}) : t('checkin.enterBibHint')}</div>
-    `;
-  } else {
+function buildCheckinResultCardHtml(evt, rider){
     const completed = rider.completed || [];
     const scores = rider.scores || {};
     const cpTimes = rider.checkpointTimes || {};
@@ -435,7 +492,7 @@ function renderCheckin(){
         ? `<div class="checkin-status warn">${t(missingMandatory.length === 1 ? 'checkin.missingMandatorySingular' : 'checkin.missingMandatoryPlural', {count: missingMandatory.length})}</div>`
         : `<div class="checkin-status ok">${t('checkin.allMandatoryDone')}</div>`;
     }
-    body = `
+    return `
       <div class="checkin-card">
         <div class="checkin-card-head">
           <div class="checkin-bib">#${rider.bib}</div>
@@ -488,7 +545,13 @@ function renderCheckin(){
         ${mandatoryBlock}
       </div>
     `;
-  }
+}
+function buildCheckinViewHtml(evt){
+  const rider = getActiveCheckinRider();
+  const riders = evt.riders || [];
+  const body = rider ? buildCheckinResultCardHtml(evt, rider) : `
+    <div class="checkin-search-hint">${state.checkinNotFound ? t('checkin.riderNotFound', {bib: escapeHtml(state.checkinBibInput)}) : t('checkin.enterBibHint')}</div>
+  `;
 
   const finishedCount = riders.filter(r => r.finishTime).length;
   const overviewRows = sortRidersForOverview(riders).map(r => `
@@ -500,16 +563,21 @@ function renderCheckin(){
     </div>
   `).join('');
 
-  el.innerHTML = `
+  return `
     <div class="checkin-main">
       <div class="checkin-main-inner">
+        ${state.racedayActive ? '' : `
+          <div class="checkin-page-head">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="enterRacedayMode()">${t('raceday.enterButton')}</button>
+          </div>
+        `}
         <div id="live-countdown" class="live-countdown"></div>
         <div class="checkin-search">
           <label>${t('checkin.bibNumberLabel')}</label>
           <div class="checkin-search-row">
             <input type="text" id="checkin-bib-input" inputmode="numeric" placeholder="${t('checkin.bibPlaceholder')}" value="${escapeHtml(state.checkinBibInput)}" oninput="onCheckinBibInput(this.value)" onkeydown="if(event.key==='Enter') findCheckinRider()">
             <button class="btn btn-primary" onclick="findCheckinRider()">${t('checkin.search')}</button>
-            <button class="btn" onclick="startQrScan()" title="${t('checkin.scanQrTitle')}">${t('checkin.scan')}</button>
+            ${state.racedayActive ? '' : `<button class="btn" onclick="startQrScan()" title="${t('checkin.scanQrTitle')}">${t('checkin.scan')}</button>`}
           </div>
         </div>
         ${body}
@@ -522,7 +590,7 @@ function renderCheckin(){
       </div>
       ${riders.length ? `<div class="checkin-overview-list">${overviewRows}</div>` : `<div class="checkin-side-empty">${t('checkin.noRiderListYet')}</div>`}
     </div>
-    ${state.qrScannerActive ? `
+    ${state.qrScannerActive && !state.racedayActive ? `
       <div class="qr-scan-overlay">
         ${state.qrScanError ? `
           <div class="qr-scan-status error">${escapeHtml(state.qrScanError)}</div>
@@ -530,7 +598,13 @@ function renderCheckin(){
         ` : `
           <div class="qr-scan-video-wrap">
             <video id="qr-scan-video" autoplay playsinline muted></video>
-            <div class="qr-scan-frame"></div>
+            <div class="qr-scan-frame">
+              <span class="qr-scan-corner tl"></span>
+              <span class="qr-scan-corner tr"></span>
+              <span class="qr-scan-corner bl"></span>
+              <span class="qr-scan-corner br"></span>
+              <span class="qr-scan-line"></span>
+            </div>
           </div>
           <div class="qr-scan-status">${t('checkin.holdQrToCamera')}</div>
         `}
@@ -538,10 +612,23 @@ function renderCheckin(){
       </div>
     ` : ''}
   `;
+}
+function afterCheckinRender(){
   updateLiveCountdown();
   if(state.qrScannerActive && qrScanStream){
     const video = document.getElementById('qr-scan-video');
     if(video) video.srcObject = qrScanStream;
   }
+}
+function renderCheckin(){
+  const el = document.getElementById('view-checkin');
+  const evt = state.currentEvent;
+  if(!evt){
+    el.innerHTML = `<div class="loading-row">${t('checkin.noEventSelected')}</div>`;
+    return;
+  }
+  el.innerHTML = buildCheckinViewHtml(evt);
+  afterCheckinRender();
+  if(state.racedayActive) refreshRacedayStats();
 }
 

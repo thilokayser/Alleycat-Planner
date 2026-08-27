@@ -81,14 +81,14 @@ async function runAlleycatTestSuite(){
   evt.expectedRiders = 5;
 
   /* 2) Alle Checkpoint-Typen anlegen (wächst automatisch mit CHECKPOINT_TYPES mit) */
-  CHECKPOINT_TYPES.forEach((t, i) => {
+  getCheckpointTypes().forEach((t, i) => {
     evt.checkpoints.push(withCheckpointDefaults({
       id: uid('cp'), order: i + 1, lat: 50 + i * 0.01, lng: 8 + i * 0.01,
       name: 'CP ' + t.shortLabel, type: t.key, mandatory: i % 2 === 0
     }));
   });
-  checkEqual('Alle ' + CHECKPOINT_TYPES.length + ' Checkpoint-Typen angelegt', evt.checkpoints.length, CHECKPOINT_TYPES.length);
-  CHECKPOINT_TYPES.forEach(t => {
+  checkEqual('Alle ' + getCheckpointTypes().length + ' Checkpoint-Typen angelegt', evt.checkpoints.length, getCheckpointTypes().length);
+  getCheckpointTypes().forEach(t => {
     const cp = evt.checkpoints.find(c => c.type === t.key);
     check('Checkpoint-Typ "' + t.key + '" via getCheckpointType() korrekt aufgelöst', getCheckpointType(cp.type).key === t.key);
   });
@@ -366,7 +366,7 @@ async function runAlleycatTestSuite(){
     checkEqual('moveCp blockiert bei gesperrtem Checkpoint', evt.checkpoints.map(c => c.id).join(','), orderBefore.join(','));
 
     duplicateCheckpoint(cp0.id);
-    checkEqual('duplicateCheckpoint blockiert bei gesperrtem Checkpoint', evt.checkpoints.length, CHECKPOINT_TYPES.length);
+    checkEqual('duplicateCheckpoint blockiert bei gesperrtem Checkpoint', evt.checkpoints.length, getCheckpointTypes().length);
 
     toggleCpLocked(cp0.id);
     checkEqual('toggleCpLocked entsperrt wieder', cp0.locked, false);
@@ -2044,7 +2044,7 @@ async function runAlleycatTestSuite(){
      Rechtsklick-Kontextmenü (map.js). Läuft komplett auf dem echten `evt`
      (echte Karte bereits initialisiert), stellt aber jeden Seiteneffekt
      danach exakt zurück — Abschnitt 4 gleich im Anschluss prüft u. a. eine
-     feste Checkpoint-Anzahl (`CHECKPOINT_TYPES.length`) und
+     feste Checkpoint-Anzahl (`getCheckpointTypes().length`) und
      `eventLocations[0]` als die freistehende HQ-Location; beides darf durch
      diesen Test nicht verschoben werden. */
   {
@@ -2493,14 +2493,14 @@ async function runAlleycatTestSuite(){
   /* 4d) Paket-Abholung/-Zustellung: zwei verknüpfte Checkpoint-Typen
      (Fahrer holt an A ab, muss an B zustellen). Läuft komplett auf zwei
      eigens angelegten, am Ende wieder entfernten Test-Checkpoints statt auf
-     den von CHECKPOINT_TYPES.forEach oben mit-erzeugten "CP ABHOLUNG"/
+     den von getCheckpointTypes().forEach oben mit-erzeugten "CP ABHOLUNG"/
      "CP ZUSTELLUNG" — die bleiben bewusst unverknüpft, damit
-     evt.checkpoints.length für die CHECKPOINT_TYPES.length-Assertionen in
+     evt.checkpoints.length für die getCheckpointTypes().length-Assertionen in
      Abschnitt 4 unverändert bleibt. Ruft bewusst NICHT openEditor() auf,
      siehe Begründung in 3m — stattdessen direkt state.view/render(). */
   {
-    check('CHECKPOINT_TYPES enthält "pickup"', CHECKPOINT_TYPES.some(ct => ct.key === 'pickup'));
-    check('CHECKPOINT_TYPES enthält "dropoff"', CHECKPOINT_TYPES.some(ct => ct.key === 'dropoff'));
+    check('CHECKPOINT_TYPES enthält "pickup"', getCheckpointTypes().some(ct => ct.key === 'pickup'));
+    check('CHECKPOINT_TYPES enthält "dropoff"', getCheckpointTypes().some(ct => ct.key === 'dropoff'));
     checkEqual('pickup ist nicht gewertet', getCheckpointType('pickup').isScored, false);
     checkEqual('dropoff ist nicht gewertet', getCheckpointType('dropoff').isScored, false);
     checkEqual('withCheckpointDefaults setzt pairedDropoffCpId auf leer', withCheckpointDefaults({}).pairedDropoffCpId, '');
@@ -2698,7 +2698,7 @@ async function runAlleycatTestSuite(){
   const reloaded = await loadEvent(evt.id);
   check('Event aus Storage zurückgelesen', !!reloaded);
   checkEqual('Event-Name persistiert', reloaded && reloaded.name, evt.name);
-  checkEqual('Checkpoints persistiert', reloaded && reloaded.checkpoints.length, CHECKPOINT_TYPES.length);
+  checkEqual('Checkpoints persistiert', reloaded && reloaded.checkpoints.length, getCheckpointTypes().length);
   checkEqual('Fahrerliste persistiert', reloaded && reloaded.riders.length, 5);
   checkEqual('Teams persistiert', reloaded && reloaded.teams.length, 2);
   checkEqual('Fahrer-Team-Zuordnung persistiert', reloaded && reloaded.riders[0].teamId, evt.teams[0].id);
@@ -2960,7 +2960,7 @@ async function runAlleycatTestSuite(){
 
   /* 19) Dokumentationsseite */
   {
-    checkEqual('DOC_TOPICS hat 11 Einträge', DOC_TOPICS.length, 11);
+    checkEqual('DOC_TOPICS hat 12 Einträge', DOC_TOPICS.length, 12);
     checkEqual('filteredDocTopics() liefert ohne Suche alle Themen', filteredDocTopics().length, DOC_TOPICS.length);
 
     const searchBefore = state.docSearch;
@@ -3131,6 +3131,50 @@ async function runAlleycatTestSuite(){
     checkEqual('withEventDefaults() ergänzt fehlende riderApp-Schalter', partialRiderApp.riderApp.progress, true);
     checkEqual('withEventDefaults() behält gesetzte riderApp-Schalter', partialRiderApp.riderApp.map, true);
 
+    /* Checkpoint-Typen folgen dem Sprachwechsel (Regressionstest).
+       Vor der Umstellung auf getCheckpointTypes() wertete die Typtabelle
+       t() genau einmal beim Laden aus und blieb danach in der Startsprache
+       stehen — dieselbe Fehlerklasse wie bei NAV_ITEMS/THEMES (19.08.2026). */
+    {
+      const langBefore = getCurrentLanguage();
+      const deLabel = getCheckpointType('qr').fullLabel;
+      setLanguage('en');
+      const enLabel = getCheckpointType('qr').fullLabel;
+      const enDirect = t('checkpoint.types.qr.full');
+      setLanguage(langBefore);
+      const backLabel = getCheckpointType('qr').fullLabel;
+
+      check('Checkpoint-Typ-Beschriftung wechselt mit der Sprache', deLabel !== enLabel);
+      checkEqual('Checkpoint-Typ-Beschriftung entspricht t() nach dem Wechsel', enLabel, enDirect);
+      checkEqual('Checkpoint-Typ-Beschriftung kehrt zurück', backLabel, deLabel);
+      checkEqual('Sprache nach dem Test zurückgesetzt', getCurrentLanguage(), langBefore);
+    }
+
+    /* Memo von getCheckpointTypes(): muss greifen, aber nie veralten */
+    {
+      check('getCheckpointTypes() liefert bei unverändertem Zustand dieselbe Referenz',
+        getCheckpointTypes() === getCheckpointTypes());
+
+      const lenBefore = getCheckpointTypes().length;
+      customCheckpointTypes.push({key: 'custom-suite-test', icon: '🧪', shortLabel: 'TEST',
+        fullLabel: 'Suite-Testtyp', dropdownLabel: 'Suite-Testtyp', referenceFieldLabel: 'x',
+        hasCustomQuestion: false, isScored: false, scoreMax: 0, manifestCell: 'punch-box'});
+
+      /* Bewusst OHNE invalidateCheckpointTypes(): das Längen-Sicherheitsnetz
+         muss den vergessenen Aufruf abfangen. */
+      checkEqual('Neuer eigener Typ erscheint auch ohne Invalidierung', getCheckpointTypes().length, lenBefore + 1);
+      checkEqual('Eigener Typ ist über getCheckpointType() auffindbar', getCheckpointType('custom-suite-test').fullLabel, 'Suite-Testtyp');
+
+      const langBefore2 = getCurrentLanguage();
+      setLanguage('en');
+      checkEqual('Eigener Typ wird nicht übersetzt (Nutzereingabe)', getCheckpointType('custom-suite-test').fullLabel, 'Suite-Testtyp');
+      setLanguage(langBefore2);
+
+      customCheckpointTypes = customCheckpointTypes.filter(ct => ct.key !== 'custom-suite-test');
+      invalidateCheckpointTypes();
+      checkEqual('Eigener Typ nach dem Entfernen wieder weg', getCheckpointTypes().length, lenBefore);
+    }
+
     /* Ausstehende Anmeldungen */
     const pendEvt = withEventDefaults({id: 'p', name: 'p', riders: [
       {bib: 1, riderStatus: 'confirmed'}, {bib: 2, riderStatus: 'pending', pendingData: {name: 'Wartender'}},
@@ -3159,6 +3203,110 @@ async function runAlleycatTestSuite(){
     const xssHtml = renderRidersSectionPending(xssEvt);
     check('Anmeldungs-Sektion escapt einen eingegebenen Namen', !xssHtml.includes('<img src=x'));
     check('Anmeldungs-Sektion escapt einen eingegebenen Kontakt', !xssHtml.includes('<b>roh</b>'));
+
+    /* Spokecard-QR-Inhalt hängt am Seam. In der lokalen Variante liefert
+       riderAppBaseUrl() '' — dort muss es bei der nackten Startnummer
+       bleiben, sonst zeigten gedruckte Karten ins Leere. */
+    {
+      const seamEvt = withEventDefaults({id: 's', name: 's', publicId: 'abcdefghijkl'});
+      const seamRider = withRiderDefaults({bib: 23, riderToken: 'k'.repeat(32), riderCode: 'ABCDEFGH'});
+      checkEqual('Spokecard-QR ohne Fahrer-App ist die nackte Startnummer', spokecardQrPayload(seamEvt, seamRider), '23');
+
+      /* Mit Fahrer-App die Token-URL — der Seam wird dafür kurz gestubbt,
+         weil die lokale Variante ihn nie liefert. */
+      const echterSeam = window.riderAppBaseUrl;
+      window.riderAppBaseUrl = () => 'https://x.tld/alleycat-rider.html';
+      const mitApp = spokecardQrPayload(seamEvt, seamRider);
+      window.riderAppBaseUrl = echterSeam;
+      check('Spokecard-QR mit Fahrer-App ist die Token-URL', mitApp === 'https://x.tld/alleycat-rider.html#r.abcdefghijkl.' + 'k'.repeat(32));
+      check('Token-URL ist wieder parsebar', parseRiderQrPayload(mitApp).kind === 'rider');
+    }
+
+    /* Ziel-Check-in liest BEIDE Spokecard-Formate. Das ist die
+       kritischste Zusage des Druckstück-Pakets: eine vor dem Release
+       gedruckte Karte trägt nur die Startnummer und muss weiter
+       funktionieren. */
+    {
+      const evtBefore2 = state.currentEvent, viewBefore2 = state.view;
+      const scanEvt = withEventDefaults({
+        id: 'q', name: 'q', publicId: 'abcdefghijkl', status: 'running',
+        riders: [
+          withRiderDefaults({bib: 11, name: 'Alt', riderToken: 'm'.repeat(32)}),
+          withRiderDefaults({bib: 12, name: 'Neu', riderToken: 'n'.repeat(32)})
+        ],
+        checkpoints: [withCheckpointDefaults({id: 'cp-q', name: 'Q', order: 0})]
+      });
+      state.currentEvent = scanEvt;
+      state.view = 'checkin';
+
+      onQrScanSuccess('11');
+      checkEqual('Alte Karte (nackte Startnummer) findet den Fahrer', state.checkinBibInput, '11');
+
+      state.checkinBibInput = '';
+      onQrScanSuccess('https://x.tld/alleycat-rider.html#r.abcdefghijkl.' + 'n'.repeat(32));
+      checkEqual('Neue Karte (Token-URL) wird lokal zur Startnummer aufgelöst', state.checkinBibInput, '12');
+
+      state.checkinBibInput = '';
+      onQrScanSuccess('https://x.tld/alleycat-rider.html#r.abcdefghijkl.' + 'z'.repeat(32));
+      checkEqual('Karte eines fremden Events füllt kein Startnummernfeld', state.checkinBibInput, '');
+
+      state.checkinBibInput = '';
+      onQrScanSuccess('https://x.tld/alleycat-rider.html#c.abcdefghijkl.cp-q.' + 'm'.repeat(32));
+      checkEqual('Checkpoint-Code am Zieltisch füllt kein Startnummernfeld', state.checkinBibInput, '');
+
+      state.currentEvent = evtBefore2; state.view = viewBefore2;
+      clearCheckin();
+    }
+
+    /* Checkpoint-QR-PDF: nur QR-Checkpoints, und nur mit Fahrer-App */
+    {
+      const qrEvt = withEventDefaults({
+        id: 'pdf', name: 'PDF-Test', publicId: 'abcdefghijkl',
+        checkpoints: [
+          withCheckpointDefaults({id: 'cp-1', name: 'A', order: 0, qrCheckinEnabled: true, qrToken: 'a'.repeat(32)}),
+          withCheckpointDefaults({id: 'cp-2', name: 'B', order: 1, qrCheckinEnabled: false, qrToken: 'b'.repeat(32)}),
+          withCheckpointDefaults({id: 'cp-3', name: 'C', order: 2, qrCheckinEnabled: true, qrToken: 'c'.repeat(32)})
+        ]
+      });
+      const mitQr = qrEvt.checkpoints.filter(cp => cp.qrCheckinEnabled).length;
+      checkEqual('Zwei der drei Checkpoints haben QR-Check-In', mitQr, 2);
+
+      const echterSeam2 = window.riderAppBaseUrl;
+      window.riderAppBaseUrl = () => 'https://x.tld/alleycat-rider.html';
+      const nutzlast = buildCheckpointQrPayload(riderAppBaseUrl(), qrEvt, qrEvt.checkpoints[0]);
+      window.riderAppBaseUrl = echterSeam2;
+
+      const zurueck = parseRiderQrPayload(nutzlast);
+      checkEqual('Checkpoint-Nutzlast ist als Checkpoint parsebar', zurueck.kind, 'checkpoint');
+      checkEqual('Checkpoint-Nutzlast trägt die richtige cpId', zurueck.cpId, 'cp-1');
+      checkEqual('Checkpoint-Nutzlast trägt das richtige Token', zurueck.qrToken, 'a'.repeat(32));
+
+      const evtBefore3 = state.currentEvent, sectionBefore = state.manifestSection;
+      state.currentEvent = qrEvt;
+      state.manifestSection = 'drucken';
+      const druckenLokal = renderManifestPanel(qrEvt);
+      check('Ohne Fahrer-App erscheint kein QR-Blätter-Abschnitt', !druckenLokal.includes(t('exportPdf.cpQrHeading')));
+
+      const echterSeam3 = window.riderAppBaseUrl;
+      window.riderAppBaseUrl = () => 'https://x.tld/alleycat-rider.html';
+      const druckenMitApp = renderManifestPanel(qrEvt);
+      window.riderAppBaseUrl = echterSeam3;
+      check('Mit Fahrer-App erscheint der QR-Blätter-Abschnitt', druckenMitApp.includes(t('exportPdf.cpQrHeading')));
+      check('Knopf nennt die Anzahl der QR-Checkpoints', druckenMitApp.includes(t('exportPdf.cpQrButton', {count: 2})));
+
+      /* Kein QR-Checkpoint: Hinweis statt Knopf, damit niemand ein leeres
+         PDF erzeugt. */
+      const ohneQr = withEventDefaults({id: 'p2', name: 'p2', publicId: 'abcdefghijkl',
+        checkpoints: [withCheckpointDefaults({id: 'cp-x', name: 'X', order: 0})]});
+      state.currentEvent = ohneQr;
+      window.riderAppBaseUrl = () => 'https://x.tld/alleycat-rider.html';
+      const leer = renderManifestPanel(ohneQr);
+      window.riderAppBaseUrl = echterSeam3;
+      check('Ohne QR-Checkpoint erscheint ein Hinweis', leer.includes(t('exportPdf.cpQrNone')));
+      check('Ohne QR-Checkpoint erscheint kein Erzeugen-Knopf', !leer.includes('exportCheckpointQrPDF()'));
+
+      state.currentEvent = evtBefore3; state.manifestSection = sectionBefore;
+    }
 
     /* Verwaiste Check-ins erscheinen im Leaderboard */
     const orphanEvt = withEventDefaults({id: 'o', name: 'o',

@@ -50,3 +50,11 @@
     --warn:#7a5c00;
     --tile-underway-bg:#ffe0b3; --tile-finished-bg:#c8f0c8; --tile-alert-bg:#ffd0d0;
   }
+  :root[data-theme="signal"]{
+    --asphalt:#0e1113; --asphalt-2:#171a1d; --asphalt-3:#1f2327;
+    --paper:#f5f2ec; --paper-2:#efe9de; --paper-line:#ddd8cc; --paper-muted:#8a8577;
+    --ink:#20211f; --hivis:#f4762a; --hivis-2:#ff9152; --stamp:#e05540;
+    --steel:#8b9499; --chalk:#eef0ef; --ok:#2fa46a;
+    --warn:#d9a406;
+    --tile-underway-bg:#2c3237; --tile-finished-bg:#1e3327; --tile-alert-bg:#3a2422;
+  }

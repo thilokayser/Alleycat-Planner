@@ -54,7 +54,9 @@ const translations = {
       offlineTitle: 'Offline-Modus',
       offlineBody: 'Kartenkacheln lassen sich vorab herunterladen und lokal im Browser zwischenspeichern, damit die Karte auch ohne Netzverbindung nutzbar bleibt — praktisch für Checkpoints ohne Mobilfunkempfang.\n\nDen Speicherverbrauch und die Aktualität des Caches siehst du unter Einstellungen → Datensicherheit.',
       deliveryTitle: 'Paket-Zustellung',
-      deliveryBody: 'Für Kurier-Routenaufgaben gibt es zwei verknüpfte Checkpoint-Typen: Abholung und Zustellung. Am Abholung-Checkpoint wählst du den zugehörigen Zustell-Checkpoint aus der Dropdown-Liste.\n\nDas Ziel-Check-in warnt, wenn eine Zustellung ohne bestätigte Abholung eingetragen wird — lässt sich aber mit Bestätigung überschreiben.'
+      deliveryBody: 'Für Kurier-Routenaufgaben gibt es zwei verknüpfte Checkpoint-Typen: Abholung und Zustellung. Am Abholung-Checkpoint wählst du den zugehörigen Zustell-Checkpoint aus der Dropdown-Liste.\n\nDas Ziel-Check-in warnt, wenn eine Zustellung ohne bestätigte Abholung eingetragen wird — lässt sich aber mit Bestätigung überschreiben.',
+      riderAppTitle: 'Fahrer-App (QR-Check-in)',
+      riderAppBody: 'Nur in der Server-Variante und nur, wenn im Setup eine Fahrer-App-Adresse eingetragen ist. Fahrer scannen dann am Checkpoint einen festen QR-Code und checken selbst ein, statt dass jemand die Startnummer eintippt.\n\nAblauf zum Vorbereiten: Startnummern erzeugen, Spokecards drucken (sie tragen dann automatisch den Fahrer-Link plus einen achtstelligen Ausweichcode — bewusst KEINEN Namen, weil Karten vorgedruckt werden, bevor feststeht, wer sie bekommt). Dann im Checkpoint-Editor bei den gewünschten Checkpoints das Häkchen QR Check-In setzen und unter Manifest → Drucken die Checkpoint-QR-Blätter erzeugen, ausdrucken, laminieren.\n\nBewertete Checkpoints: der Selbst-Check-in ersetzt nur die Anwesenheit. Die Punktzahl trägt weiterhin das Personal vor Ort auf dem Papiermanifest ein. Die Punch-Boxen bleiben auf dem Manifest — als Rückfallweg bei leerem Handy-Akku.\n\nWildcards: Karten ohne zugeordneten Fahrer. Wer eine bekommt, scannt sie und trägt sich selbst ein; die Anmeldung erscheint in der Fahrerliste unter Ausstehende Anmeldungen zum Bestätigen oder Ablehnen.\n\nWas du den Fahrern sagen solltest: App vor dem Start öffnen und offen lassen. Scannen ohne Empfang funktioniert — die Check-ins werden gespeichert und automatisch nachgesendet, sobald wieder Netz da ist. Was NICHT funktioniert, ist die Seite im Funkloch neu zu laden. Und: Karte während des Rennens behalten, sie ist der Zugang zur App.',
     },
     onboarding: {
       noEventToast: 'Für die Tour wird mindestens ein Event benötigt.',
@@ -183,7 +185,16 @@ const translations = {
       tooEarly: 'zu früh',
       tooLate: 'zu spät',
       inTimeWindow: 'im Zeitfenster',
-      cpPrefix: 'CP-'
+      cpPrefix: 'CP-',
+      sortByPoints: 'Punkte',
+      sortByTime: 'Zeit',
+      sortByCpCount: 'CP-Anzahl',
+      podiumTitle: 'Podium',
+      podiumEmpty: 'Noch keine Platzierung.',
+      classWinnersTitle: 'Klassen-Sieger',
+      classWinnersEmpty: 'Noch keine Kategorien angelegt.',
+      teamWinnerLabel: 'Team',
+      provisionalNote: 'Ergebnis vorläufig &middot; {count} Fahrer unterwegs'
     },
     map: {
       defaultCheckpointName: 'Checkpoint {order}',
@@ -369,6 +380,11 @@ const translations = {
       staffBriefingFooter: 'Intern — nicht Teil des Fahrer-Manifests',
       title: 'Manifest',
       printDescription: 'Druckt das Manifest in einem neuen Fenster. Nutze den Browser-Print-Dialog zur Optimierung.',
+      cpQrHeading: 'Checkpoint-QR-Blätter',
+      cpQrDescription: 'Eine Seite je Checkpoint mit aktivem QR-Check-In — zum Laminieren und Aufstellen. Fahrer scannen diese Codes mit der Fahrer-App.',
+      cpQrButton: '{count} QR-Blätter erzeugen',
+      cpQrNone: 'Kein Checkpoint hat QR-Check-In aktiviert. Setz das Häkchen im Checkpoint-Editor, dann erscheint hier der Knopf.',
+      cpQrFooter: 'Bitte nicht abnehmen — dieser Code gehört zum Rennen.',
       exportDescription: 'Exportiert das komplette Manifest mit allen Checkpoints und PDF-Baukasten-Blöcken als PDF-Datei.',
       backToList: '&larr; Übersicht'
     },
@@ -470,6 +486,7 @@ const translations = {
     },
     checkin: {
       unconfirmedToast: 'Fahrer #{bib} ist wieder „nicht im Ziel".',
+      confirmedToast: 'Fahrer #{bib} ist im Ziel bestätigt.',
       undo: 'Rückgängig',
       startIn: 'Start in {countdown}',
       curfewIn: 'Curfew in {countdown}',
@@ -477,6 +494,8 @@ const translations = {
       curfewReached: 'Curfew erreicht — Rennen beendet',
       cameraUnsupported: 'Kamera-Zugriff wird von diesem Browser oder dieser Umgebung nicht unterstützt.',
       qrLibFailed: 'QR-Scan-Bibliothek konnte nicht geladen werden.',
+      qrForeignEvent: 'Diese Spokecard gehört zu einem anderen Rennen.',
+      qrIsCheckpoint: 'Das ist ein Checkpoint-Code, keine Spokecard.',
       cameraAccessDenied: 'Kein Zugriff auf die Kamera. Bitte Berechtigung erlauben und erneut versuchen, oder Bib-Nummer manuell eingeben.',
       statusMissing: 'Fehlt',
       statusArrived: 'Im Ziel',
@@ -541,6 +560,7 @@ const translations = {
       iconPackMaterialLabel: 'Material Symbols', iconPackMaterialDesc: 'Lädt Material Symbols von Google Fonts nach'
     },
     commandPalette: {
+      shortcutHint: 'Befehlspalette (&#8984;K / Strg+K)',
       placeholder: 'Suche Navigation, Fahrer, Checkpoints, Aktionen… (Esc zum Schließen)',
       noResults: 'Keine Treffer.',
       catNav: 'Navigation',
@@ -617,7 +637,8 @@ const translations = {
       maxScoreLabel: 'Maximalpunktzahl',
       createType: 'Checkpoint-Typ anlegen',
       newType: '+ Neuer Checkpoint-Typ',
-      themeFeldpostLabel: 'Feldpost', themeFeldpostDesc: 'Rally-Stempel-Look — dunkles Chrome, warmes Papier (Standard)',
+      themeSignalLabel: 'Signal', themeSignalDesc: 'Graphit mit Signal-Orange, Papier-Flächen für Gedrucktes (Standard)',
+      themeFeldpostLabel: 'Feldpost', themeFeldpostDesc: 'Rally-Stempel-Look — dunkles Chrome, warmes Papier',
       themeHellLabel: 'Hell', themeHellDesc: 'Helles Chrome, klassisches Papier',
       themeDunkelLabel: 'Dunkel', themeDunkelDesc: 'Durchgehend dunkel, ruhiger blauer Akzent',
       themeDraculaLabel: 'Dracula', themeDraculaDesc: 'Pink/Lila-Akzente auf klassischem Dracula-Dunkel',
@@ -735,6 +756,15 @@ const translations = {
       completePrompt: 'Vorbereitung abschließen',
       startPrompt: 'Rennen jetzt starten',
       completeRacePrompt: 'Rennen abschließen'
+    },
+    raceday: {
+      enterButton: '⛶ Raceday-Vollbild',
+      exitButton: 'Verlassen',
+      eyebrow: 'Raceday',
+      tickerTitle: 'Ticker',
+      statusFooter: 'Wake Lock aktiv — Bildschirm bleibt an',
+      scannerActive: 'Scanner aktiv',
+      scannerHint: 'Spokecard vor die Kamera halten — oder Nummer eintippen'
     },
     beamer: {
       openButton: '🖥️ Beamer-Ansicht öffnen',
@@ -1021,6 +1051,73 @@ const translations = {
       downloadButton: 'Herunterladen',
       shareButton: 'Teilen'
     },
+    /* NICHT mit riderApp verwechseln (direkt darunter): riderScan sind die
+       Strings der Fahrer-App auf dem Handy und wandern ins Rider-Bundle
+       (RIDER_I18N_NAMESPACES in build.js). riderApp ist die
+       Organizer-Seite und bleibt draußen. */
+    riderScan: {
+      appTitle: 'Alleycat — Fahrer',
+      loading: 'Lade…',
+
+      loginTitle: 'Spokecard scannen',
+      loginLead: 'Halte den QR-Code auf deiner Spokecard vor die Kamera. Du bekommst die Karte am HQ.',
+      loginScanButton: '📷  Spokecard scannen',
+      loginCodeButton: 'Stattdessen Code eintippen',
+      codeTitle: 'Code eintippen',
+      codeLead: 'Der achtstellige Code steht auf deiner Spokecard unter dem QR-Code.',
+      codeLabel: 'Code von der Karte',
+      codeSubmit: 'Anmelden',
+      codeBackToScan: 'Zurück zum Scannen',
+
+      registerTitle: 'Startnummer {bib} — Anmeldung',
+      registerLead: 'Diese Karte ist noch keinem Fahrer zugeordnet. Trag dich ein, das Orga-Team bestätigt dich am HQ.',
+      registerName: 'Name',
+      registerContact: 'E-Mail oder Telefon',
+      registerEmergency: 'Notfallkontakt',
+      registerSubmit: 'Anmeldung abschicken',
+      registerNameRequired: 'Bitte gib deinen Namen ein.',
+
+      pendingTitle: 'Anmeldung läuft',
+      pendingLead: 'Deine Anmeldung liegt beim Orga-Team. Sobald sie bestätigt ist, geht es hier automatisch weiter.',
+      pendingBib: 'Deine Startnummer: {bib}',
+
+      homeOpenCheckpoints: '{done} von {total} Checkpoints',
+      homeScanButton: '📷  Checkpoint scannen',
+      homeHintScannable: 'Hier selbst einchecken',
+      homeHintMarshal: 'Beim Personal melden',
+      homeHintUnknownType: 'Siehe Papiermanifest',
+      homeQueueWaiting: '{count} wartet auf Übertragung',
+      homeQueueWaitingPlural: '{count} warten auf Übertragung',
+      homeOfflineBanner: 'Offline — Stand von {time}',
+
+      scanHint: 'QR-Code am Checkpoint anvisieren',
+      scanCancel: 'Abbrechen',
+      scanCameraDenied: 'Kein Kamerazugriff. Erlaube die Kamera in den Browser-Einstellungen oder tippe den Code ein.',
+      scanCameraUnsupported: 'Dieses Gerät stellt keine Kamera bereit. Nutze die Code-Eingabe.',
+      scanNoReader: 'Der QR-Leser konnte nicht geladen werden. Nutze die Code-Eingabe.',
+
+      confirmTitle: 'Eingecheckt',
+      confirmAlready: 'Schon eingecheckt',
+      confirmQueued: 'Gespeichert — wird gesendet, sobald du Empfang hast.',
+      confirmBack: 'Weiter',
+
+      errWrongEvent: 'Dieser Code gehört zu einem anderen Rennen.',
+      errIsCheckpoint: 'Das ist ein Checkpoint-Code, keine Spokecard.',
+      errIsSpokecard: 'Das ist deine eigene Spokecard, kein Checkpoint.',
+      errUnreadable: 'Dieser Code gehört nicht zu Alleycat Dispatch.',
+      errUnknownRider: 'Karte nicht erkannt. Prüfe den Code oder frag am HQ.',
+      errUnknownCheckpoint: 'Dieser Checkpoint gehört nicht zu deinem Rennen.',
+      errQrDisabled: 'An diesem Checkpoint wird nicht selbst eingecheckt — melde dich beim Personal.',
+      errNotConfirmed: 'Deine Anmeldung ist noch nicht bestätigt. Frag am HQ.',
+      errRaceNotRunning: 'Das Rennen läuft noch nicht.',
+      errRateLimited: 'Zu viele Versuche. Warte {seconds} Sekunden.',
+      errSlotTaken: 'Diese Startnummer ist inzwischen vergeben. Frag am HQ.',
+      errNetwork: 'Keine Verbindung zum Server.',
+      errRetry: 'Erneut versuchen',
+      errGeneric: 'Etwas ist schiefgelaufen.'
+    },
+    /* Organizer-Seite der Rider-Funktionen — siehe Kommentar über
+       riderScan, die beiden Namen laden zur Verwechslung ein. */
     riderApp: {
       navPending: 'Anmeldungen ({count})',
       pendingHeading: 'Ausstehende Anmeldungen',

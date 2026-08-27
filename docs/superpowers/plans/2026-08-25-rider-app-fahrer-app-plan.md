@@ -20,13 +20,15 @@ Sieben Pakete. Drei Regeln bestimmen die Reihenfolge, zwei davon aus Teilprojekt
 |---|---|---|
 | 1 Extraktionen | ja | danach neu setzen |
 | 2 Checkpoint-Typ | ja, eine Zeile | danach neu setzen |
-| 3 Build-Ausgabe | **nein** | muss unverändert bleiben |
-| 4 Fahrer-App | **nein** | muss unverändert bleiben |
-| 5 Offline | **nein** | muss unverändert bleiben |
+| 3 Build-Ausgabe | ja, nur `i18n.js` | danach neu setzen |
+| 4 Fahrer-App | ja, nur `i18n.js` | danach neu setzen |
+| 5 Offline | ja, nur `i18n.js` | danach neu setzen |
 | 6 Druckstücke | ja | danach neu setzen |
 | 7 Abnahme | **nein** | muss unverändert bleiben |
 
-Die Aussagekraft steckt in den vier Nein-Zeilen: Pakete 3 bis 5 bauen ausschließlich in `src/rider/`, `templates/` und `build.js`. Schlägt der Fingerabdruck dort aus, ist Fahrer-Code in den geteilten Kern geraten — genau das, wovor der Detektor warnen soll.
+**Korrektur vom 26.08.2026:** Die Zeilen 3 bis 5 standen hier zunächst auf „nein". Das war falsch und fiel beim Bauen von Paket 3 sofort auf: die Strings der Fahrer-App leben unter `riderScan` in `i18n.js`, weil genau das die i18n-Entscheidung war — eine Quelle für alle Strings, statt eines zweiten Übersetzungssystems. Jedes Paket, das neue Fahrer-Strings braucht, fasst damit zwangsläufig den Kern an.
+
+Der Detektor bleibt trotzdem nützlich, nur ist die Prüfung eine andere als gedacht: bei den Paketen 3 bis 5 muss `git diff --stat src/core/` **ausschließlich `i18n.js`** zeigen. Jede andere Kerndatei in dieser Liste ist ein Leck.
 
 Bei den Ja-Zeilen ist die Prüfung eine andere: den Ausschlag gegen `git diff` halten. Passt die Änderung zum beabsichtigten Eingriff, neu setzen; ist sie größer, nachsehen.
 

@@ -300,7 +300,11 @@ Der Teil, den keine Testsuite ersetzt:
 ## 11. Abnahmekriterien
 
 1. `node build.js` erzeugt drei Ausgaben; beide bestehenden Varianten laufen unverändert, `test-suite.js` grün.
-2. Das Rider-Bundle ist kleiner als 200 KB, jsQR eingerechnet — und fordert nach dem Laden **keine externe Adresse** mehr an außer `rider.php` (im Netzwerk-Reiter nachprüfbar).
+2. Das Rider-Bundle bleibt **komprimiert unter 100 KB**, jsQR eingerechnet — und fordert **keine externe Adresse** an außer `rider.php` (im Netzwerk-Reiter nachprüfbar).
+
+   **Korrektur vom 26.08.2026:** Hier stand zunächst „unter 200 KB", gemeint als Dateigröße, geschätzt mit „jsQR ~45 KB". Die Schätzung war für die Datei grob falsch: das npm-Paket enthält nur die unkomprimierte Fassung, 251 KB. Über die Leitung gehen davon aber knapp 57 KB, weil Webserver JavaScript gzip-komprimiert ausliefern — jsDelivr tut es beim heutigen CDN-Verweis genauso. Für ein Handy am Checkpoint zählt die Übertragung, deshalb ist das Kriterium darauf umgestellt. Gemessener Stand nach Paket 3: 302 KB roh, **73 KB komprimiert**, davon 57 KB jsQR und 16 KB eigener Code.
+
+   **Voraussetzung, die damit hinzukommt:** Der Hoster muss Kompression eingeschaltet haben (Apache `mod_deflate`, nginx `gzip on`). Bei Standard-Shared-Hosting üblich, aber nicht garantiert — ohne sie lädt ein Fahrer-Handy die volle Rohgröße. Gehört nach `INSTALL.md` und auf die Prüfliste für `hasencore.de`.
 3. Eine gedruckte Spokecard trägt QR, Startnummer und 8-Zeichen-Code — **keinen Namen**.
 4. Eine vor diesem Release gedruckte Karte (nackte Startnummer) funktioniert im Ziel-Check-in weiterhin.
 5. Fahrer scannt Spokecard, sieht Startnummer und Checkpoint-Liste.
