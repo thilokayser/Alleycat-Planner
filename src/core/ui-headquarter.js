@@ -24,6 +24,7 @@ let state = {
   saveStatus: 'idle',
   qrScannerActive: false,
   qrScanError: '',
+  racedayActive: false,
   manifestSection: 'anpassen',
   manifestMobileDetailOpen: false,
   appSettings: {theme: 'signal', iconPack: 'emoji', autoBackupEnabled: false, autoBackupIntervalMinutes: 10, autoBackupHintShown: false, offlineCacheHintShown: false, featureToggles: {}, distanceUnit: 'metric', timeFormat: '24h', coordFormat: 'decimal', showSplashScreen: true, onboardingCompleted: false},
@@ -362,6 +363,7 @@ function initGlobalShortcuts(){
     }
     if(isTypingTarget(e.target)) return;
     if(e.metaKey || e.ctrlKey || e.altKey) return;
+    if(state.racedayActive) return;
     if(!state.currentEvent || state.view === 'dashboard' || state.view === 'settings') return;
     const fn = NAV_SHORTCUT_KEYS[e.key];
     if(fn){ e.preventDefault(); fn(); }

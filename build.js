@@ -33,6 +33,7 @@ const CORE_FILES = [
   'map.js',
   'rider.js',
   'checkin.js',
+  'raceday.js',
   'leaderboard.js',
   'export-csv.js',
   'export-gpx.js',

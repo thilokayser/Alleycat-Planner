@@ -384,22 +384,7 @@ function computeTimeWindowResult(cp, timeValue){
 
 
 /* ---------------- render: check-in ---------------- */
-function renderCheckin(){
-  const el = document.getElementById('view-checkin');
-  const evt = state.currentEvent;
-  if(!evt){
-    el.innerHTML = `<div class="loading-row">${t('checkin.noEventSelected')}</div>`;
-    return;
-  }
-  const rider = getActiveCheckinRider();
-  const riders = evt.riders || [];
-  let body = '';
-
-  if(!rider){
-    body = `
-      <div class="checkin-search-hint">${state.checkinNotFound ? t('checkin.riderNotFound', {bib: escapeHtml(state.checkinBibInput)}) : t('checkin.enterBibHint')}</div>
-    `;
-  } else {
+function buildCheckinResultCardHtml(evt, rider){
     const completed = rider.completed || [];
     const scores = rider.scores || {};
     const cpTimes = rider.checkpointTimes || {};
@@ -476,7 +461,7 @@ function renderCheckin(){
         ? `<div class="checkin-status warn">${t(missingMandatory.length === 1 ? 'checkin.missingMandatorySingular' : 'checkin.missingMandatoryPlural', {count: missingMandatory.length})}</div>`
         : `<div class="checkin-status ok">${t('checkin.allMandatoryDone')}</div>`;
     }
-    body = `
+    return `
       <div class="checkin-card">
         <div class="checkin-card-head">
           <div class="checkin-bib">#${rider.bib}</div>
@@ -529,7 +514,13 @@ function renderCheckin(){
         ${mandatoryBlock}
       </div>
     `;
-  }
+}
+function buildCheckinViewHtml(evt){
+  const rider = getActiveCheckinRider();
+  const riders = evt.riders || [];
+  const body = rider ? buildCheckinResultCardHtml(evt, rider) : `
+    <div class="checkin-search-hint">${state.checkinNotFound ? t('checkin.riderNotFound', {bib: escapeHtml(state.checkinBibInput)}) : t('checkin.enterBibHint')}</div>
+  `;
 
   const finishedCount = riders.filter(r => r.finishTime).length;
   const overviewRows = sortRidersForOverview(riders).map(r => `
@@ -541,9 +532,14 @@ function renderCheckin(){
     </div>
   `).join('');
 
-  el.innerHTML = `
+  return `
     <div class="checkin-main">
       <div class="checkin-main-inner">
+        ${state.racedayActive ? '' : `
+          <div class="checkin-page-head">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="enterRacedayMode()">${t('raceday.enterButton')}</button>
+          </div>
+        `}
         <div id="live-countdown" class="live-countdown"></div>
         <div class="checkin-search">
           <label>${t('checkin.bibNumberLabel')}</label>
@@ -579,10 +575,23 @@ function renderCheckin(){
       </div>
     ` : ''}
   `;
+}
+function afterCheckinRender(){
   updateLiveCountdown();
   if(state.qrScannerActive && qrScanStream){
     const video = document.getElementById('qr-scan-video');
     if(video) video.srcObject = qrScanStream;
   }
+}
+function renderCheckin(){
+  const el = document.getElementById('view-checkin');
+  const evt = state.currentEvent;
+  if(!evt){
+    el.innerHTML = `<div class="loading-row">${t('checkin.noEventSelected')}</div>`;
+    return;
+  }
+  el.innerHTML = buildCheckinViewHtml(evt);
+  afterCheckinRender();
+  if(state.racedayActive) refreshRacedayStats();
 }
 

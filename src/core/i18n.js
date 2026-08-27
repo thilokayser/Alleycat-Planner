@@ -747,6 +747,13 @@ const translations = {
       startPrompt: 'Rennen jetzt starten',
       completeRacePrompt: 'Rennen abschließen'
     },
+    raceday: {
+      enterButton: '⛶ Raceday-Vollbild',
+      exitButton: 'Verlassen',
+      eyebrow: 'Raceday',
+      tickerTitle: 'Ticker',
+      statusFooter: 'Wake Lock aktiv — Bildschirm bleibt an'
+    },
     beamer: {
       openButton: '🖥️ Beamer-Ansicht öffnen',
       hintNewTab: 'Läuft im selben Browser wie HQ (neuer Tab) — für einen externen Beamer-Rechner die Server-Variante nutzen.',

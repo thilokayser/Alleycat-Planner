@@ -973,6 +973,7 @@
   #view-checkin{flex-direction:row; align-items:stretch; background:var(--asphalt);}
   .checkin-main{flex:1; min-width:0; overflow:auto; display:flex; flex-direction:column; align-items:center; padding:32px 28px;}
   .checkin-main-inner{width:100%; max-width:600px; display:flex; flex-direction:column; gap:16px;}
+  .checkin-page-head{display:flex; justify-content:flex-end;}
   .checkin-side{
     width:320px; flex-shrink:0; overflow:auto; padding:24px 20px;
     background:var(--asphalt-2); border-left:1px solid var(--asphalt-3);
@@ -1783,3 +1784,44 @@
   .leaderboard-orphan-note{background:rgba(230,168,42,0.12); border:1px solid var(--hivis); border-radius:4px; padding:12px 14px; margin-bottom:16px; font-size:12.5px; color:var(--chalk); line-height:1.55;}
   .leaderboard-orphan-note div{color:var(--steel); margin-top:4px;}
   .leaderboard-orphan-note ul{margin:8px 0 0; padding-left:18px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--steel);}
+
+  /* ---------- Raceday-Vollbild ---------- */
+  #raceday-root{
+    display:none; flex-direction:column; height:100vh; height:100dvh;
+    background:var(--asphalt); color:var(--chalk);
+  }
+  .raceday-topbar{
+    display:flex; align-items:center; gap:16px; flex-shrink:0;
+    padding:14px 24px; background:var(--asphalt); border-bottom:1px solid var(--asphalt-3);
+  }
+  .raceday-eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.16em;
+    color:var(--hivis); flex-shrink:0;
+  }
+  .raceday-topbar h2{font-size:20px; color:var(--chalk); flex-shrink:0; white-space:nowrap;}
+  .raceday-topbar-spacer{flex:1;}
+  .raceday-clock{text-align:right; line-height:1.05; flex-shrink:0;}
+  .raceday-clock-value{font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; color:var(--chalk);}
+  .raceday-topbar-divider{width:1px; height:30px; background:var(--asphalt-3); flex-shrink:0;}
+  .raceday-body{flex:1; min-height:0; display:flex;}
+  .raceday-checkin-slot{flex:1; min-width:0; height:100%; display:flex; flex-direction:column;}
+  .raceday-stats{
+    width:352px; flex-shrink:0; height:100%; overflow-y:auto;
+    padding:18px; display:flex; flex-direction:column; gap:14px;
+    background:var(--asphalt-2); border-left:1px solid var(--asphalt-3);
+  }
+  .raceday-stats .overview-widget{border-top:1px solid var(--asphalt-3);}
+  .raceday-ticker-list{display:flex; flex-direction:column; gap:8px; max-height:320px; overflow-y:auto;}
+  .raceday-ticker-row{display:flex; gap:10px; align-items:baseline; font-size:12.5px; color:var(--chalk); line-height:1.4;}
+  .raceday-ticker-row.finish{color:var(--ok);}
+  .raceday-ticker-time{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--steel); flex-shrink:0;}
+  .raceday-status-footer{
+    display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--steel);
+    padding-top:4px;
+  }
+  .raceday-status-dot{width:8px; height:8px; border-radius:50%; background:var(--ok); flex-shrink:0;}
+  @media (max-width: 900px){
+    .raceday-body{flex-direction:column; overflow-y:auto;}
+    .raceday-stats{width:100%; height:auto; border-left:none; border-top:1px solid var(--asphalt-3);}
+    .raceday-checkin-slot{height:auto;}
+  }
