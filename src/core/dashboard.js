@@ -342,9 +342,16 @@ function renderCategoryDistributionWidget(evt){
 function renderMiniLeaderboardWidget(evt){
   const top = computeMiniLeaderboard(evt, 5);
   const body = top.length ? `
-    <ol class="overview-mini-leaderboard">
-      ${top.map(r => `<li><b>#${r.bib}</b> ${escapeHtml(r.name || '—')} <span class="overview-mini-lb-time">${formatTimeOnly(r.finishTime)}</span></li>`).join('')}
-    </ol>
+    <div class="overview-mini-leaderboard">
+      ${top.map((r, i) => `
+        <div class="overview-mini-lb-row">
+          <span class="overview-mini-lb-rank ${i === 0 ? 'first' : ''}">${i + 1}</span>
+          <b>#${r.bib}</b>
+          <span class="overview-mini-lb-name">${escapeHtml(r.name || '—')}</span>
+          <span class="overview-mini-lb-time">${formatTimeOnly(r.finishTime)}</span>
+        </div>
+      `).join('')}
+    </div>
     <button type="button" class="btn btn-sm" onclick="openLeaderboard()">${t('overview.openFullLeaderboard')}</button>
   ` : `<div class="overview-widget-empty">${t('overview.noFinishers')}</div>`;
   return overviewWidgetWrap('miniLeaderboard', body);
