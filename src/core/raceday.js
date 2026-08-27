@@ -52,7 +52,34 @@ function updateRacedayClock(){
   if(!el || !state.currentEvent) return;
   el.textContent = formatOverviewCountdownText(computeStartCountdown(state.currentEvent));
 }
+/* Prefers evt.ruleRuntimeState.eventLog (rules-engine.js's pushEventLog) —
+   it's type-tagged (finish/bonus/zone-shrink/elimination/reveal) so the
+   ticker can color-code events like the mockup, and it's already what
+   feeds the beamer's ticker (beamer-modes.js:44). It's only populated
+   while a game mode is enabled (pushEventLog's own guard); for a plain
+   event without game modes, fall back to computeRecentActivity's
+   checkpoint/finish-only feed so the ticker isn't just empty. */
+const RACEDAY_TICKER_TONE = {
+  rider_finished: 'finish',
+  rider_eliminated: 'danger',
+  zone_shrink: 'warn',
+  district_toggled: 'warn'
+};
 function renderRacedayTicker(evt){
+  const log = (evt.ruleRuntimeState && evt.ruleRuntimeState.eventLog) || [];
+  if(log.length){
+    const entries = log.slice(-10).reverse();
+    return `
+      <div class="raceday-ticker-list">
+        ${entries.map(e => `
+          <div class="raceday-ticker-row ${RACEDAY_TICKER_TONE[e.type] || ''}">
+            <span class="raceday-ticker-time">${formatTimeOnly(e.at)}</span>
+            <span>${e.message}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
   const entries = computeRecentActivity(evt, 10);
   if(!entries.length) return `<div class="overview-widget-empty">${t('overview.noActivity')}</div>`;
   const finishLabel = t('overview.finishLabel');

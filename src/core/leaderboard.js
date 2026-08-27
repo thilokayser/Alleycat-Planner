@@ -15,6 +15,82 @@ function sortRidersByPoints(riders, evt){
     return a.bib - b.bib;
   });
 }
+/* ---------------- leaderboard side panel: podium + class winners ----------------
+   Independent of the toolbar's search/filter state on purpose (a marshal
+   filtering for one rider shouldn't watch the overall podium disappear) —
+   computed from every named rider, not the filtered `riders` list. */
+function computeLeaderboardPodium(evt){
+  const named = (evt.riders || []).filter(r => (r.name || '').trim());
+  const ranked = evt.scoringMode === 'points'
+    ? sortRidersByPoints(named, evt)
+    : named.filter(r => r.finishTime).sort((a, b) => new Date(a.finishTime) - new Date(b.finishTime));
+  return ranked.slice(0, 3);
+}
+function computeClassWinners(evt){
+  const groups = (evt.categoryGroups || []).slice().sort((a, b) => a.sortOrder - b.sortOrder);
+  const pointsScoring = evt.scoringMode === 'points';
+  const rankOf = riders => pointsScoring
+    ? sortRidersByPoints(riders, evt)
+    : riders.filter(r => r.finishTime).sort((a, b) => new Date(a.finishTime) - new Date(b.finishTime));
+  const winners = [];
+  groups.forEach(g => {
+    g.options.forEach(opt => {
+      const inClass = (evt.riders || []).filter(r => r.categories && r.categories[g.id] === opt);
+      const ranked = rankOf(inClass);
+      if(ranked.length) winners.push({groupName: g.name, optionName: opt, rider: ranked[0]});
+    });
+  });
+  return winners;
+}
+function renderLeaderboardSidebar(evt){
+  const pointsScoring = evt.scoringMode === 'points';
+  const podium = computeLeaderboardPodium(evt);
+  const podiumHtml = podium.length ? podium.map((r, i) => `
+    <div class="lb-podium-row ${i === 0 ? 'first' : ''}">
+      <span class="lb-podium-rank">${i + 1}</span>
+      <span class="lb-podium-name">${escapeHtml(r.name || '—')}</span>
+      <span class="lb-podium-value">${pointsScoring ? pointsForRider(evt, r.bib) + ' Pkt.' : (r.finishTime ? formatTimeOnly(r.finishTime) : '—')}</span>
+    </div>
+  `).join('') : `<div class="overview-widget-empty">${t('leaderboard.podiumEmpty')}</div>`;
+
+  const classWinners = computeClassWinners(evt);
+  const classRowsHtml = classWinners.map(w => `
+    <div class="lb-class-winner-row">
+      <span class="lb-class-winner-label">${escapeHtml(w.groupName)}: ${escapeHtml(w.optionName)}</span>
+      <span class="lb-class-winner-name">${escapeHtml(w.rider.name || '—')}</span>
+    </div>
+  `).join('');
+  const teamStats = (evt.teams || []).length ? computeTeamStats(evt) : null;
+  const topTeam = teamStats && teamStats.teams.length ? teamStats.teams[0] : null;
+  const teamRowHtml = topTeam ? `
+    <div class="lb-class-winner-row">
+      <span class="lb-class-winner-label">${t('leaderboard.teamWinnerLabel')}</span>
+      <span class="lb-class-winner-name">${escapeHtml(topTeam.team.name)}</span>
+    </div>
+  ` : '';
+  const classWinnersHtml = (classRowsHtml || teamRowHtml) ? (classRowsHtml + teamRowHtml) : `<div class="overview-widget-empty">${t('leaderboard.classWinnersEmpty')}</div>`;
+
+  const underwayCount = (evt.riders || []).filter(r => (r.name || '').trim() && !r.finishTime && r.raceStatus !== 'dnf' && r.raceStatus !== 'dns' && r.raceStatus !== 'eliminated').length;
+
+  return `
+    <div class="leaderboard-side">
+      <div class="overview-widget">
+        <div class="overview-widget-head"><h3>${t('leaderboard.podiumTitle')}</h3></div>
+        <div class="overview-widget-body">${podiumHtml}</div>
+      </div>
+      <div class="overview-widget">
+        <div class="overview-widget-head"><h3>${t('leaderboard.classWinnersTitle')}</h3></div>
+        <div class="overview-widget-body">${classWinnersHtml}</div>
+      </div>
+      ${evt.status === 'running' ? `
+        <div class="raceday-status-footer">
+          <span class="raceday-status-dot"></span>
+          <span>${t('leaderboard.provisionalNote', {count: underwayCount})}</span>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
 function showPointsLedger(bib){
   const evt = state.currentEvent;
   const entries = ledgerEntriesForRider(evt, bib);
@@ -277,6 +353,8 @@ function renderLeaderboard(){
     </div>
     ${tabsHtml}
       ${orphanHtml}
+    <div class="leaderboard-layout">
+    <div class="leaderboard-main">
     <div class="leaderboard-toolbar">
       <div class="leaderboard-search">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -330,6 +408,9 @@ function renderLeaderboard(){
         </thead>
         <tbody>${rows || `<tr><td colspan="${cps.length + (hasScoredCheckpoints ? 4 : 3) + (pointsScoring ? 2 : 0)}" class="leaderboard-empty">${t('leaderboard.noRidersFound')}</td></tr>`}</tbody>
       </table>
+    </div>
+    </div>
+    ${renderLeaderboardSidebar(evt)}
     </div>
   `;
 }

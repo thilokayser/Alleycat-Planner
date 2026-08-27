@@ -185,7 +185,13 @@ const translations = {
       tooEarly: 'zu früh',
       tooLate: 'zu spät',
       inTimeWindow: 'im Zeitfenster',
-      cpPrefix: 'CP-'
+      cpPrefix: 'CP-',
+      podiumTitle: 'Podium',
+      podiumEmpty: 'Noch keine Platzierung.',
+      classWinnersTitle: 'Klassen-Sieger',
+      classWinnersEmpty: 'Noch keine Kategorien angelegt.',
+      teamWinnerLabel: 'Team',
+      provisionalNote: 'Ergebnis vorläufig &middot; {count} Fahrer unterwegs'
     },
     map: {
       defaultCheckpointName: 'Checkpoint {order}',
