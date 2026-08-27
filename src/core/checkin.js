@@ -32,6 +32,7 @@ function playConfirmFeedback(){
 }
 function confirmRiderAtFinish(){
   const rider = getActiveCheckinRider(); if(!rider) return;
+  const bib = rider.bib;
   rider.finishTime = toLocalDateTimeInputValue(new Date());
   rider.raceStatus = '';
   evaluateRules(state.currentEvent, 'on_finish', {rider});
@@ -39,6 +40,23 @@ function confirmRiderAtFinish(){
   debouncedSave();
   renderCheckin();
   playConfirmFeedback();
+  /* Mockup's confirm button carries "Enter · rückgängig innerhalb von 30 s"
+     as a caption — showToast() defaults to 6s (ui-headquarter.js:95), too
+     short for a marshal glancing away from a phone mid-scan-queue, so this
+     passes an explicit 30s window instead. */
+  showToast({
+    message: t('checkin.confirmedToast', {bib}),
+    actionLabel: t('checkin.undo'),
+    duration: 30000,
+    onAction: () => {
+      const r = (state.currentEvent.riders || []).find(x => x.bib === bib);
+      if(!r) return;
+      r.finishTime = '';
+      removeLedgerEntries(state.currentEvent, p => p.riderBib === bib && p.source === 'sequence_match');
+      debouncedSave();
+      renderCheckin();
+    }
+  });
 }
 function assignJokerCheckpoint(cpId){
   const rider = getActiveCheckinRider(); if(!rider) return;

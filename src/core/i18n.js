@@ -486,6 +486,7 @@ const translations = {
     },
     checkin: {
       unconfirmedToast: 'Fahrer #{bib} ist wieder „nicht im Ziel".',
+      confirmedToast: 'Fahrer #{bib} ist im Ziel bestätigt.',
       undo: 'Rückgängig',
       startIn: 'Start in {countdown}',
       curfewIn: 'Curfew in {countdown}',
