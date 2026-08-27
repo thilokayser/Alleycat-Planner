@@ -1890,4 +1890,12 @@
     .raceday-body{flex-direction:column; overflow-y:auto;}
     .raceday-stats{width:100%; height:auto; border-left:none; border-top:1px solid var(--asphalt-3);}
     .raceday-checkin-slot{height:auto;}
+    /* Topbar is a single nowrap row by default (fine on a projector/tablet);
+       on a phone the clock+Beamer+Verlassen buttons were overflowing off
+       the right edge, invisible and unreachable — Verlassen included, a
+       real dead end with no other way out of raceday mode on mobile. */
+    .raceday-topbar{flex-wrap:wrap; row-gap:8px;}
+    .raceday-topbar h2{max-width:50vw; overflow:hidden; text-overflow:ellipsis; font-size:16px;}
+    .raceday-clock-value{font-size:20px;}
+    .raceday-scan-video-wrap{width:min(200px, 60vw);}
   }

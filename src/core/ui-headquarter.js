@@ -574,7 +574,7 @@ function renderTopbar(){
     ${renderStatusControl(state.currentEvent)}
   `;
   bottomNav.innerHTML = navItems.map(item => `
-    <button class="bottom-nav-item ${state.view === item.view ? 'active' : ''}" onclick="${item.onclick(evtId)}">
+    <button class="bottom-nav-item ${state.view === item.view ? 'active' : ''}" data-nav-view="${item.view}" onclick="${item.onclick(evtId)}">
       <svg viewBox="0 0 24 24">${item.icon}</svg>
       <span>${item.shortLabel}</span>
     </button>
