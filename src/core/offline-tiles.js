@@ -8,7 +8,7 @@
    Zeitstempel (`evt.tileCacheUpdatedAt`) ist pro Event. */
 const TILES_IDB_DB = 'alleycat-tiles';
 const TILES_IDB_STORE = 'tiles';
-const OFFLINE_TILE_URL_TEMPLATE = 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
+const OFFLINE_TILE_URL_TEMPLATE = 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OFFLINE_TILE_ZOOM_MIN = 13;
 const OFFLINE_TILE_ZOOM_MAX = 17;
 const OFFLINE_TILE_BUFFER_METERS = 500;

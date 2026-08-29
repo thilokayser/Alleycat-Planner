@@ -88,8 +88,8 @@ function updateBeamerZoneMap(evt){
   const center = firstZoneCenter || (brMode ? zoneActiveCenterOf(evt, brMode) : zoneCenterOf(evt));
   if(!center) return;
   beamerZoneMap = L.map(container, {zoomControl: false, attributionControl: false, scrollWheelZoom: false}).setView([center.lat, center.lng], 14);
-  createOfflineTileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
-    subdomains: 'abcd', maxZoom: 20
+  createOfflineTileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    subdomains: 'abc', maxZoom: 19
   }).addTo(beamerZoneMap);
   zones.forEach(zone => {
     if(zone.type === 'circle' && zone.center){
