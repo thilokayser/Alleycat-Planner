@@ -15,8 +15,29 @@ function withCheckpointDefaults(cp){
     gameRevealPrerequisiteCpId: '',
     pairedDropoffCpId: '',
     qrCheckinEnabled: false,
-    qrToken: ''
+    qrToken: '',
+    staffAccessCode: ''
   }, cp);
+}
+/* Zugangscode für die Checkpoint-App (Code-Modus), Klartext hier — wie
+   riderCode wird nur der Hash zum Server geschickt (siehe
+   buildRiderSyncPayload() in rider-sync.js). Bewusst erst auf Knopfdruck
+   erzeugt statt wie qrToken automatisch nachgerüstet: ein Checkpoint ohne
+   Code braucht auch keinen — die meisten laufen im Konten-Modus oder gar
+   nicht über die Checkpoint-App. Ein Neu-Erzeugen macht den alten Code
+   sofort ungültig (anders als ensureCheckpointTokens() bei qrToken), das
+   ist hier gewollt: der Code steht nirgends laminiert, sondern wird dem
+   Personal mündlich/per Zettel mitgeteilt. */
+function generateCheckpointStaffCode(cpId){
+  const cp = findCp(cpId);
+  if(!cp) return;
+  cp.staffAccessCode = generateRiderCode();
+  debouncedSave();
+  renderSidebar();
+}
+function regenerateCheckpointStaffCode(cpId){
+  if(!confirm(t('checkpoint.staffAccessRegenerateConfirm'))) return;
+  generateCheckpointStaffCode(cpId);
 }
 /* Gegenstück zu ensureRiderTokens(): rüstet qrToken für Checkpoints nach, die
    vor der Rider-App angelegt wurden. Fasst vorhandene Token nie an — ein
@@ -580,6 +601,19 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
                     <span>${t('riderApp.cpToggleLabel')}</span>
                   </label>
                   <div class="riders-hint" style="margin:4px 0 0;">${getCheckpointType(cp.type).isScored ? t('riderApp.cpToggleHintScored') : t('riderApp.cpToggleHint')}</div>
+                </div>
+                <div class="cp-qr-checkin">
+                  <label>${t('checkpoint.staffAccessHeading')}</label>
+                  <div class="riders-hint" style="margin:4px 0 8px;">${t('checkpoint.staffAccessHint')}</div>
+                  ${cp.staffAccessCode ? `
+                    <div class="row2">
+                      <input type="text" class="mono" readonly value="${escapeHtml(cp.staffAccessCode)}">
+                      <button type="button" class="btn btn-sm" onclick="regenerateCheckpointStaffCode('${cp.id}')">${t('checkpoint.staffAccessRegenerate')}</button>
+                    </div>
+                    <div class="settings-hint">${t('checkpoint.staffAccessCodeHint', {publicId: evt.publicId || '—', cpId: cp.id})}</div>
+                  ` : `
+                    <button type="button" class="btn btn-sm" onclick="generateCheckpointStaffCode('${cp.id}')">${t('checkpoint.staffAccessGenerate')}</button>
+                  `}
                 </div>` : ''}
                 <div>
                   <label>${t('checkpoint.clueLabel')}</label>

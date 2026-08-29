@@ -43,7 +43,7 @@ function apiLoadConfig(){
 
 function apiSendCorsHeaders(){
   header('Access-Control-Allow-Origin: ' . ALLEYCAT_ALLOWED_ORIGIN);
-  header('Access-Control-Allow-Headers: X-Api-Key, X-Rider-Token, X-Rider-Code, Content-Type');
+  header('Access-Control-Allow-Headers: X-Api-Key, X-Rider-Token, X-Rider-Code, X-Admin-Token, X-Checkpoint-Token, Content-Type');
   header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
 }
 
@@ -190,4 +190,140 @@ function riderDistanceMeters($lat1, $lon1, $lat2, $lon2){
   $dLon = deg2rad($lon2 - $lon1);
   $a = sin($dLat/2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon/2) ** 2;
   return (int)round($R * 2 * atan2(sqrt($a), sqrt(1 - $a)));
+}
+
+/* ================= Admin-Benutzer/Rollen =================
+   Zweite Ebene über dem einen geteilten API-Key: der Key bleibt gültig
+   (Rückwärtskompatibilität, Ersteinrichtung), zusätzlich kann sich ein
+   Browser als benannter Benutzer mit Rolle anmelden. Bearer-Token statt
+   PHP-Session-Cookie — Begründung siehe Migration 4 in migrations.php.
+
+   Rollen, aufsteigend:
+     viewer   nur GET
+     editor   GET/POST/DELETE, aber keine Benutzerverwaltung
+     admin    alles, inkl. Benutzerverwaltung
+   checkpoint_staff hat KEINEN Zugriff auf api.php/auth.php-Verwaltung —
+   die Rolle wird ausschließlich in rider.php für die Checkpoint-App
+   aufgelöst (siehe dort), nie über apiVerifyAccess(). */
+
+function adminTableName($suffix){
+  return ALLEYCAT_TABLE . '_' . $suffix;
+}
+
+function adminHashToken($token){
+  return hash('sha256', (string)$token);
+}
+
+function adminGenerateToken(){
+  return bin2hex(random_bytes(32));
+}
+
+const ADMIN_ROLE_RANK = ['viewer' => 1, 'editor' => 2, 'admin' => 3];
+
+function adminRoleAtLeast($role, $min){
+  return ($role !== null) && (ADMIN_ROLE_RANK[$role] ?? 0) >= (ADMIN_ROLE_RANK[$min] ?? 99);
+}
+
+function adminResolveSessionUser(PDO $pdo, $token){
+  if($token === '') return null;
+  $t = adminTableName('admin_session');
+  $u = adminTableName('admin_user');
+  $stmt = $pdo->prepare("SELECT u.* FROM `{$t}` s
+                         JOIN `{$u}` u ON u.id = s.user_id
+                         WHERE s.token_hash = ? AND u.active = 1");
+  $stmt->execute([adminHashToken($token)]);
+  $user = $stmt->fetch(PDO::FETCH_ASSOC);
+  if(!$user) return null;
+  $pdo->prepare("UPDATE `{$t}` SET last_seen_at = NOW() WHERE token_hash = ?")
+      ->execute([adminHashToken($token)]);
+  return $user;
+}
+
+/* ================= Checkpoint-App-Helfer =================
+   Zwei getrennte Zugangswege für dieselbe Aktion (?a=checkpoint-checkin
+   in rider.php), beide über den öffentlich erreichbaren Endpunkt:
+     Konten-Modus     X-Admin-Token, Rolle 'checkpoint_staff' — dieselbe
+                      Session-Tabelle wie das Admin-Panel, der Umfang
+                      (welche Checkpoints) wird live aus
+                      checkpoint_staff nachgeschlagen statt im Token
+                      eingefroren, damit eine Umzuweisung sofort greift.
+     Code-Modus       X-Checkpoint-Token, eigene checkpoint_session-
+                      Tabelle, fest auf genau einen Checkpoint begrenzt. */
+
+function checkpointStaffScope(PDO $pdo, $userId, $publicId){
+  $t = adminTableName('checkpoint_staff');
+  $stmt = $pdo->prepare("SELECT `cp_id` FROM `{$t}` WHERE `user_id` = ? AND `public_id` = ?");
+  $stmt->execute([$userId, $publicId]);
+  return $stmt->fetchAll(PDO::FETCH_COLUMN);
+}
+
+function checkpointResolveCodeSession(PDO $pdo, $token){
+  if($token === '') return null;
+  $t = adminTableName('checkpoint_session');
+  $stmt = $pdo->prepare("SELECT * FROM `{$t}` WHERE `token_hash` = ?");
+  $stmt->execute([adminHashToken($token)]);
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
+  if($row) $pdo->prepare("UPDATE `{$t}` SET last_seen_at = NOW() WHERE token_hash = ?")->execute([adminHashToken($token)]);
+  return $row ?: null;
+}
+
+/* Löst die aktuelle Anfrage auf einen Geltungsbereich auf: eine Liste
+   erlaubter cp_id für die angegebene publicId, plus eine Anzeigekennung
+   fürs Log (`staffRef`). Bricht mit 401 ab, wenn keiner der beiden
+   Header eine gültige Berechtigung ergibt — bewusst ohne
+   riderRejectAuth()/Zähler: das ist die Bremse der Fahrer-Token, ein
+   falsch getipptes Checkpoint-Passwort verdient dieselbe Vorsicht nicht
+   weniger, aber diese Funktion wird von mehreren Aktionen mit je eigener
+   Bremse aufgerufen (siehe rider.php). */
+function checkpointResolveScope(PDO $pdo, $publicId){
+  $adminToken = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '';
+  if($adminToken !== ''){
+    $user = adminResolveSessionUser($pdo, $adminToken);
+    if($user && $user['role'] === 'checkpoint_staff'){
+      $cpIds = checkpointStaffScope($pdo, (int)$user['id'], $publicId);
+      if($cpIds) return ['cpIds' => $cpIds, 'staffRef' => $user['username']];
+    }
+    return null;
+  }
+  $cpToken = $_SERVER['HTTP_X_CHECKPOINT_TOKEN'] ?? '';
+  if($cpToken !== ''){
+    $session = checkpointResolveCodeSession($pdo, $cpToken);
+    if($session && $session['public_id'] === $publicId){
+      return ['cpIds' => [$session['cp_id']], 'staffRef' => 'code:' . $session['cp_id']];
+    }
+  }
+  return null;
+}
+
+/* Prüft Zugriff für die aktuelle Anfrage und bricht mit 401/403 ab, wenn
+   nicht ausreichend. Zwei Zugangswege, beide vollwertig:
+     - X-Api-Key: bestehender Vollzugriffs-Key -> zählt immer als 'admin'.
+     - X-Admin-Token: personalisierte Session -> Rolle aus admin_user.
+   $minRole ist die für DIESE Anfrage nötige Mindestrolle (z. B. 'editor'
+   für einen schreibenden api.php-Aufruf, 'admin' für Benutzerverwaltung).
+   Gibt die aufgelöste Rolle zurück (für Aufrufer, die z. B. den
+   Benutzernamen fürs Log brauchen). */
+function apiVerifyAccess(PDO $pdo, $minRole = 'viewer'){
+  $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? '';
+  if($apiKey !== ''){
+    if(defined('ALLEYCAT_API_KEY_HASH') && password_verify($apiKey, ALLEYCAT_API_KEY_HASH)){
+      return ['role' => 'admin', 'username' => null, 'userId' => null];
+    }
+    if(defined('ALLEYCAT_API_KEY') && hash_equals(ALLEYCAT_API_KEY, $apiKey)){
+      return ['role' => 'admin', 'username' => null, 'userId' => null];
+    }
+  }
+
+  $adminToken = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '';
+  if($adminToken !== ''){
+    $user = adminResolveSessionUser($pdo, $adminToken);
+    if($user && adminRoleAtLeast($user['role'], $minRole)){
+      return ['role' => $user['role'], 'username' => $user['username'], 'userId' => (int)$user['id']];
+    }
+    if($user){
+      apiSendJsonError(403, 'insufficient_role');
+    }
+  }
+
+  apiSendJsonError(401, 'unauthorized');
 }

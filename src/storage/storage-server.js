@@ -19,15 +19,103 @@ function getPhpConfig(){
 function savePhpConfig(cfg){
   localStorage.setItem('alleycat:php-config', JSON.stringify(cfg));
 }
+
+/* ---------------- Admin-Session (Benutzerverwaltung) ----------------
+   Zweiter, personalisierter Zugangsweg neben dem einen geteilten
+   API-Key: siehe auth.js für die reine Rollenlogik. Hier nur Transport.
+
+   Vorrang: eine geladene Session verdrängt den Master-Key vollständig —
+   sonst würde ein noch lokal gespeicherter Key jede Rollenbeschränkung
+   wirkungslos machen (der Key zählt serverseitig immer als 'admin'). Ein
+   Browser, der Rollen nutzen soll, darf also gar keinen apiKey mehr in
+   seiner php-config haben (siehe submitPhpSetup()/renderAdminLogin()). */
+function currentAuthHeaders(contentType){
+  const session = loadAdminSession();
+  const cfg = getPhpConfig();
+  const headers = {};
+  if(session && session.token) headers['X-Admin-Token'] = session.token;
+  else if(cfg && cfg.apiKey) headers['X-Api-Key'] = cfg.apiKey;
+  if(contentType) headers['Content-Type'] = contentType;
+  return headers;
+}
+/* Bei 401 mit aktiver Session ist die Session tot (abgelaufen serverseitig
+   gelöscht, oder nie gültig) — nicht bei 403, das heißt "gültig, aber
+   Rolle reicht nicht" und ist kein Grund, den Benutzer auszuloggen. */
+function handleAuthResponseStatus(status){
+  if(status === 401 && loadAdminSession()){
+    clearAdminSession();
+    location.reload();
+  }
+}
+
+function authEndpointUrl(){
+  const cfg = getPhpConfig();
+  if(!cfg || !cfg.apiUrl) return '';
+  return cfg.apiUrl.replace(/\/[^\/]*$/, '/auth.php');
+}
+async function authRequest(method, query, body){
+  const res = await fetch(authEndpointUrl() + '?' + query, {
+    method,
+    headers: Object.assign(currentAuthHeaders(body ? 'application/json' : null)),
+    body: body ? JSON.stringify(body) : undefined
+  });
+  handleAuthResponseStatus(res.status);
+  let data = null;
+  try{ data = await res.json(); }catch(e){}
+  if(!res.ok) return {ok: false, status: res.status, error: (data && data.error) || 'http_' + res.status};
+  return Object.assign({ok: true}, data);
+}
+
+async function adminBootstrap(apiKey, username, password, displayName){
+  return authRequest('POST', 'a=bootstrap', {apiKey, username, password, displayName});
+}
+async function adminLogin(username, password){
+  const res = await authRequest('POST', 'a=login', {username, password});
+  if(res.ok) saveAdminSession({token: res.token, role: res.role, username: res.username, displayName: res.displayName});
+  return res;
+}
+async function adminLogout(){
+  await authRequest('POST', 'a=logout', {});
+  clearAdminSession();
+}
+async function adminWhoami(){
+  return authRequest('GET', 'a=whoami');
+}
+async function adminListUsers(){
+  return authRequest('GET', 'a=users');
+}
+async function adminCreateUser(user){
+  return authRequest('POST', 'a=users/create', user);
+}
+async function adminUpdateUser(patch){
+  return authRequest('POST', 'a=users/update', patch);
+}
+async function adminDeleteUser(id){
+  return authRequest('POST', 'a=users/delete', {id});
+}
+async function adminGetCheckpointStaff(publicId){
+  return authRequest('GET', 'a=checkpointstaff&public_id=' + encodeURIComponent(publicId));
+}
+async function adminSetCheckpointStaff(userId, publicId, cpIds){
+  return authRequest('POST', 'a=checkpointstaff/set', {userId, publicId, cpIds});
+}
+/* Admin-Rollen-Seam (siehe auth.js currentUserRole()): unter geteiltem
+   window.storage gibt es kein PHP-Backend und damit keine Konten. */
+function hasAdminRoles(){
+  return !hasSharedStorage;
+}
+
 async function phpRequest(method, key, body){
   const cfg = getPhpConfig();
   if(!cfg) throw new Error('PHP-Backend nicht konfiguriert');
   const url = cfg.apiUrl + '?key=' + encodeURIComponent(key);
-  return fetch(url, {
+  const res = await fetch(url, {
     method,
-    headers: Object.assign({'X-Api-Key': cfg.apiKey}, method === 'POST' ? {'Content-Type': 'text/plain'} : {}),
+    headers: Object.assign(currentAuthHeaders(method === 'POST' ? 'text/plain' : null)),
     body: method === 'POST' ? body : undefined
   });
+  handleAuthResponseStatus(res.status);
+  return res;
 }
 async function storageGet(key){
   if(hasSharedStorage){
@@ -72,7 +160,8 @@ function renderPhpSetup(error){
         style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
       <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('phpSetup.apiKeyLabel')}</label>
       <input type="text" id="php-setup-key" placeholder="${escapeHtml(t('phpSetup.apiKeyPlaceholder'))}"
-        style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+        style="width:100%; padding:9px 10px; margin-bottom:6px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <div style="color:var(--steel); font-size:11.5px; margin-bottom:14px; line-height:1.5;">${t('phpSetup.apiKeyOptionalHint')}</div>
       <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('phpSetup.riderAppUrlLabel')}</label>
       <input type="text" id="php-setup-rider-url" placeholder="${escapeHtml(t('phpSetup.riderAppUrlPlaceholder'))}"
         style="width:100%; padding:9px 10px; margin-bottom:6px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
@@ -84,32 +173,109 @@ function renderPhpSetup(error){
 }
 async function submitPhpSetup(){
   const apiUrl = (document.getElementById('php-setup-url').value || '').trim().replace(/\/$/, '');
+  /* Der API-Key ist jetzt OPTIONAL: leer gelassen bekommt dieser Browser
+     keinen Vollzugriffs-Key, sondern landet nach dem Verbinden auf dem
+     personalisierten Login (renderAdminLogin()) — genau der Weg, wie ein
+     Gerät für Editor/Betrachter/Checkpoint-Personal eingerichtet wird,
+     ohne den Master-Key aus der Hand zu geben. Wer den Key einträgt,
+     bekommt weiterhin sofort Vollzugriff wie bisher (Rückwärtskompatibilität). */
   const apiKey = (document.getElementById('php-setup-key').value || '').trim();
   /* Optional: leer lassen heißt "keine Fahrer-App". Die Rider-Seams
      liefern dann null und der geteilte Kern blendet alles Zugehörige
      aus — eine bestehende Installation bleibt damit ohne Zutun
      unverändert lauffähig. */
   const riderAppUrl = (document.getElementById('php-setup-rider-url').value || '').trim();
-  if(!apiUrl || !apiKey){ renderPhpSetup(t('phpSetup.errorFieldsRequired')); return; }
+  if(!apiUrl){ renderPhpSetup(t('phpSetup.errorFieldsRequired')); return; }
   savePhpConfig({apiUrl, apiKey, riderAppUrl});
-  try{
-    const res = await phpRequest('GET', 'events:index');
-    if(res.status === 401){
+  if(apiKey){
+    try{
+      const res = await phpRequest('GET', 'events:index');
+      if(res.status === 401){
+        localStorage.removeItem('alleycat:php-config');
+        renderPhpSetup(t('phpSetup.errorKeyRejected'));
+        return;
+      }
+      if(!res.ok && res.status !== 404){
+        localStorage.removeItem('alleycat:php-config');
+        renderPhpSetup(t('phpSetup.errorServerStatus', {status: res.status}));
+        return;
+      }
+    }catch(e){
       localStorage.removeItem('alleycat:php-config');
-      renderPhpSetup(t('phpSetup.errorKeyRejected'));
+      renderPhpSetup(t('phpSetup.errorConnectionFailed', {message: e.message}));
       return;
     }
-    if(!res.ok && res.status !== 404){
-      localStorage.removeItem('alleycat:php-config');
-      renderPhpSetup(t('phpSetup.errorServerStatus', {status: res.status}));
-      return;
-    }
-  }catch(e){
-    localStorage.removeItem('alleycat:php-config');
-    renderPhpSetup(t('phpSetup.errorConnectionFailed', {message: e.message}));
+  }
+  location.reload();
+}
+
+/* ---------------- Login-Gate (Benutzerverwaltung) ----------------
+   Greift nur, wenn ein apiUrl konfiguriert ist UND kein lokal
+   gespeicherter Master-Key vorliegt — siehe currentAuthHeaders()-
+   Kommentar oben: mit gespeichertem Key bleibt der Browser wie bisher
+   sofort im Vollzugriff, ganz ohne diesen Bildschirm. */
+function renderAdminLogin(error){
+  document.getElementById('app').innerHTML = `
+    <div style="max-width:420px; margin:60px auto; padding:32px; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:3px solid var(--hivis); border-radius:6px;">
+      <h2 style="margin:0 0 4px;">Alleycat Dispatch</h2>
+      <div style="color:var(--steel); font-size:13px; font-family:'JetBrains Mono'; margin-bottom:22px;">${t('auth.loginTitle')}</div>
+      ${error ? `<div style="background:rgba(178,58,46,0.15); border:1px solid var(--stamp); color:#ff9a8f; padding:10px 12px; border-radius:4px; font-size:13px; margin-bottom:14px;">${escapeHtml(error)}</div>` : ''}
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.loginUsernameLabel')}</label>
+      <input type="text" id="admin-login-username" autocomplete="username"
+        style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.loginPasswordLabel')}</label>
+      <input type="password" id="admin-login-password" autocomplete="current-password" onkeydown="if(event.key==='Enter') submitAdminLogin();"
+        style="width:100%; padding:9px 10px; margin-bottom:20px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <button class="btn btn-primary" style="width:100%;" onclick="submitAdminLogin()">${t('auth.loginButton')}</button>
+      <div style="text-align:center; margin-top:16px;">
+        <button type="button" style="background:none; border:none; color:var(--steel); font-size:12px; text-decoration:underline; cursor:pointer;" onclick="renderAdminBootstrap()">${t('auth.bootstrapTitle')}</button>
+      </div>
+    </div>
+  `;
+}
+async function submitAdminLogin(){
+  const username = (document.getElementById('admin-login-username').value || '').trim();
+  const password = document.getElementById('admin-login-password').value || '';
+  if(!username || !password){ renderAdminLogin(t('auth.loginErrorInvalid')); return; }
+  const res = await adminLogin(username, password);
+  if(!res.ok){
+    if(res.status === 429) renderAdminLogin(t('auth.loginErrorRateLimited', {seconds: res.retryAfter || 60}));
+    else if(res.status === 403 || res.error === 'invalid_credentials') renderAdminLogin(t('auth.loginErrorInvalid'));
+    else renderAdminLogin(t('auth.loginErrorGeneric'));
     return;
   }
   location.reload();
+}
+function renderAdminBootstrap(error){
+  document.getElementById('app').innerHTML = `
+    <div style="max-width:440px; margin:60px auto; padding:32px; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:3px solid var(--hivis); border-radius:6px;">
+      <h2 style="margin:0 0 4px;">${t('auth.bootstrapTitle')}</h2>
+      <div style="color:var(--steel); font-size:12.5px; margin-bottom:20px; line-height:1.5;">${t('auth.bootstrapDesc')}</div>
+      ${error ? `<div style="background:rgba(178,58,46,0.15); border:1px solid var(--stamp); color:#ff9a8f; padding:10px 12px; border-radius:4px; font-size:13px; margin-bottom:14px;">${escapeHtml(error)}</div>` : ''}
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.bootstrapApiKeyLabel')}</label>
+      <input type="text" id="admin-bootstrap-key" style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.bootstrapUsernameLabel')}</label>
+      <input type="text" id="admin-bootstrap-username" style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.bootstrapPasswordLabel')}</label>
+      <input type="password" id="admin-bootstrap-password" style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.bootstrapDisplayNameLabel')}</label>
+      <input type="text" id="admin-bootstrap-displayname" style="width:100%; padding:9px 10px; margin-bottom:20px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <button class="btn btn-primary" style="width:100%;" onclick="submitAdminBootstrap()">${t('auth.bootstrapButton')}</button>
+      <div style="text-align:center; margin-top:16px;">
+        <button type="button" style="background:none; border:none; color:var(--steel); font-size:12px; text-decoration:underline; cursor:pointer;" onclick="renderAdminLogin()">${t('auth.loginButton')}</button>
+      </div>
+    </div>
+  `;
+}
+async function submitAdminBootstrap(){
+  const apiKey = (document.getElementById('admin-bootstrap-key').value || '').trim();
+  const username = (document.getElementById('admin-bootstrap-username').value || '').trim();
+  const password = document.getElementById('admin-bootstrap-password').value || '';
+  const displayName = (document.getElementById('admin-bootstrap-displayname').value || '').trim();
+  if(!apiKey || !username || password.length < 8){ renderAdminBootstrap(t('auth.bootstrapError')); return; }
+  const res = await adminBootstrap(apiKey, username, password, displayName);
+  if(!res.ok){ renderAdminBootstrap(t('auth.bootstrapError')); return; }
+  renderAdminLogin();
 }
 
 async function exportBackupBlob(evt){
@@ -148,12 +314,12 @@ function riderSeamsAvailable(){
   return !hasSharedStorage && !!getPhpConfig() && !!riderAppBaseUrl();
 }
 async function riderRequest(method, query, body){
-  const cfg = getPhpConfig();
   const res = await fetch(riderEndpointUrl() + '?' + query, {
     method,
-    headers: Object.assign({'X-Api-Key': cfg.apiKey}, body ? {'Content-Type': 'application/json'} : {}),
+    headers: Object.assign(currentAuthHeaders(body ? 'application/json' : null)),
     body: body ? JSON.stringify(body) : undefined
   });
+  handleAuthResponseStatus(res.status);
   if(!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
@@ -186,8 +352,22 @@ async function confirmRiderSlot(publicId, bib, status){
   }
 }
 async function initStorageBackend(){
-  if(!hasSharedStorage && !getPhpConfig()){
+  if(hasSharedStorage) return true;
+  const cfg = getPhpConfig();
+  if(!cfg){
     renderPhpSetup();
+    return false;
+  }
+  /* Ohne gespeicherten Master-Key ist dieser Browser für den
+     personalisierten Login eingerichtet (siehe submitPhpSetup()) — ohne
+     gültige Session kommt er nicht weiter. Die Session selbst wird nicht
+     gegen den Server verifiziert, bevor die Oberfläche lädt: ein toter
+     Token fällt beim ersten echten Aufruf mit 401 auf und
+     handleAuthResponseStatus() schickt dann zurück zum Login. Das spart
+     einen Roundtrip bei jedem Start, auf Kosten eines einzigen
+     fehlschlagenden Requests im toten Fall. */
+  if(!cfg.apiKey && !loadAdminSession()){
+    renderAdminLogin();
     return false;
   }
   return true;

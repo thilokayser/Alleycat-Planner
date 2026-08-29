@@ -26,7 +26,6 @@ if($_SERVER['REQUEST_METHOD'] === 'OPTIONS'){
 }
 
 header('Content-Type: application/json');
-apiVerifyKey();
 
 $key = $_GET['key'] ?? '';
 if($key === '' || strlen($key) > 191){
@@ -36,6 +35,10 @@ if($key === '' || strlen($key) > 191){
 $pdo = apiConnectDb();
 $table = ALLEYCAT_TABLE;
 $method = $_SERVER['REQUEST_METHOD'];
+
+/* GET braucht nur 'viewer', POST/DELETE mindestens 'editor' —
+   apiVerifyAccess() bricht selbst mit 401/403 ab, wenn nicht genug. */
+apiVerifyAccess($pdo, $method === 'GET' ? 'viewer' : 'editor');
 
 if($method === 'GET'){
   $stmt = $pdo->prepare("SELECT `value` FROM `{$table}` WHERE `key` = ?");

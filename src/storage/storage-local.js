@@ -149,6 +149,21 @@ async function confirmRiderSlot(){ return null; }
 /* Gehört zum selben Seam-Vertrag: der Kern erzeugt daraus die QR-Nutzlast.
    Leer heißt "keine Adresse, auf die ein QR-Code zeigen könnte". */
 function riderAppBaseUrl(){ return ''; }
+/* Admin-Rollen-Seam: diese Variante läuft in genau einem Browser ohne
+   geteiltes Backend — es gibt niemanden, dem gegenüber eine Rolle
+   überhaupt etwas bedeuten würde. currentUserRole() in auth.js liest das
+   und behandelt jeden als 'admin'. */
+function hasAdminRoles(){ return false; }
+async function adminLogin(){ return {ok: false, error: 'not_supported'}; }
+async function adminLogout(){}
+async function adminWhoami(){ return null; }
+async function adminBootstrap(){ return {ok: false, error: 'not_supported'}; }
+async function adminListUsers(){ return {ok: false, error: 'not_supported'}; }
+async function adminCreateUser(){ return {ok: false, error: 'not_supported'}; }
+async function adminUpdateUser(){ return {ok: false, error: 'not_supported'}; }
+async function adminDeleteUser(){ return {ok: false, error: 'not_supported'}; }
+async function adminGetCheckpointStaff(){ return {ok: false, error: 'not_supported'}; }
+async function adminSetCheckpointStaff(){ return {ok: false, error: 'not_supported'}; }
 async function initStorageBackend(){
   await initSqliteStorage();
   return true;

@@ -56,6 +56,7 @@ const CORE_FILES = [
   'documentation.js',
   'rider-qr.js',
   'rider-sync.js',
+  'auth.js',
   'ui-headquarter.js'
 ];
 
@@ -87,6 +88,26 @@ const RIDER_FILES = [
    Anmeldungen, QR-Häkchen) und gehört hier NICHT dazu. Die Strings der
    Fahrer-App liegen unter `riderScan`. */
 const RIDER_I18N_NAMESPACES = ['common', 'checkpoint', 'riderScan'];
+
+/* ---------------- Checkpoint-App (Teilprojekt 4) ----------------
+   Vierte Ausgabe, gleiches Prinzip wie die Fahrer-App: eigenes
+   Verzeichnis (src/checkpoint/), eigenes Bundle, teilt vom Kern nur, was
+   wirklich gebraucht wird. Diese App scannt Fahrer, statt gescannt zu
+   werden — braucht deshalb denselben QR-Parser wie die Fahrer-App
+   (rider-qr.js), aber keinen der Fahrer-eigenen Zustandscode. */
+const CHECKPOINT_FILES = [
+  'src/core/i18n.js',            // beim Bauen auf CHECKPOINT_I18N_NAMESPACES gekürzt
+  'src/core/utils.js',
+  'src/core/checkpoint-types.js',
+  'src/core/rider-qr.js',
+  'src/checkpoint/state.js',
+  'src/checkpoint/api.js',
+  'src/checkpoint/queue.js',
+  'src/checkpoint/scanner.js',
+  'src/checkpoint/views.js',
+  'src/checkpoint/init.js'
+];
+const CHECKPOINT_I18N_NAMESPACES = ['common', 'checkpoint', 'checkpointScan'];
 
 function read(relPath){
   return fs.readFileSync(path.join(__dirname, relPath), 'utf8');
@@ -121,15 +142,15 @@ const CORE_GUARD_RULES = [
   }
 ];
 
-/* Vierte Regel, dynamisch: kein Kernmodul darf ein Symbol aus src/rider/
-   aufrufen. Solange das Verzeichnis nicht existiert, ist die Regel
-   wirkungslos statt fehlerhaft. */
-function riderOnlySymbols(){
-  const riderDir = path.join(__dirname, 'src/rider');
-  if(!fs.existsSync(riderDir)) return [];
+/* Vierte (und fünfte) Regel, dynamisch: kein Kernmodul darf ein Symbol aus
+   src/rider/ oder src/checkpoint/ aufrufen. Solange ein Verzeichnis nicht
+   existiert, ist seine Regel wirkungslos statt fehlerhaft. */
+function bundleOnlySymbols(dir){
+  const fullDir = path.join(__dirname, dir);
+  if(!fs.existsSync(fullDir)) return [];
   const names = new Set();
-  for(const file of fs.readdirSync(riderDir).filter(f => f.endsWith('.js'))){
-    const src = fs.readFileSync(path.join(riderDir, file), 'utf8');
+  for(const file of fs.readdirSync(fullDir).filter(f => f.endsWith('.js'))){
+    const src = fs.readFileSync(path.join(fullDir, file), 'utf8');
     /* Nur Deklarationen auf Modulebene (Spalte 0, kein führender
        Leerraum). Verschachtelte Funktionen sind für andere Module gar
        nicht sichtbar und können deshalb nicht lecken — sie mitzuzählen
@@ -165,13 +186,21 @@ function stripComments(src){
 }
 
 function assertCoreIsBackendAgnostic(){
-  const riderSymbols = riderOnlySymbols();
-  const rules = riderSymbols.length
-    ? CORE_GUARD_RULES.concat([{
-        pattern: new RegExp('\\b(?:' + riderSymbols.join('|') + ')\\b'),
-        reason: 'Symbol aus src/rider/ — das Rider-Bundle darf nicht in den geteilten Kern lecken.'
-      }])
-    : CORE_GUARD_RULES;
+  const riderSymbols = bundleOnlySymbols('src/rider');
+  const checkpointSymbols = bundleOnlySymbols('src/checkpoint');
+  let rules = CORE_GUARD_RULES;
+  if(riderSymbols.length){
+    rules = rules.concat([{
+      pattern: new RegExp('\\b(?:' + riderSymbols.join('|') + ')\\b'),
+      reason: 'Symbol aus src/rider/ — das Rider-Bundle darf nicht in den geteilten Kern lecken.'
+    }]);
+  }
+  if(checkpointSymbols.length){
+    rules = rules.concat([{
+      pattern: new RegExp('\\b(?:' + checkpointSymbols.join('|') + ')\\b'),
+      reason: 'Symbol aus src/checkpoint/ — das Checkpoint-Bundle darf nicht in den geteilten Kern lecken.'
+    }]);
+  }
 
   const violations = [];
   for(const name of CORE_FILES){
@@ -242,7 +271,7 @@ function coreFingerprint(){
    Fehlt ein hier nicht gelisteter Namensraum, den die App benutzt, gibt
    t() den Schlüssel im Klartext zurück — sichtbar genug, um beim ersten
    Ausprobieren aufzufallen, aber kein Absturz. */
-function trimTranslations(){
+function trimTranslations(namespaces){
   const src = read('src/core/i18n.js');
   const start = src.indexOf('const translations = {');
   if(start === -1) throw new Error('translations-Literal in i18n.js nicht gefunden');
@@ -259,17 +288,22 @@ function trimTranslations(){
 
   const pick = (dict) => {
     const out = {};
-    for(const ns of RIDER_I18N_NAMESPACES) if(dict && dict[ns]) out[ns] = dict[ns];
+    for(const ns of namespaces) if(dict && dict[ns]) out[ns] = dict[ns];
     return out;
   };
-  const missing = RIDER_I18N_NAMESPACES.filter(ns => !full.de || !full.de[ns]);
-  if(missing.length) throw new Error('RIDER_I18N_NAMESPACES kennt i18n.js nicht: ' + missing.join(', '));
+  const missing = namespaces.filter(ns => !full.de || !full.de[ns]);
+  if(missing.length) throw new Error('Namensräume kennt i18n.js nicht: ' + missing.join(', '));
 
   return {de: pick(full.de), en: pick(en)};
 }
 
-function buildRiderVariant(){
-  const trimmed = trimTranslations();
+/* Gemeinsamer Bauweg für Fahrer- und Checkpoint-App: gleiches Prinzip
+   (kleines Kern-Subset + gekürztes i18n + eingebettetes jsQR in einer
+   einzigen HTML-Datei), unterschiedliche Dateilisten/Namensräume/
+   Platzhalter. Eine dritte solche App bräuchte nur einen weiteren Aufruf
+   hier, keine dritte Kopie dieser Funktion. */
+function buildScopedVariant({files, i18nNamespaces, templateFile, outputFile, jsPlaceholder, cssPlaceholder, cssFile}){
+  const trimmed = trimTranslations(i18nNamespaces);
   /* i18n.js kommt NICHT als Quelltext mit — nur seine Funktionen. Das
      Literal wird durch die gekürzte Fassung ersetzt, sonst läge die
      komplette Übersetzung doppelt im Bundle. */
@@ -285,22 +319,48 @@ function buildRiderVariant(){
     + 'const translations = ' + JSON.stringify(trimmed).replace(/</g, '\\u003c')
     + i18nSrc.slice(litEnd + 1);
 
-  const js = RIDER_FILES
+  const js = files
     .map(rel => rel === 'src/core/i18n.js' ? i18nTrimmed : read(rel))
     .join('\n\n');
 
-  const output = read('templates/rider.template.html')
+  const output = read(`templates/${templateFile}`)
     .replace('{{THEMES_CSS}}', read('src/styles/themes.css'))
-    .replace('{{RIDER_CSS}}', read('src/styles/rider.css'))
+    .replace(cssPlaceholder, read(cssFile))
     .replace('{{JSQR_JS}}', read('vendor/jsQR-1.4.0.js'))
-    .replace('{{RIDER_JS}}', js);
+    .replace(jsPlaceholder, js);
 
   const distDir = path.join(__dirname, 'dist');
   if(!fs.existsSync(distDir)) fs.mkdirSync(distDir);
-  fs.writeFileSync(path.join(distDir, 'alleycat-rider.html'), output);
+  fs.writeFileSync(path.join(distDir, outputFile), output);
 
   const gz = require('zlib').gzipSync(Buffer.from(output, 'utf8'), {level: 9}).length;
-  console.log(`gebaut: dist/alleycat-rider.html (${(Buffer.byteLength(output) / 1024).toFixed(0)} KB roh, ${(gz / 1024).toFixed(0)} KB über die Leitung)`);
+  console.log(`gebaut: dist/${outputFile} (${(Buffer.byteLength(output) / 1024).toFixed(0)} KB roh, ${(gz / 1024).toFixed(0)} KB über die Leitung)`);
+}
+
+function buildRiderVariant(){
+  buildScopedVariant({
+    files: RIDER_FILES,
+    i18nNamespaces: RIDER_I18N_NAMESPACES,
+    templateFile: 'rider.template.html',
+    outputFile: 'alleycat-rider.html',
+    jsPlaceholder: '{{RIDER_JS}}',
+    cssPlaceholder: '{{RIDER_CSS}}',
+    cssFile: 'src/styles/rider.css'
+  });
+}
+
+function buildCheckpointVariant(){
+  buildScopedVariant({
+    files: CHECKPOINT_FILES,
+    i18nNamespaces: CHECKPOINT_I18N_NAMESPACES,
+    templateFile: 'checkpoint.template.html',
+    outputFile: 'alleycat-checkpoint.html',
+    jsPlaceholder: '{{CHECKPOINT_JS}}',
+    /* Teilt sich rider.css statt einer eigenen Datei — siehe Kommentar
+       in templates/checkpoint.template.html. */
+    cssPlaceholder: '{{RIDER_CSS}}',
+    cssFile: 'src/styles/rider.css'
+  });
 }
 
 if(process.argv.includes('--core-hash')){
@@ -313,4 +373,5 @@ assertCoreIsBackendAgnostic();
 buildVariant('storage-local.js', 'local.template.html', 'alleycat-dispatch-local.html');
 buildVariant('storage-server.js', 'server.template.html', 'alleycat-dispatch-server.html');
 buildRiderVariant();
+buildCheckpointVariant();
 console.log(`Kern-Fingerabdruck: ${coreFingerprint().slice(0, 16)}…`);

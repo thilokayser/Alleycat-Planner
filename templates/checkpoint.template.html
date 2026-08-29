@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a1a">
+<title>ALLEYCAT — Checkpoint</title>
+<!-- Bewusst KEINE externen Verweise, gleicher Grund wie beim Fahrer-Bundle:
+     dieses Gerät steht draußen an einem Checkpoint, teils ohne Empfang.
+     CSS ist dasselbe wie die Fahrer-App (rider.css) — beide sind
+     Ein-Karten-Ansichten mit großen Touch-Zielen fürs Freie, ein eigenes
+     Stylesheet böte keinen anderen Look, nur doppelte Pflege. -->
+<style>
+{{THEMES_CSS}}
+{{RIDER_CSS}}
+</style>
+</head>
+<body>
+<div id="checkpoint-app"></div>
+<script>
+{{JSQR_JS}}
+</script>
+<script>
+{{CHECKPOINT_JS}}
+initCheckpointApp();
+</script>
+</body>
+</html>

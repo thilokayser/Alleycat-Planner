@@ -143,6 +143,11 @@ async function buildRiderSyncPayload(evt){
     cpType: cp.type || '',
     qrTokenHash: await sha256Hex(cp.qrToken),
     qrEnabled: !!cp.qrCheckinEnabled,
+    /* Null statt Hash eines leeren Strings, wenn kein Code erzeugt wurde
+       — rider.php prüft in ?a=checkpoint-auth explizit auf NULL, um einen
+       Checkpoint ohne Code-Zugang von einem mit (zufällig) leerem Code zu
+       unterscheiden. sha256Hex('') wäre ein gültiger, aber falscher Hash. */
+    staffCodeHash: cp.staffAccessCode ? await sha256Hex(cp.staffAccessCode) : null,
     sortIndex: i,
     /* Koordinaten nur, wenn die Kartenansicht für Fahrer freigeschaltet ist.
        Sonst wäre die Checkpoint-Liste eines nicht gestarteten Rennens über

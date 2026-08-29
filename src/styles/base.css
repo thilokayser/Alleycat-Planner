@@ -1479,6 +1479,13 @@
   .beamer-elimination-icon{font-size:min(24vw, 200px); line-height:1; animation:beamer-go-pulse 0.9s ease-in-out infinite;}
   .beamer-elimination-text{font-family:'Barlow Condensed',sans-serif; text-transform:uppercase; letter-spacing:0.04em; font-weight:700; font-size:min(6vw, 40px); color:var(--chalk); text-align:center;}
 
+  /* ---------- auth badge (Benutzerverwaltung) ---------- */
+  .auth-badge{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.04em;
+    color:var(--steel); display:flex; align-items:center; padding:0 10px;
+  }
+  .auth-badge-viewer{color:var(--hivis-2);}
+
   /* ---------- data safety: running-hint, backup line, todo severity ---------- */
   .running-hint{
     font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.04em;

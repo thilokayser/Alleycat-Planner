@@ -11,6 +11,11 @@ let state = {
   eventDateSettingsOpen: false,
   loading: true,
   storageOk: true,
+  adminSession: null,   // {token, role, username, displayName} — siehe auth.js currentUserRole()
+  adminUsersList: null, // gecachte ?a=users-Antwort für die Benutzerverwaltung
+  adminUsersError: '',
+  adminUsersEditingId: null,
+  adminAssignEditingId: null,
   checkinBibInput: '',
   checkinActiveBib: null,
   checkinNotFound: false,
@@ -169,6 +174,15 @@ async function loadEvent(id){
 }
 async function saveCurrentEvent(){
   if(!state.currentEvent) return;
+  /* Letzte Bremse für die Betrachter-Rolle: der Server lehnt einen
+     schreibenden Aufruf ohnehin mit 403 ab (apiVerifyAccess() in
+     bootstrap.php), aber ohne diesen Rückweg hier bliebe das Speichern-
+     Symbol dauerhaft auf "pending"/"error" hängen und lokale
+     optimistische Änderungen wichen nie wieder vom letzten echten Stand
+     ab. Rollen-UI-Gating pro Button ist bewusst nicht Teil dieses
+     Durchgangs — dieser eine Engpass deckt jeden Schreibpfad ab, siehe
+     debouncedSave(). */
+  if(isViewerRole()){ setSaveStatus('saved'); return; }
   setSaveStatus('saving');
   const ok = await storageSet('event:' + state.currentEvent.id, JSON.stringify(state.currentEvent));
   setSaveStatus(ok ? 'saved' : 'error');
@@ -178,6 +192,7 @@ async function saveCurrentEvent(){
   }
 }
 function debouncedSave(){
+  if(isViewerRole()) return;
   setSaveStatus('pending');
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(saveCurrentEvent, 450);
@@ -236,6 +251,7 @@ function applyStaticTranslations(){
 }
 async function init(){
   if(isBeamerRoute()){ await initBeamer(); return; }
+  state.adminSession = loadAdminSession();
   if(!(await initStorageBackend())) return;
   await Promise.all([loadAppSettings(), loadCustomLanguagePacks(), loadCustomCheckpointTypes(), loadEventsIndex()]);
   applyAppSettings();
@@ -543,6 +559,24 @@ function renderIconSidebar(navItems, evtId){
     </button>
   `;
 }
+/* Kleines Abzeichen statt eines eigenen Banner-Elements: das Template hat
+   keinen dedizierten Platz dafür, und topbar-actions wird ohnehin bei
+   jedem render() neu gebaut. Erscheint nur unter dem Server-Backend mit
+   personalisiertem Login (hasAdminRoles() && state.adminSession) — beim
+   Master-Key-Zugriff und in beiden anderen Varianten gibt es keine
+   Rolle anzuzeigen. */
+function renderAuthBadge(){
+  if(!hasAdminRoles() || !state.adminSession) return '';
+  const role = currentUserRole();
+  const roleLabel = t('auth.role' + role.charAt(0).toUpperCase() + role.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase()));
+  return `
+    <span class="auth-badge ${role === 'viewer' ? 'auth-badge-viewer' : ''}" title="${escapeHtml(currentUserDisplayName())}">
+      ${role === 'viewer' ? '👁 ' : ''}${escapeHtml(currentUserDisplayName())} · ${escapeHtml(roleLabel)}
+    </span>
+    <button class="btn btn-ghost" onclick="adminLogout().then(() => location.reload())">${t('auth.logoutButton')}</button>
+  `;
+}
+
 function renderTopbar(){
   const sub = document.getElementById('topbar-sub');
   const actions = document.getElementById('topbar-actions');
@@ -559,7 +593,7 @@ function renderTopbar(){
 
   if(state.view === 'dashboard' || !state.currentEvent){
     sub.textContent = t('ui.headquarter');
-    actions.innerHTML = '';
+    actions.innerHTML = renderAuthBadge();
     bottomNav.innerHTML = '';
     if(iconSidebar) iconSidebar.innerHTML = `<div class="icon-sidebar-mark">AC</div>`;
     return;
@@ -572,6 +606,7 @@ function renderTopbar(){
     <button class="btn btn-ghost" onclick="goDashboard()">${t('ui.backToAllEvents')}</button>
     ${state.currentEvent.status === 'running' ? `<span class="running-hint">${t('dataSafety.keepTabOpenHint')}</span>` : ''}
     ${renderStatusControl(state.currentEvent)}
+    ${renderAuthBadge()}
   `;
   bottomNav.innerHTML = navItems.map(item => `
     <button class="bottom-nav-item ${state.view === item.view ? 'active' : ''}" data-nav-view="${item.view}" onclick="${item.onclick(evtId)}">
@@ -614,6 +649,14 @@ const SETTINGS_NAV_GROUPS = [
   ]},
   {id: 'help', label: () => t('settings.groupHelp'), items: [
     {id: 'documentation', icon: '📖', label: () => t('settings.navDocumentation')}
+  ]},
+  /* Nur sichtbar für Rolle 'admin' (renderSettingsSidebar() filtert),
+     nur relevant unter hasAdminRoles() — ohne Server-Backend gibt es
+     nichts zu verwalten. Als eigene Gruppe statt Item unter 'data', weil
+     Betrachter/Editor diese Gruppe nie zu Gesicht bekommen sollen, auch
+     nicht als deaktivierten Eintrag. */
+  {id: 'account', label: () => t('settings.groupAccount'), items: [
+    {id: 'users', icon: '👤', label: () => t('auth.navUsers')}
   ]}
 ];
 function settingsNavItem(id){
@@ -630,7 +673,7 @@ function renderSettingsSidebar(){
         <h2>${t('settings.title')}</h2>
         <p>${t('settings.intro')}</p>
       </div>
-      ${SETTINGS_NAV_GROUPS.map(group => `
+      ${SETTINGS_NAV_GROUPS.filter(group => group.id !== 'account' || (hasAdminRoles() && currentUserCan('manageUsers'))).map(group => `
         <div class="settings-nav-group">
           <div class="settings-nav-group-label">${group.label()}</div>
           ${group.items.map(item => `
@@ -832,10 +875,150 @@ function settingsSectionContent(id){
     case 'checkpointTypes': return renderSettingsSectionCheckpointTypes();
     case 'dataSafety': return renderDataSafetySection();
     case 'documentation': return renderDocumentationSection();
+    case 'users': return renderSettingsSectionUsers();
     case 'features':
     default: return renderFeatureRegistrySection();
   }
 }
+/* ---------------- Benutzerverwaltung ---------------- */
+async function loadAdminUsersIfNeeded(force){
+  if(state.adminUsersList && !force) return;
+  const res = await adminListUsers();
+  state.adminUsersError = res.ok ? '' : (res.error || 'error');
+  state.adminUsersList = res.ok ? res.users : [];
+  if(state.settingsSection === 'users') renderSettings();
+}
+function toggleAddUserForm(){
+  state.adminUsersEditingId = state.adminUsersEditingId === 'new' ? null : 'new';
+  renderSettings();
+}
+async function submitNewUser(){
+  const username = (document.getElementById('newuser-username').value || '').trim();
+  const password = document.getElementById('newuser-password').value || '';
+  const displayName = (document.getElementById('newuser-displayname').value || '').trim();
+  const role = document.getElementById('newuser-role').value;
+  if(!username || password.length < 8){ alert(t('auth.usersDesc')); return; }
+  const res = await adminCreateUser({username, password, displayName, role});
+  if(!res.ok){
+    alert(res.error === 'username_taken' ? t('auth.usersUsernameTaken') : t('checkpointScan.errGeneric'));
+    return;
+  }
+  state.adminUsersEditingId = null;
+  await loadAdminUsersIfNeeded(true);
+}
+async function updateUserRole(id, role){
+  const res = await adminUpdateUser({id, role});
+  if(!res.ok && res.error === 'last_admin') alert(t('auth.usersLastAdminError'));
+  await loadAdminUsersIfNeeded(true);
+}
+async function toggleUserActive(id, active){
+  const res = await adminUpdateUser({id, active});
+  if(!res.ok && res.error === 'last_admin') alert(t('auth.usersLastAdminError'));
+  await loadAdminUsersIfNeeded(true);
+}
+async function resetUserPasswordPrompt(id, username){
+  const password = prompt(t('auth.usersResetPasswordButton') + ' — ' + username);
+  if(password === null) return;
+  if(password.length < 8){ alert(t('auth.usersPasswordLabel')); return; }
+  await adminUpdateUser({id, password});
+  alert(t('auth.usersSaveButton'));
+}
+async function deleteUserRow(id, username){
+  if(!confirm(t('auth.usersDeleteConfirm', {username}))) return;
+  const res = await adminDeleteUser(id);
+  if(!res.ok && res.error === 'last_admin') alert(t('auth.usersLastAdminError'));
+  await loadAdminUsersIfNeeded(true);
+}
+function toggleAssignForUser(id){
+  state.adminAssignEditingId = state.adminAssignEditingId === id ? null : id;
+  if(state.adminAssignEditingId && state.currentEvent){
+    adminGetCheckpointStaff(state.currentEvent.publicId || '').then(res => {
+      state.adminAssignCache = res.ok ? res.assignments : [];
+      renderSettings();
+    });
+  }
+  renderSettings();
+}
+async function saveAssignForUser(id){
+  const evt = state.currentEvent;
+  if(!evt || !evt.publicId) return;
+  const checked = [...document.querySelectorAll(`.admin-assign-cp[data-user="${id}"]:checked`)].map(el => el.value);
+  await adminSetCheckpointStaff(id, evt.publicId, checked);
+  state.adminAssignEditingId = null;
+  renderSettings();
+}
+const ADMIN_ROLE_OPTIONS = ['admin', 'editor', 'viewer', 'checkpoint_staff'];
+function adminRoleLabel(role){
+  return t('auth.role' + role.charAt(0).toUpperCase() + role.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase()));
+}
+function renderSettingsSectionUsers(){
+  if(!hasAdminRoles()){
+    return `<div class="settings-section"><h3>${t('auth.usersHeading')}</h3><div class="settings-section-desc">${t('auth.usersDesc')}</div></div>`;
+  }
+  const users = state.adminUsersList || [];
+  const rows = users.map(u => {
+    const assignOpen = state.adminAssignEditingId === u.id;
+    const cps = (state.currentEvent && state.currentEvent.checkpoints) || [];
+    const assigned = new Set((state.adminAssignCache || []).filter(a => a.user_id == u.id).map(a => a.cp_id));
+    return `
+      <div class="admin-user-row" style="border:1px solid var(--asphalt-3); border-radius:4px; padding:12px 14px; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <strong>${escapeHtml(u.username)}</strong>
+          <span style="color:var(--steel); font-size:12px;">${escapeHtml(u.displayName || '')}</span>
+          <select onchange="updateUserRole(${u.id}, this.value)" style="margin-left:auto;">
+            ${ADMIN_ROLE_OPTIONS.map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${escapeHtml(adminRoleLabel(r))}</option>`).join('')}
+          </select>
+          <button class="btn btn-ghost" onclick="toggleUserActive(${u.id}, ${!u.active})">${u.active ? t('auth.usersDeactivateButton') : t('auth.usersActivateButton')}</button>
+          <button class="btn btn-ghost" onclick="resetUserPasswordPrompt(${u.id}, '${escapeHtml(u.username)}')">${t('auth.usersResetPasswordButton')}</button>
+          <button class="btn btn-ghost" onclick="deleteUserRow(${u.id}, '${escapeHtml(u.username)}')">${t('auth.usersDeleteButton')}</button>
+        </div>
+        <div style="color:var(--steel); font-size:11px; margin-top:4px;">${t('auth.usersLastSeen')}: ${u.lastSeenAt ? escapeHtml(u.lastSeenAt) : t('auth.usersLastSeenNever')}${u.active ? '' : ' · ' + t('auth.usersActiveLabel') + ': ✕'}</div>
+        ${u.role === 'checkpoint_staff' ? `
+          <div style="margin-top:8px;">
+            <button class="btn btn-ghost" onclick="toggleAssignForUser(${u.id})">${t('auth.usersCheckpointAssignHeading')}</button>
+            ${assignOpen ? (
+              !state.currentEvent ? `<div class="settings-section-desc">${t('auth.usersCheckpointAssignNoEvent')}</div>` : `
+              <div style="margin-top:8px; padding:10px; background:var(--asphalt); border-radius:4px;">
+                <div class="settings-section-desc">${t('auth.usersCheckpointAssignHint')}</div>
+                ${cps.map(cp => `
+                  <label style="display:block; margin:4px 0;">
+                    <input type="checkbox" class="admin-assign-cp" data-user="${u.id}" value="${escapeHtml(cp.id)}" ${assigned.has(cp.id) ? 'checked' : ''}>
+                    ${escapeHtml(cp.name || cp.id)}
+                  </label>
+                `).join('')}
+                <button class="btn btn-primary" style="margin-top:8px;" onclick="saveAssignForUser(${u.id})">${t('auth.usersSaveButton')}</button>
+              </div>
+            `) : ''}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+
+  const addForm = state.adminUsersEditingId === 'new' ? `
+    <div class="admin-user-row" style="border:1px solid var(--asphalt-3); border-radius:4px; padding:12px 14px; margin-bottom:14px;">
+      <div class="rider-field"><label>${t('auth.usersUsernameLabel')}</label><input type="text" id="newuser-username"></div>
+      <div class="rider-field"><label>${t('auth.usersPasswordLabel')}</label><input type="password" id="newuser-password"></div>
+      <div class="rider-field"><label>${t('auth.usersDisplayNameLabel')}</label><input type="text" id="newuser-displayname"></div>
+      <div class="rider-field"><label>${t('auth.usersRoleLabel')}</label>
+        <select id="newuser-role">${ADMIN_ROLE_OPTIONS.map(r => `<option value="${r}">${escapeHtml(adminRoleLabel(r))}</option>`).join('')}</select>
+      </div>
+      <button class="btn btn-primary" onclick="submitNewUser()">${t('auth.usersSaveButton')}</button>
+    </div>
+  ` : '';
+
+  return `
+    <div class="settings-section">
+      <h3>${t('auth.usersHeading')}</h3>
+      <div class="settings-section-desc">${t('auth.usersDesc')}</div>
+      ${state.adminUsersError ? `<div class="rider-note rider-note-error">${escapeHtml(state.adminUsersError)}</div>` : ''}
+      <button class="btn btn-primary" style="margin:12px 0;" onclick="toggleAddUserForm()">${t('auth.usersAddButton')}</button>
+      ${addForm}
+      ${rows || `<div class="settings-section-desc">…</div>`}
+    </div>
+  `;
+}
+
 function renderSettings(){
   Object.entries(ICON_PACKS).forEach(([key, p]) => {
     if(!p.cdn) return;
@@ -862,5 +1045,6 @@ function renderSettings(){
     refreshStorageEstimate();
     if(isFeatureEnabled('offline_map_cache')) refreshTileCacheTotal();
   }
+  if(state.settingsSection === 'users' && hasAdminRoles()) loadAdminUsersIfNeeded();
 }
 

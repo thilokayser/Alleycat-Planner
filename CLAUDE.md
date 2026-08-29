@@ -4,7 +4,7 @@ Guidance for Claude Code (claude.ai/code) on this repo. Kept under ~5k tokens on
 
 ## What this is
 
-Alleycat Dispatch: organizer tool for alleycat races (bike checkpoint races) — create events, place checkpoints on map, print bib numbers/spokecards, run finish-line check-in, keep leaderboard, export manifest as PDF. Ships as three self-contained HTML files (two organizer variants — local/server storage — plus a separate rider app for the server variant), opened directly in browser — files are **generated**, not hand-edited. See Architecture below before touching anything.
+Alleycat Dispatch: organizer tool for alleycat races (bike checkpoint races) — create events, place checkpoints on map, print bib numbers/spokecards, run finish-line check-in, keep leaderboard, export manifest as PDF. Ships as four self-contained HTML files (two organizer variants — local/server storage — plus a separate rider app and a separate checkpoint-staff app, both server-variant only), opened directly in browser — files are **generated**, not hand-edited. See Architecture below before touching anything.
 
 ## Project docs
 
@@ -20,7 +20,7 @@ Plain JS (no framework, no bundler, no `npm install`) — single global `state` 
 
 ## Commands
 
-- **Build**: `node build.js` — reads `src/` + `templates/` + `vendor/`, writes **three** files: `dist/alleycat-dispatch-local.html`, `-server.html`, and `dist/alleycat-rider.html`. Run after every source change, before testing in browser. `node build.js --core-hash` prints only the `CORE_FILES` fingerprint (leak detector, see Core guard).
+- **Build**: `node build.js` — reads `src/` + `templates/` + `vendor/`, writes **four** files: `dist/alleycat-dispatch-local.html`, `-server.html`, `dist/alleycat-rider.html`, and `dist/alleycat-checkpoint.html`. Run after every source change, before testing in browser. `node build.js --core-hash` prints only the `CORE_FILES` fingerprint (leak detector, see Core guard).
 - **Run**: open `dist/alleycat-dispatch-local.html` (or `-server.html`) directly in browser after building.
 - **Test (organizer)**: paste `test-suite.js` into the browser console of a running `dist/alleycat-dispatch-*.html`, call `runAlleycatTestSuite()`. No CI — always manual, in-browser. See Test coverage gaps below.
 - **Test (rider app)**: paste `test-suite-rider.js` into the console of `dist/alleycat-rider.html`, call `runRiderTestSuite()`. Needs **no server** — every network call is stubbed, deliberately: the promises it checks (the queue loses nothing, the cache carries offline, bad codes are rejected before any request) are exactly the ones that must hold without one. Two suites rather than one because the bundles share no runtime state — `state`, `render()`, and the storage layer do not exist in the rider app.
@@ -77,7 +77,8 @@ Everything here must build **byte-identical** across both variants — order not
 | `checkpoint-types.js` | `CHECKPOINT_TYPES` + `getCheckpointTypes()`. **Fabrik, keine Konstante** — Beschriftungen kommen aus `t()` und müssen dem Sprachwechsel folgen; memoisiert pro Sprache. Auch im Rider-Bundle |
 | `rider-qr.js` | QR-Nutzlast erzeugen und zerlegen (`parseRiderQrPayload` u. a.). Auch im Rider-Bundle — deshalb liegt hier **nur**, was die Fahrer-App braucht |
 | `rider-sync.js` | Rider-App-Fundament: Publish, Log-Merge, Anmeldungen bestätigen. Alles Netzabhängige läuft über Seams. **Nicht** im Rider-Bundle (hängt an `state`/`debouncedSave`) |
-| `ui-headquarter.js` | `state`, `init()`, `render()` dispatcher, Settings-Hub sidebar |
+| `auth.js` | Admin-Rollen: reine Logik (`currentUserRole()`, `currentUserCan()`), keine Endpunkte. Netzwerk-Seams (`adminLogin()` u. a.) in `src/storage/*` |
+| `ui-headquarter.js` | `state`, `init()`, `render()` dispatcher, Settings-Hub sidebar (inkl. Benutzerverwaltung) |
 
 `src/storage/storage-{local,server}.js` (backend-specific), `src/styles/base.css`+`themes.css`, `templates/{local,server}.template.html`.
 
@@ -91,6 +92,14 @@ Third build output, **server variant only**, driven by `RIDER_FILES` in `build.j
 - **What may live in a shared `src/core/` file**: only what the rider bundle actually needs. `src/storage/*` is absent there, so anything calling a seam (`riderAppBaseUrl()`, `storageGet`) must not be in a file `RIDER_FILES` pulls in.
 - **No offline start.** Check-ins without signal work (queue in `localStorage`); *reloading* without a connection shows the browser's error page. Service worker deliberately deferred — see the rider-app spec §7.5.
 
+### Checkpoint-App bundle (`dist/alleycat-checkpoint.html`)
+
+Fourth build output, **server variant only**, driven by `CHECKPOINT_FILES` in `build.js` — same pattern as the rider bundle (own `src/checkpoint/*.js`, `templates/checkpoint.template.html`, `CHECKPOINT_I18N_NAMESPACES`, embedded jsQR, `bundleOnlySymbols()` core-guard rule covers both bundles now). Lets checkpoint volunteers scan a rider's spokecard and check them in at exactly one checkpoint, instead of the whole-event view `checkin.js` gives the organizer. Shares `src/styles/rider.css` rather than its own stylesheet — both are one-screen, big-touch-target apps for outdoor use, a second file would just duplicate the same rules.
+
+- **Two access modes per checkpoint**, picked in the checkpoint editor (`checkpoint.staffAccessCode` field): **code** (`?a=checkpoint-auth` in `rider.php`, a short human-typeable code hashed into `staff_code_hash`) for volunteers without individual accounts, or **account** (`?a=checkpoint-login`, role `checkpoint_staff` in `{prefix}_admin_user`, scoped to specific checkpoints via `{prefix}_checkpoint_staff`) for larger crews. Both issue a bearer token consumed by `?a=checkpoint-me`/`?a=checkpoint-checkin`, resolved live per-request in `checkpointResolveScope()` (`bootstrap.php`) — never baked into the token, so re-assigning a volunteer's checkpoints takes effect without re-login.
+- **Admin-Rollensystem** (Admin/Editor/Betrachter/Checkpoint-Personal) rides on the same migration: `{prefix}_admin_user` + `{prefix}_admin_session`, bearer-token sessions (not PHP cookies — the API's `Access-Control-Allow-Origin: *` doesn't support credentialed cookies, and every other endpoint here is already header-auth). The one shared master API key from `install.php` still works unchanged and always resolves to `admin` (backward compatible); a browser configured with just the API URL and no key lands on the personalized login instead (`renderAdminLogin()`/`renderAdminBootstrap()` in `storage-server.js`). `api.php` enforces role per HTTP method (`apiVerifyAccess()`): GET needs `viewer`, POST/DELETE need `editor`; user management (`auth.php`) needs `admin`. Settings → Konto → Benutzer is admin-only UI for this.
+- **Client-side viewer enforcement is a single choke point, not per-button gating**: `debouncedSave()`/`saveCurrentEvent()` in `ui-headquarter.js` no-op for role `viewer`. The server-side 403 is the real guarantee; the client no-op just avoids a stuck "speichert…" indicator. Individual edit controls are **not** hidden per role in this first pass.
+
 ### Storage-capability seams
 
 Variant-specific behavior never branches on `hasSharedStorage`/`typeof sqlDb` inside `src/core/*` — goes through one of four seams, implemented per-backend in `src/storage/*`. **This is enforced by `build.js`, not just convention** — see Core guard below.
@@ -101,6 +110,7 @@ Variant-specific behavior never branches on `hasSharedStorage`/`typeof sqlDb` in
 - **`supportsLocalBackup()`** — sync, `!hasSharedStorage` in both variants. The *capability* question behind `exportBackupBlob`, for the two render paths that need to hide backup UI without producing a blob (`renderDataSafetySection`, `renderBackupStatusLine`).
 - **`riderAppBaseUrl()`** — sync, `''` when there can be no rider app (local variant always; server variant until a rider-app URL is configured). **Ask this before mutating anything rider-related** — the three async seams below only reveal `null` after the call, by which point an event would already carry a `publicId` and tokens nobody will use.
 - **`publishRiderConfig(payload)` / `pollRiderLog(publicId, since)` / `confirmRiderSlot(publicId, bib, status)`** — `null` in the local variant. Server variant posts to `rider.php`, whose URL is derived from the configured `api.php` endpoint (same directory).
+- **`hasAdminRoles()`** — sync, `false` in the local variant and under shared `window.storage` (nobody to have a role relative to); `!hasSharedStorage` in the server variant. `auth.js`'s `currentUserRole()` treats everyone as `admin` when this is `false`.
 
 ### Core guard (`build.js`)
 
@@ -126,7 +136,8 @@ All persistence goes through `storageGet(key)`/`storageSet(key, value)`/`storage
 
 ## Known issues & open TODOs
 
-- **PHP backend untested on real host.** `php-backend/` code-complete (pre-flight checks, migrations, hardened error handling) but only verified against local MariaDB/PHP dev server — never installed on real shared hosting. Needs user to run `install.php` on their host, record result in `php-backend/COMPATIBILITY.md`.
+- **PHP backend untested on real host.** `php-backend/` code-complete (pre-flight checks, migrations, hardened error handling) but only verified against local MariaDB/PHP dev server — never installed on real shared hosting. Needs user to run `install.php` on their host, record result in `php-backend/COMPATIBILITY.md`. This now also covers migration 4 (`admin_user`/`admin_session`/`checkpoint_staff`/`checkpoint_session`) and `auth.php` — schema-verified locally (`php -l`, `node build.js`), never run against a live database.
+- **Checkpoint-App + Admin-Rollensystem built 2026-08-29, PHP side unverified against a live database.** Client flows (setup screen, login gate, bootstrap screen, checkpoint-app login in both modes) checked in-browser with the server variant pointed at a placeholder API URL — confirms the UI wiring, not the actual `auth.php`/`rider.php` round-trip. Needs a real PHP+MySQL run of: `migrate.php` picking up migration 4, `auth.php?a=bootstrap` creating the first admin, login as each role and confirming `api.php` actually 403s a viewer's POST, and both checkpoint-app auth modes end-to-end against `rider.php?a=checkpoint-checkin`. Per-control role gating (hiding individual edit buttons for `viewer`/`editor`) was deliberately not built — see Checkpoint-App bundle section above — only the server-side 403 and the `debouncedSave()` no-op exist so far.
 - **`pdf_page_format` (A4/US Letter switch + crop marks) deliberately deferred.** `exportManifestPDF()` uses absolute pt coordinates throughout, not page-size-relative fractions — naive format switch risks clipping content on US Letter (50pt shorter than A4). Needs own focused pass.
 - **Storage protocol: last writer wins — but no longer for check-ins.** One key = one whole event JSON blob, and two devices editing the same event still overwrite each other; there is no optimistic locking or ETag. Rider check-ins and registrations are the exception: since the rider-app foundation (2026-08-25) they are append-only rows in `<prefix>_rider_log`, never blob writes, and `mergeRiderLogRows()` is idempotent — so two organizer devices reading the same log converge instead of clobbering. Anything else the organizer edits is still last-writer-wins.
 - **Rider-App sub-projects all built.** 1 (foundation), 2 (`dist/alleycat-rider.html` itself), and 3 (beamer checkpoint-ping + public online pre-registration, `#g.<publicId>` entry route) are done — see [`docs/superpowers/specs/2026-08-25-rider-app-fundament-design.md`](docs/superpowers/specs/2026-08-25-rider-app-fundament-design.md) and [`docs/superpowers/specs/2026-08-28-public-pre-registration-design.md`](docs/superpowers/specs/2026-08-28-public-pre-registration-design.md). Real-host PHP testing is still the one open item (see below).

@@ -138,15 +138,16 @@ if($action === 'sync'){
         ->execute([$publicId, $publicId]);
 
     $keptCps = [];
-    $cpStmt = $pdo->prepare("INSERT INTO `{$cpT}` (`public_id`,`cp_id`,`label`,`cp_type`,`qr_token_hash`,`qr_enabled`,`sort_index`,`lat`,`lon`)
-                             VALUES (?,?,?,?,?,?,?,?,?)
+    $cpStmt = $pdo->prepare("INSERT INTO `{$cpT}` (`public_id`,`cp_id`,`label`,`cp_type`,`qr_token_hash`,`qr_enabled`,`sort_index`,`lat`,`lon`,`staff_code_hash`)
+                             VALUES (?,?,?,?,?,?,?,?,?,?)
                              ON DUPLICATE KEY UPDATE `label`=VALUES(`label`),
                                                      `cp_type`=VALUES(`cp_type`),
                                                      `qr_token_hash`=VALUES(`qr_token_hash`),
                                                      `qr_enabled`=VALUES(`qr_enabled`),
                                                      `sort_index`=VALUES(`sort_index`),
                                                      `lat`=VALUES(`lat`),
-                                                     `lon`=VALUES(`lon`)");
+                                                     `lon`=VALUES(`lon`),
+                                                     `staff_code_hash`=VALUES(`staff_code_hash`)");
     foreach(($body['checkpoints'] ?? []) as $cp){
       $cpId = (string)($cp['cpId'] ?? '');
       if($cpId === '') continue;
@@ -159,7 +160,8 @@ if($action === 'sync'){
         !empty($cp['qrEnabled']) ? 1 : 0,
         (int)($cp['sortIndex'] ?? 0),
         isset($cp['lat']) && $cp['lat'] !== null ? (float)$cp['lat'] : null,
-        isset($cp['lon']) && $cp['lon'] !== null ? (float)$cp['lon'] : null
+        isset($cp['lon']) && $cp['lon'] !== null ? (float)$cp['lon'] : null,
+        isset($cp['staffCodeHash']) && $cp['staffCodeHash'] !== null ? (string)$cp['staffCodeHash'] : null
       ]);
     }
 
@@ -519,6 +521,164 @@ if($action === 'register'){
   }
 
   riderOut(['ok' => true, 'bib' => (int)$slot['bib']]);
+}
+
+/* ================= Checkpoint-App-Aktionen =================
+   Vierter Zugangsweg neben Admin-Key, Fahrer-Token und Admin-Session:
+   die Checkpoint-App scannt Fahrer statt selbst gescannt zu werden — das
+   Spiegelbild von ?a=checkin oben. Beide Auth-Modi (Konto/Code) landen
+   hier auf denselben drei Aktionen, siehe checkpointResolveScope() in
+   bootstrap.php. */
+
+if($action === 'checkpoint-auth'){
+  riderRequirePost();
+  riderCheckRateLimit($pdo); // Code ist ein kurzes Geheimnis, verdient dieselbe Bremse wie ?a=me
+  $body = riderJsonBody();
+  $publicId = (string)($body['publicId'] ?? '');
+  $cpId = (string)($body['cpId'] ?? '');
+  $code = (string)($body['code'] ?? '');
+
+  $stmt = $pdo->prepare("SELECT * FROM `" . riderTableName('checkpoint') . "`
+                         WHERE `public_id` = ? AND `cp_id` = ?");
+  $stmt->execute([$publicId, $cpId]);
+  $cp = $stmt->fetch(PDO::FETCH_ASSOC);
+  if(!$cp || $cp['staff_code_hash'] === null) riderRejectAuth($pdo, 'unknown_checkpoint');
+  if(!hash_equals($cp['staff_code_hash'], riderHashToken(strtoupper(trim($code))))) riderRejectAuth($pdo, 'invalid_code');
+  riderClearFailures($pdo);
+
+  $token = adminGenerateToken();
+  $pdo->prepare("INSERT INTO `" . adminTableName('checkpoint_session') . "` (`token_hash`,`public_id`,`cp_id`,`last_seen_at`) VALUES (?,?,?,NOW())")
+      ->execute([adminHashToken($token), $publicId, $cpId]);
+  riderOut(['ok' => true, 'token' => $token, 'cpId' => $cpId, 'label' => $cp['label']]);
+}
+
+if($action === 'checkpoint-login'){
+  riderRequirePost();
+  riderCheckRateLimit($pdo);
+  $body = riderJsonBody();
+  $publicId = (string)($body['publicId'] ?? '');
+  $username = trim((string)($body['username'] ?? ''));
+  $password = (string)($body['password'] ?? '');
+
+  $userTable = adminTableName('admin_user');
+  $stmt = $pdo->prepare("SELECT * FROM `{$userTable}` WHERE `username` = ? AND `active` = 1 AND `role` = 'checkpoint_staff'");
+  $stmt->execute([$username]);
+  $user = $stmt->fetch(PDO::FETCH_ASSOC);
+  if(!$user || !password_verify($password, $user['password_hash'])) riderRejectAuth($pdo, 'invalid_credentials');
+
+  $cpIds = checkpointStaffScope($pdo, (int)$user['id'], $publicId);
+  if(!$cpIds) riderRejectAuth($pdo, 'no_checkpoints_assigned');
+  riderClearFailures($pdo);
+
+  $token = adminGenerateToken();
+  $pdo->prepare("INSERT INTO `" . adminTableName('admin_session') . "` (`token_hash`,`user_id`,`last_seen_at`) VALUES (?,?,NOW())")
+      ->execute([adminHashToken($token), $user['id']]);
+  riderOut(['ok' => true, 'token' => $token, 'username' => $user['username'], 'displayName' => $user['display_name']]);
+}
+
+if($action === 'checkpoint-logout'){
+  riderRequirePost();
+  $adminToken = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '';
+  $cpToken = $_SERVER['HTTP_X_CHECKPOINT_TOKEN'] ?? '';
+  if($adminToken !== ''){
+    $pdo->prepare("DELETE FROM `" . adminTableName('admin_session') . "` WHERE `token_hash` = ?")->execute([adminHashToken($adminToken)]);
+  }
+  if($cpToken !== ''){
+    $pdo->prepare("DELETE FROM `" . adminTableName('checkpoint_session') . "` WHERE `token_hash` = ?")->execute([adminHashToken($cpToken)]);
+  }
+  riderOut(['ok' => true]);
+}
+
+if($action === 'checkpoint-me'){
+  riderRequireGet();
+  $publicId = (string)($_GET['public_id'] ?? '');
+  $scope = checkpointResolveScope($pdo, $publicId);
+  if(!$scope) riderRejectAuth($pdo, 'unauthorized');
+
+  $evt = riderLoadEvent($pdo, $publicId);
+  if(!$evt) apiSendJsonError(404, 'unknown_event');
+
+  $ph = implode(',', array_fill(0, count($scope['cpIds']), '?'));
+  $stmt = $pdo->prepare("SELECT `cp_id`,`label`,`cp_type` FROM `" . riderTableName('checkpoint') . "`
+                         WHERE `public_id` = ? AND `cp_id` IN ({$ph}) ORDER BY `sort_index` ASC");
+  $stmt->execute(array_merge([$publicId], $scope['cpIds']));
+  $checkpoints = array_map(function($c){
+    return ['cpId' => $c['cp_id'], 'label' => $c['label'], 'cpType' => $c['cp_type']];
+  }, $stmt->fetchAll(PDO::FETCH_ASSOC));
+
+  riderOut(['ok' => true, 'event' => ['name' => $evt['name'], 'status' => $evt['status']], 'checkpoints' => $checkpoints]);
+}
+
+if($action === 'checkpoint-checkin'){
+  riderRequirePost();
+  $body = riderJsonBody();
+  $publicId = (string)($body['publicId'] ?? '');
+  $cpId = (string)($body['cpId'] ?? '');
+  $clientUuid = (string)($body['clientUuid'] ?? '');
+  if($clientUuid === '') apiSendJsonError(400, 'missing_client_uuid');
+
+  $scope = checkpointResolveScope($pdo, $publicId);
+  if(!$scope) riderRejectAuth($pdo, 'unauthorized');
+  if(!in_array($cpId, $scope['cpIds'], true)) apiSendJsonError(403, 'checkpoint_not_assigned');
+
+  $evt = riderLoadEvent($pdo, $publicId);
+  if(!$evt) apiSendJsonError(404, 'unknown_event');
+
+  $cpStmt = $pdo->prepare("SELECT * FROM `" . riderTableName('checkpoint') . "` WHERE `public_id` = ? AND `cp_id` = ?");
+  $cpStmt->execute([$publicId, $cpId]);
+  $cp = $cpStmt->fetch(PDO::FETCH_ASSOC);
+  if(!$cp) apiSendJsonError(404, 'unknown_checkpoint');
+
+  /* Zwei Wege zum Fahrer: über den eigenen Token (Spokecard vorgezeigt,
+     genau wie beim Selbst-Check-in) oder — neu, weil das Personal bereits
+     durch checkpointResolveScope() legitimiert ist — direkt über die
+     Startnummer (alte Karte ohne QR, oder Zuruf am Checkpoint). Ein
+     Fremder ohne Zugangscode/Konto kommt hier gar nicht erst hin. */
+  $slot = null;
+  if(!empty($body['riderToken'])){
+    $slot = riderResolveSlot($pdo, $publicId, (string)$body['riderToken']);
+  } elseif(!empty($body['bib'])){
+    $bibStmt = $pdo->prepare("SELECT * FROM `" . riderTableName('slot') . "` WHERE `public_id` = ? AND `bib` = ?");
+    $bibStmt->execute([$publicId, (int)$body['bib']]);
+    $slot = $bibStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+  }
+  if(!$slot) apiSendJsonError(404, 'unknown_rider');
+  if($slot['status'] !== 'confirmed') apiSendJsonError(409, 'slot_not_confirmed');
+  if($evt['status'] !== 'running') apiSendJsonError(409, 'race_not_running');
+
+  $now = time();
+  $scannedAt = strtotime((string)($body['scannedAt'] ?? ''));
+  $createdAt = ($scannedAt && $scannedAt <= $now + 120 && $scannedAt > $now - 86400)
+    ? date('Y-m-d H:i:s', $scannedAt)
+    : date('Y-m-d H:i:s', $now);
+
+  $lat = isset($body['lat']) && $body['lat'] !== null ? (float)$body['lat'] : null;
+  $lon = isset($body['lon']) && $body['lon'] !== null ? (float)$body['lon'] : null;
+  $distance = null;
+  if($lat !== null && $lon !== null && $cp['lat'] !== null && $cp['lon'] !== null){
+    $distance = riderDistanceMeters($lat, $lon, (float)$cp['lat'], (float)$cp['lon']);
+  }
+
+  $t = riderTableName('log');
+  try {
+    $pdo->prepare("INSERT INTO `{$t}` (`public_id`,`type`,`bib`,`cp_id`,`client_uuid`,`gps_lat`,`gps_lon`,`gps_distance_m`,`created_at`,`via`,`staff_ref`)
+                   VALUES (?,'checkin',?,?,?,?,?,?,?,'staff',?)")
+        ->execute([$publicId, (int)$slot['bib'], $cpId, $clientUuid, $lat, $lon, $distance, $createdAt, $scope['staffRef']]);
+  } catch (PDOException $e) {
+    if($e->getCode() !== '23000') throw $e;
+    $dupStmt = $pdo->prepare("SELECT `created_at`,`client_uuid` FROM `{$t}` WHERE `public_id` = ? AND `bib` = ? AND `cp_id` = ?");
+    $dupStmt->execute([$publicId, (int)$slot['bib'], $cpId]);
+    $existing = $dupStmt->fetch(PDO::FETCH_ASSOC);
+    riderOut([
+      'ok' => true,
+      'duplicate' => $existing && $existing['client_uuid'] === $clientUuid,
+      'already' => $existing ? $existing['created_at'] : null,
+      'bib' => (int)$slot['bib'],
+      'label' => $cp['label']
+    ]);
+  }
+
+  riderOut(['ok' => true, 'bib' => (int)$slot['bib'], 'label' => $cp['label'], 'at' => $createdAt]);
 }
 
 apiSendJsonError(400, 'unknown_action');

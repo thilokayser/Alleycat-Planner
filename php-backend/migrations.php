@@ -149,6 +149,99 @@ function migrationsList($table, $charset){
                     ADD COLUMN `cp_type` VARCHAR(32) NOT NULL DEFAULT ''");
       }
     },
+
+    /* Admin-Benutzer/Rollen (Checkpoint-App-Grundlage). Vier neue Tabellen,
+       analog zur Rider-App-Migration (2) additiv und ohne Berührung der
+       bestehenden Tabellen — eine Installation ohne diese Migration bleibt
+       mit dem einen geteilten API-Key voll funktionsfähig (apiVerifyKey()
+       in bootstrap.php prüft weiterhin zuerst den Key, die Rollenprüfung
+       kommt nur bei X-Admin-Token zum Tragen). */
+    4 => function(PDO $pdo) use ($table, $charset){
+      /* Passwort bewusst mit password_hash (bcrypt), nicht sha256 wie bei
+         Fahrer-Token: hier ist der Mensch die Quelle des Geheimnisses
+         (wählt ein womöglich schwaches Passwort), nicht ein
+         kryptografischer Zufallsgenerator — dieselbe Unterscheidung wie
+         beim API-Key in install.php. */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_admin_user` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `username` VARCHAR(64) NOT NULL,
+        `password_hash` VARCHAR(255) NOT NULL,
+        `role` VARCHAR(20) NOT NULL DEFAULT 'viewer',
+        `display_name` VARCHAR(191) NOT NULL DEFAULT '',
+        `active` TINYINT(1) NOT NULL DEFAULT 1,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `last_seen_at` DATETIME NULL,
+        UNIQUE KEY `uq_username` (`username`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      /* Bearer-Session statt PHP-$_SESSION-Cookie: die API antwortet mit
+         Access-Control-Allow-Origin: * (siehe apiSendCorsHeaders()), und
+         Cookies funktionieren mit einem Wildcard-Origin nicht zusammen mit
+         credentials — das ganze Backend ist ohnehin durchgehend
+         Header-Auth (X-Api-Key, X-Rider-Token). Der Sessiontoken reiht sich
+         da ein, nur eben personalisiert und mit Rolle statt Vollzugriff.
+         Gleiches Hash-Verfahren wie bei Fahrer-Token: hochentropischer
+         Zufallswert, kein schwaches Geheimnis zu strecken. */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_admin_session` (
+        `token_hash` CHAR(64) NOT NULL PRIMARY KEY,
+        `user_id` INT UNSIGNED NOT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `last_seen_at` DATETIME NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      /* Checkpoint-App, Konten-Modus: welchem Benutzer welcher Checkpoint
+         (innerhalb welchen Events) zugewiesen ist. Zusammengesetzter
+         Primärschlüssel statt eigener id-Spalte, weil eine Zuweisung nie
+         für sich allein referenziert wird. */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_checkpoint_staff` (
+        `user_id` INT UNSIGNED NOT NULL,
+        `public_id` VARCHAR(16) NOT NULL,
+        `cp_id` VARCHAR(64) NOT NULL,
+        PRIMARY KEY (`user_id`, `public_id`, `cp_id`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      /* Checkpoint-App, Code-Modus: ein kurzer, am Gerät eingetippter
+         Zugangscode pro Checkpoint statt eines Benutzerkontos — für kleine
+         Rennen, bei denen ein Konto pro Helfer Overhead wäre. Eigene
+         Session-Tabelle statt admin_session: dieser Token ist auf genau
+         einen Checkpoint beschränkt und trägt keine admin_user-Rolle. */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_checkpoint_session` (
+        `token_hash` CHAR(64) NOT NULL PRIMARY KEY,
+        `public_id` VARCHAR(16) NOT NULL,
+        `cp_id` VARCHAR(64) NOT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `last_seen_at` DATETIME NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'staff_code_hash'"
+      );
+      $stmt->execute(["{$table}_rider_checkpoint"]);
+      if((int)$stmt->fetchColumn() === 0){
+        $pdo->exec("ALTER TABLE `{$table}_rider_checkpoint`
+                    ADD COLUMN `staff_code_hash` CHAR(64) NULL");
+      }
+
+      /* Herkunft eines Check-ins: 'rider' (Fahrer scannt selbst, Status
+         quo) oder 'staff' (Checkpoint-App). `staff_ref` ist ein
+         Anzeigename fürs Log (Username im Konten-Modus, sonst 'code') —
+         kein Fremdschlüssel, damit ein gelöschtes Benutzerkonto die
+         historischen Log-Zeilen nicht verwaist zurücklässt. */
+      foreach([
+        ['via', "VARCHAR(16) NOT NULL DEFAULT 'rider'"],
+        ['staff_ref', "VARCHAR(64) NULL"]
+      ] as $col){
+        $stmt = $pdo->prepare(
+          "SELECT COUNT(*) FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?"
+        );
+        $stmt->execute(["{$table}_rider_log", $col[0]]);
+        if((int)$stmt->fetchColumn() === 0){
+          $pdo->exec("ALTER TABLE `{$table}_rider_log` ADD COLUMN `{$col[0]}` {$col[1]}");
+        }
+      }
+    },
   ];
 }
 
