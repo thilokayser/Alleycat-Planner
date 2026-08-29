@@ -76,7 +76,7 @@ $pdo = apiConnectDb();
 
 if($action === 'sync'){
   riderRequirePost();
-  apiVerifyKey();
+  apiVerifyAccess($pdo, 'editor');
   $body = riderJsonBody();
 
   $publicId = (string)($body['publicId'] ?? '');
@@ -184,7 +184,7 @@ if($action === 'sync'){
 
 if($action === 'log'){
   riderRequireGet();
-  apiVerifyKey();
+  apiVerifyAccess($pdo, 'viewer');
   $publicId = (string)($_GET['public_id'] ?? '');
   $since = max(0, (int)($_GET['since'] ?? 0));
   $limit = (int)($_GET['limit'] ?? 200);
@@ -215,7 +215,7 @@ if($action === 'log'){
 
 if($action === 'slotstatus'){
   riderRequirePost();
-  apiVerifyKey();
+  apiVerifyAccess($pdo, 'editor');
   $body = riderJsonBody();
   $publicId = (string)($body['publicId'] ?? '');
   $bib = (int)($body['bib'] ?? 0);
