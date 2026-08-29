@@ -547,7 +547,7 @@ if($action === 'checkpoint-auth'){
   riderClearFailures($pdo);
 
   $token = adminGenerateToken();
-  $pdo->prepare("INSERT INTO `" . adminTableName('checkpoint_session') . "` (`token_hash`,`public_id`,`cp_id`,`last_seen_at`) VALUES (?,?,?,NOW())")
+  $pdo->prepare("INSERT INTO `" . adminTableName('checkpoint_session') . "` (`token_hash`,`public_id`,`cp_id`,`last_seen_at`) VALUES (?,?,?,UTC_TIMESTAMP())")
       ->execute([adminHashToken($token), $publicId, $cpId]);
   riderOut(['ok' => true, 'token' => $token, 'cpId' => $cpId, 'label' => $cp['label']]);
 }
@@ -571,7 +571,7 @@ if($action === 'checkpoint-login'){
   riderClearFailures($pdo);
 
   $token = adminGenerateToken();
-  $pdo->prepare("INSERT INTO `" . adminTableName('admin_session') . "` (`token_hash`,`user_id`,`last_seen_at`) VALUES (?,?,NOW())")
+  $pdo->prepare("INSERT INTO `" . adminTableName('admin_session') . "` (`token_hash`,`user_id`,`last_seen_at`) VALUES (?,?,UTC_TIMESTAMP())")
       ->execute([adminHashToken($token), $user['id']]);
   riderOut(['ok' => true, 'token' => $token, 'username' => $user['username'], 'displayName' => $user['display_name']]);
 }

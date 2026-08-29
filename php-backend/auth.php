@@ -112,9 +112,9 @@ if($action === 'login'){
   riderClearFailures($pdo);
 
   $token = adminGenerateToken();
-  $pdo->prepare("INSERT INTO `{$sessionTable}` (`token_hash`,`user_id`,`last_seen_at`) VALUES (?,?,NOW())")
+  $pdo->prepare("INSERT INTO `{$sessionTable}` (`token_hash`,`user_id`,`last_seen_at`) VALUES (?,?,UTC_TIMESTAMP())")
       ->execute([adminHashToken($token), $user['id']]);
-  $pdo->prepare("UPDATE `{$userTable}` SET `last_seen_at` = NOW() WHERE `id` = ?")->execute([$user['id']]);
+  $pdo->prepare("UPDATE `{$userTable}` SET `last_seen_at` = UTC_TIMESTAMP() WHERE `id` = ?")->execute([$user['id']]);
 
   authOut(['ok' => true, 'token' => $token, 'role' => $user['role'], 'username' => $user['username'], 'displayName' => $user['display_name']]);
 }

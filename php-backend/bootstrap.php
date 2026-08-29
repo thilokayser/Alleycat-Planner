@@ -234,7 +234,7 @@ function adminResolveSessionUser(PDO $pdo, $token){
   $stmt->execute([adminHashToken($token)]);
   $user = $stmt->fetch(PDO::FETCH_ASSOC);
   if(!$user) return null;
-  $pdo->prepare("UPDATE `{$t}` SET last_seen_at = NOW() WHERE token_hash = ?")
+  $pdo->prepare("UPDATE `{$t}` SET last_seen_at = UTC_TIMESTAMP() WHERE token_hash = ?")
       ->execute([adminHashToken($token)]);
   return $user;
 }
@@ -263,7 +263,7 @@ function checkpointResolveCodeSession(PDO $pdo, $token){
   $stmt = $pdo->prepare("SELECT * FROM `{$t}` WHERE `token_hash` = ?");
   $stmt->execute([adminHashToken($token)]);
   $row = $stmt->fetch(PDO::FETCH_ASSOC);
-  if($row) $pdo->prepare("UPDATE `{$t}` SET last_seen_at = NOW() WHERE token_hash = ?")->execute([adminHashToken($token)]);
+  if($row) $pdo->prepare("UPDATE `{$t}` SET last_seen_at = UTC_TIMESTAMP() WHERE token_hash = ?")->execute([adminHashToken($token)]);
   return $row ?: null;
 }
 
