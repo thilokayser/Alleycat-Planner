@@ -755,14 +755,15 @@ function renderCpRow(cp, cpIdx, evt, locked, routeInfo, groupView){
           ${routeInfo && routeInfo.legs[cpIdx] ? `<div class="cp-leg-distance">↓ ${formatDistance(routeInfo.legs[cpIdx].km * 1000)}</div>` : ''}`;
 }
 function renderCpListRows(evt, locked, routeInfo){
-  if(evt.checkpoints.length === 0) return emptyStateHtml({
+  const hqBanner = renderFreestandingHqBanner(evt);
+  if(evt.checkpoints.length === 0) return hqBanner + emptyStateHtml({
     icon: '📍',
     title: t('checkpoint.noCheckpointsYet'),
     description: t('checkpoint.activateHint'),
     primaryAction: {label: t('checkpoint.emptyStatePrimary'), onclick: 'toggleAddMode()'}
   });
   if(state.cpListGroupBy === 'type'){
-    return getCheckpointTypes().filter(ct => evt.checkpoints.some(cp => cp.type === ct.key)).map(ct => {
+    return hqBanner + getCheckpointTypes().filter(ct => evt.checkpoints.some(cp => cp.type === ct.key)).map(ct => {
       const group = evt.checkpoints.filter(cp => cp.type === ct.key).slice().sort((a, b) => a.order - b.order);
       return `
         <div class="cp-group-heading">${typeIconHtml(ct.key)} ${escapeHtml(ct.fullLabel)} <span class="cp-group-count">${group.length}</span></div>
@@ -770,7 +771,7 @@ function renderCpListRows(evt, locked, routeInfo){
       `;
     }).join('');
   }
-  return evt.checkpoints.map((cp, cpIdx) => renderCpRow(cp, cpIdx, evt, locked, routeInfo, false)).join('');
+  return hqBanner + evt.checkpoints.map((cp, cpIdx) => renderCpRow(cp, cpIdx, evt, locked, routeInfo, false)).join('');
 }
 function renderSidebar(){
   const el = document.getElementById('sidebar');

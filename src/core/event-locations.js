@@ -179,6 +179,20 @@ function renderEventLocationRow(evt, type){
       </div>
     </div>`;
 }
+/* Freestanding HQ (placed via map right-click, not linked to a checkpoint)
+   has no row of its own in the checkpoint list — this banner surfaces it
+   there too so it isn't only visible inside the collapsed settings panel. */
+function renderFreestandingHqBanner(evt){
+  const loc = getEventLocation(evt, 'headquarters');
+  if(!eventLocationHasPosition(loc) || loc.linkedCheckpointId) return '';
+  return `
+    <div class="cp-lock-banner">
+      <span>🏠 ${t('eventLocations.hqLabel')}: ${escapeHtml(loc.name || t('eventLocations.hqLabel'))}</span>
+      <span class="cp-row-icon-actions">
+        <button type="button" class="cp-icon-btn" onclick="flyToEventLocation('headquarters')" title="${t('zones.flyToTitle')}" aria-label="${t('zones.flyToTitle')}">🎯</button>
+      </span>
+    </div>`;
+}
 function renderEventLocationsPanel(evt){
   return `
     <div class="settings-section">
