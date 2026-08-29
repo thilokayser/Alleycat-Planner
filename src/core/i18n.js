@@ -801,7 +801,21 @@ const translations = {
       raceCompletedBanner: 'Rennen abgeschlossen',
       afterpartyBanner: 'Weiter geht’s bei: {name}',
       underwayLabel: 'unterwegs',
-      dnsDnfFooter: '{count} ausgeschieden / nicht gestartet'
+      dnsDnfFooter: '{count} ausgeschieden / nicht gestartet',
+      mapViewMenuLabel: 'Ansicht',
+      mapSectionMap: 'Karte',
+      mapSectionSidebar: 'Seitenleiste',
+      toggleCheckpoints: 'Checkpoints',
+      toggleRadius: 'Einzugsradien',
+      toggleBibNumbers: 'Startnummern',
+      toggleLegend: 'Legende',
+      toggleClock: 'Renndauer',
+      legendMandatory: 'Pflicht-CP',
+      legendBonus: 'Bonus-CP',
+      riderRailTitle: 'Fahrer unterwegs',
+      riderLegendLabel: 'Fahrer',
+      noRidersUnderway: 'Noch keine Fahrer unterwegs.',
+      brandFooter: 'Alleycat Dispatch · Live'
     },
     dataSafety: {
       justNow: 'gerade eben',

@@ -122,12 +122,12 @@ function renderBeamerOverviewSection(evt){
 async function initBeamer(){
   const eventId = beamerEventIdFromHash();
   if(!(await initStorageBackend())) return;
-  document.documentElement.setAttribute('data-theme', 'dunkel');
+  document.documentElement.setAttribute('data-theme', 'signal');
   const appEl = document.getElementById('app');
   const rootEl = document.getElementById('beamer-root');
   if(appEl) appEl.style.display = 'none';
   if(rootEl) rootEl.style.display = 'flex';
-  beamerState = {eventId, evt: null, phase: 'loading', audioBlocked: false};
+  beamerState = {eventId, evt: null, phase: 'loading', audioBlocked: false, mapPrefs: Object.assign({}, BEAMER_DEFAULT_MAP_PREFS)};
   await loadBeamerEvent();
   if(!beamerState.evt){
     renderBeamer();
@@ -195,7 +195,9 @@ function renderBeamer(){
   if(beamerState.phase === 'go'){ root.innerHTML = renderBeamerGoOverlay(); return; }
   if(beamerState.phase === 'live'){
     root.innerHTML = renderBeamerLivePhase(beamerState.evt);
-    if(getBeamerLayout(beamerState.evt).showZoneMap) updateBeamerZoneMap(beamerState.evt);
+    const layout = getBeamerLayout(beamerState.evt);
+    if(layout.showZoneMap) updateBeamerZoneMap(beamerState.evt);
+    if(beamerUsesMapLayout(layout)) initBeamerLiveMap(beamerState.evt);
     return;
   }
   root.innerHTML = renderBeamerCountdownPhase(beamerState.evt);
@@ -272,30 +274,266 @@ function renderBeamerTimeLeaderboard(evt){
     ${dnfDns.length ? `<div class="beamer-lb-footer">${t('beamer.dnsDnfFooter', {count: dnfDns.length})}</div>` : ''}
   `;
 }
+/* Default live view (no active game modes): full checkpoint map + rail,
+   see beamerUsesMapLayout(). Any game mode enabled (zone/points/ticker)
+   falls back to the pre-existing table/zone-map layout unchanged — see
+   the scope note above computeBeamerCpProgress(). */
+function beamerUsesMapLayout(layout){
+  return !layout.showZoneMap && !layout.showPointsBoard && !layout.showEventTicker;
+}
 function renderBeamerLivePhase(evt){
   const info = computeStartCountdown(evt);
   const clockLabel = evt.status === 'completed' ? t('beamer.raceDurationLabel') : t('beamer.raceClockLabel');
   const clockText = (info.mode === 'since' || info.mode === 'duration') ? formatCountdown(info.ms) : '—';
   const layout = getBeamerLayout(evt);
+  const useMapLayout = beamerUsesMapLayout(layout);
   return `
     <div class="beamer-phase beamer-live-phase">
       <div class="beamer-live-head">
+        <div class="beamer-head-bar"></div>
         <div class="beamer-event-name">${escapeHtml(evt.name || t('common.unnamedEvent'))}</div>
-        <div class="beamer-race-clock"><span>${clockLabel}</span> <span id="beamer-race-clock">${clockText}</span></div>
+        <div class="beamer-head-spacer"></div>
+        <div class="beamer-clock-block" id="beamer-clock-block" style="visibility:${beamerMapPrefs().clock ? 'visible' : 'hidden'}">
+          <span class="beamer-clock-label">${clockLabel}</span>
+          <span class="beamer-clock-value" id="beamer-race-clock">${clockText}</span>
+        </div>
       </div>
       ${evt.status === 'completed' ? `
         <div class="beamer-completed-banner">🏁 ${t('beamer.raceCompletedBanner')}</div>
         ${renderBeamerAfterpartyBanner(evt)}
       ` : ''}
-      <div class="beamer-live-body ${layout.showZoneMap ? 'has-zone-map' : ''}">
-        <div class="beamer-live-main">
-          ${layout.showPointsBoard ? renderBeamerPointsBoard(evt) : renderBeamerTimeLeaderboard(evt)}
+      ${useMapLayout ? renderBeamerMapLayout(evt) : `
+        <div class="beamer-live-body ${layout.showZoneMap ? 'has-zone-map' : ''}">
+          <div class="beamer-live-main">
+            ${layout.showPointsBoard ? renderBeamerPointsBoard(evt) : renderBeamerTimeLeaderboard(evt)}
+          </div>
+          ${layout.showZoneMap ? renderBeamerZoneSide(evt) : ''}
         </div>
-        ${layout.showZoneMap ? renderBeamerZoneSide(evt) : ''}
-      </div>
-      ${layout.showEventTicker ? renderBeamerTicker(evt) : ''}
+        ${layout.showEventTicker ? renderBeamerTicker(evt) : ''}
+      `}
+      <div class="beamer-live-footer"><span class="beamer-brand">${t('beamer.brandFooter')}</span></div>
     </div>
   `;
+}
+
+/* ---------------- default live map layout (Beamer-Livekarte redesign) ----------------
+   Riders have no live GPS in this app (only per-checkpoint scan timestamps,
+   see rider-sync.js) — a rider's map pin therefore sits at the coordinates
+   of their last-passed checkpoint, not a real live position. Several
+   riders sharing a checkpoint are spread with beamerScatterOffset() so
+   pins don't fully overlap. */
+function computeBeamerOrderedCps(evt){
+  return (evt.checkpoints || []).map((cp, i) => ({cp, num: i + 1}));
+}
+function computeBeamerCpProgress(evt){
+  const field = computeBeamerRegistered(evt);
+  const riders = evt.riders || [];
+  return computeBeamerOrderedCps(evt).map(({cp, num}) => ({
+    cp, num, field,
+    done: riders.filter(r => (r.name || '').trim() && (r.completed || []).includes(cp.id)).length
+  }));
+}
+function beamerCpColorValue(cp){
+  return cp.mandatory ? 'var(--ok)' : 'var(--beamer-bonus)';
+}
+function renderBeamerCpProgressList(evt){
+  return computeBeamerCpProgress(evt).map(({cp, num, done, field}) => {
+    const pct = field ? Math.round(done / field * 100) : 0;
+    const color = beamerCpColorValue(cp);
+    return `
+      <div class="beamer-cp-row">
+        <div class="beamer-cp-row-head">
+          <span class="beamer-cp-badge" style="background:${color}">${num}</span>
+          <span class="beamer-cp-name">${escapeHtml(cp.name || ('#' + num))}</span>
+          <span class="beamer-cp-count">${done}/${field}</span>
+        </div>
+        <span class="beamer-cp-bar"><span class="beamer-cp-bar-fill" style="width:${pct}%;background:${color}"></span></span>
+      </div>
+    `;
+  }).join('');
+}
+function beamerRiderLastCheckpoint(evt, rider){
+  const entries = Object.entries(rider.checkpointTimes || {}).filter(([, iso]) => iso);
+  if(!entries.length) return null;
+  entries.sort((a, b) => new Date(a[1]) - new Date(b[1]));
+  const [cpId, time] = entries[entries.length - 1];
+  return {cp: (evt.checkpoints || []).find(c => c.id === cpId) || null, time};
+}
+function renderBeamerUnderwayList(evt){
+  const {underway} = sortBeamerRiders(evt);
+  if(!underway.length) return `<div class="beamer-message">${t('beamer.noRidersUnderway')}</div>`;
+  return underway.map(r => {
+    const last = beamerRiderLastCheckpoint(evt, r);
+    return `
+      <div class="beamer-rider-row">
+        <span class="beamer-rider-bib">#${r.bib}</span>
+        <span class="beamer-rider-name">${escapeHtml(r.name || '—')}</span>
+        <span class="beamer-rider-last">${last && last.cp ? escapeHtml(last.cp.name) : '—'}</span>
+        <span class="beamer-rider-since">${last ? formatMinutesAgo(last.time) : '—'}</span>
+      </div>
+    `;
+  }).join('');
+}
+/* renderBeamerLivePhase()/renderBeamerMapLayout() take evt as their only
+   real argument but also read the map-view toggle prefs off the global
+   beamerState (same pattern as beamerState.audioBlocked in the GO
+   overlay) — this helper keeps them callable (e.g. from test-suite.js)
+   even before initBeamer() has set beamerState up. */
+const BEAMER_DEFAULT_MAP_PREFS = {cp: true, radius: true, riders: true, nr: true, legend: true, cpRail: true, rdRail: true, clock: true};
+function beamerMapPrefs(){
+  return (beamerState && beamerState.mapPrefs) || BEAMER_DEFAULT_MAP_PREFS;
+}
+function beamerToggleRow(key, label){
+  const on = beamerMapPrefs()[key];
+  return `
+    <div class="beamer-toggle-row${on ? ' on' : ''}" onclick="toggleBeamerMapPref('${key}', this)">
+      <span class="beamer-toggle-switch"><i></i></span>${escapeHtml(label)}
+    </div>
+  `;
+}
+function renderBeamerMapLayout(evt){
+  const prefs = beamerMapPrefs();
+  return `
+    <div class="beamer-map-layout">
+      <div class="beamer-map-panel${prefs.nr ? '' : ' no-nr'}">
+        <div id="beamer-live-map" class="beamer-live-map"></div>
+        <div id="beamer-map-legend" class="beamer-map-legend" style="display:${prefs.legend ? 'flex' : 'none'}">
+          <span class="beamer-legend-item"><span class="beamer-legend-dot" style="background:var(--ok)"></span>${t('beamer.legendMandatory')}</span>
+          <span class="beamer-legend-item"><span class="beamer-legend-dot" style="background:var(--beamer-bonus)"></span>${t('beamer.legendBonus')}</span>
+          <span class="beamer-legend-item"><span class="beamer-legend-dot" style="background:var(--hivis)"></span>${t('beamer.riderLegendLabel')}</span>
+        </div>
+        <div class="beamer-map-menu">
+          <button type="button" class="beamer-menu-btn" onclick="toggleBeamerMenu()">${t('beamer.mapViewMenuLabel')}<span class="beamer-menu-caret" id="beamer-menu-caret">▾</span></button>
+          <div class="beamer-menu-panel" id="beamer-menu-panel">
+            <div class="beamer-menu-group">
+              <span class="beamer-menu-heading">${t('beamer.mapSectionMap')}</span>
+              ${beamerToggleRow('cp', t('beamer.toggleCheckpoints'))}
+              ${beamerToggleRow('radius', t('beamer.toggleRadius'))}
+              ${beamerToggleRow('riders', t('beamer.riderLegendLabel'))}
+              ${beamerToggleRow('nr', t('beamer.toggleBibNumbers'))}
+              ${beamerToggleRow('legend', t('beamer.toggleLegend'))}
+            </div>
+            <div class="beamer-menu-divider"></div>
+            <div class="beamer-menu-group">
+              <span class="beamer-menu-heading">${t('beamer.mapSectionSidebar')}</span>
+              ${beamerToggleRow('cpRail', t('beamer.tableProgress'))}
+              ${beamerToggleRow('rdRail', t('beamer.riderRailTitle'))}
+              ${beamerToggleRow('clock', t('beamer.toggleClock'))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="beamer-rail" id="beamer-rail" style="display:${(prefs.cpRail || prefs.rdRail) ? 'flex' : 'none'}">
+        <div class="beamer-rail-card" id="beamer-cp-card" style="display:${prefs.cpRail ? 'flex' : 'none'}">
+          <span class="beamer-rail-title">${t('beamer.tableProgress')}</span>
+          <div class="beamer-cp-list">${renderBeamerCpProgressList(evt)}</div>
+        </div>
+        <div class="beamer-rail-card beamer-rail-card-grow" id="beamer-rider-card" style="display:${prefs.rdRail ? 'flex' : 'none'}">
+          <div class="beamer-rail-title-row">
+            <span class="beamer-rail-dot"></span>
+            <span class="beamer-rail-title">${t('beamer.riderRailTitle')}</span>
+          </div>
+          <div class="beamer-rider-list">${renderBeamerUnderwayList(evt)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* Purely decorative catchment ring around each checkpoint (not tied to
+   any enforced geofence — the actual GPS-mismatch check in rider-sync.js
+   uses its own threshold and never draws on a map). */
+const BEAMER_CP_RADIUS_M = 180;
+function beamerScatterOffset(lat, lng, idx, total){
+  if(total <= 1) return {lat, lng};
+  const angle = (idx / total) * 2 * Math.PI;
+  const deltaDeg = 0.00045;
+  return {lat: lat + Math.sin(angle) * deltaDeg, lng: lng + (Math.cos(angle) * deltaDeg) / Math.cos(lat * Math.PI / 180)};
+}
+function computeBeamerRiderPositions(evt){
+  const {underway} = sortBeamerRiders(evt);
+  const byLastCp = {};
+  const withLast = underway.map(rider => {
+    const last = beamerRiderLastCheckpoint(evt, rider);
+    if(!last || !last.cp || !Number.isFinite(last.cp.lat) || !Number.isFinite(last.cp.lng)) return null;
+    byLastCp[last.cp.id] = (byLastCp[last.cp.id] || 0) + 1;
+    return {rider, cp: last.cp};
+  }).filter(Boolean);
+  const seenPerCp = {};
+  return withLast.map(({rider, cp}) => {
+    const idx = seenPerCp[cp.id] || 0;
+    seenPerCp[cp.id] = idx + 1;
+    const pos = beamerScatterOffset(cp.lat, cp.lng, idx, byLastCp[cp.id]);
+    return {rider, lat: pos.lat, lng: pos.lng};
+  });
+}
+let beamerLiveMap = null;
+let beamerLiveMapLayers = null;
+function initBeamerLiveMap(evt){
+  const container = document.getElementById('beamer-live-map');
+  if(!container) return;
+  if(beamerLiveMap){ beamerLiveMap.remove(); beamerLiveMap = null; beamerLiveMapLayers = null; }
+  const orderedCps = computeBeamerOrderedCps(evt).filter(({cp}) => Number.isFinite(cp.lat) && Number.isFinite(cp.lng));
+  if(!orderedCps.length) return;
+  const prefs = beamerMapPrefs();
+  beamerLiveMap = L.map(container, {zoomControl: false, attributionControl: true, dragging: true, scrollWheelZoom: false, doubleClickZoom: false, keyboard: false});
+  createOfflineTileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {subdomains: 'abc', maxZoom: 19}).addTo(beamerLiveMap);
+  const cpLayer = L.layerGroup();
+  const radiusLayer = L.layerGroup();
+  const riderLayer = L.layerGroup();
+  orderedCps.forEach(({cp, num}) => {
+    const color = beamerCpColorValue(cp);
+    radiusLayer.addLayer(L.circle([cp.lat, cp.lng], {radius: BEAMER_CP_RADIUS_M, color, weight: 2, opacity: .55, fillColor: color, fillOpacity: .1}));
+    cpLayer.addLayer(L.marker([cp.lat, cp.lng], {
+      icon: L.divIcon({className: '', iconSize: null, iconAnchor: [19, 19],
+        html: `<div class="beamer-cp-pin" style="background:${color}"><span>${num}</span></div>`})
+    }));
+  });
+  computeBeamerRiderPositions(evt).forEach(({rider, lat, lng}) => {
+    riderLayer.addLayer(L.marker([lat, lng], {
+      icon: L.divIcon({className: '', iconSize: null, iconAnchor: [16, 16],
+        html: `<div class="beamer-rider-pin"><span class="beamer-rider-ping"></span><span class="beamer-rider-dot">${escapeHtml(String(rider.bib))}</span></div>`}),
+      zIndexOffset: 500
+    }));
+  });
+  beamerLiveMapLayers = {cp: cpLayer, radius: radiusLayer, riders: riderLayer};
+  if(prefs.cp) cpLayer.addTo(beamerLiveMap);
+  if(prefs.radius) radiusLayer.addTo(beamerLiveMap);
+  if(prefs.riders) riderLayer.addTo(beamerLiveMap);
+  const bounds = L.latLngBounds(orderedCps.map(({cp}) => [cp.lat, cp.lng]));
+  requestAnimationFrame(() => { beamerLiveMap.invalidateSize(); beamerLiveMap.fitBounds(bounds, {padding: [50, 60]}); });
+}
+function toggleBeamerMenu(){
+  const panel = document.getElementById('beamer-menu-panel');
+  const caret = document.getElementById('beamer-menu-caret');
+  if(!panel) return;
+  const open = panel.style.display === 'flex';
+  panel.style.display = open ? 'none' : 'flex';
+  if(caret) caret.textContent = open ? '▾' : '▴';
+}
+function syncBeamerRail(){
+  const cpCard = document.getElementById('beamer-cp-card');
+  const rdCard = document.getElementById('beamer-rider-card');
+  const rail = document.getElementById('beamer-rail');
+  if(!rail) return;
+  const any = (cpCard && cpCard.style.display !== 'none') || (rdCard && rdCard.style.display !== 'none');
+  rail.style.display = any ? 'flex' : 'none';
+  if(beamerLiveMap) requestAnimationFrame(() => beamerLiveMap.invalidateSize());
+}
+function toggleBeamerMapPref(key, el){
+  if(!beamerState) return;
+  const on = !beamerState.mapPrefs[key];
+  beamerState.mapPrefs[key] = on;
+  if(el) el.classList.toggle('on', on);
+  const layers = beamerLiveMapLayers;
+  if(key === 'cp' && layers) on ? layers.cp.addTo(beamerLiveMap) : layers.cp.remove();
+  else if(key === 'radius' && layers) on ? layers.radius.addTo(beamerLiveMap) : layers.radius.remove();
+  else if(key === 'riders' && layers) on ? layers.riders.addTo(beamerLiveMap) : layers.riders.remove();
+  else if(key === 'nr'){ const panel = document.querySelector('.beamer-map-panel'); if(panel) panel.classList.toggle('no-nr', !on); }
+  else if(key === 'legend'){ const el2 = document.getElementById('beamer-map-legend'); if(el2) el2.style.display = on ? 'flex' : 'none'; }
+  else if(key === 'cpRail'){ const el2 = document.getElementById('beamer-cp-card'); if(el2) el2.style.display = on ? 'flex' : 'none'; syncBeamerRail(); }
+  else if(key === 'rdRail'){ const el2 = document.getElementById('beamer-rider-card'); if(el2) el2.style.display = on ? 'flex' : 'none'; syncBeamerRail(); }
+  else if(key === 'clock'){ const el2 = document.getElementById('beamer-clock-block'); if(el2) el2.style.visibility = on ? 'visible' : 'hidden'; }
 }
 
 /* ---------------- GO trigger + live tick ---------------- */

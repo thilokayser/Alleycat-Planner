@@ -495,6 +495,12 @@ async function runAlleycatTestSuite(){
     const noneStartEvt = Object.assign({}, synthEvt, {startMode: 'manual', startTime: ''});
     check('renderBeamerCountdownPhase zeigt Warte-Text ohne geplante Startzeit', renderBeamerCountdownPhase(noneStartEvt).includes(t('beamer.waitingForStart')));
 
+    /* Die Tabellen-Ansicht unten ist seit dem Beamer-Livekarte-Redesign
+       (2026-08-29) nur noch der Fallback für Events mit aktivem Spielmodus
+       (beamerUsesMapLayout() === false) — ohne das hier würde synthEvt
+       (keine gameModes) die neue Karten-Standardansicht rendern, die diese
+       Tabellen-Strings gar nicht enthält. */
+    synthEvt.gameModes = [{type: 'sudden_death', enabled: true, config: {}}];
     synthEvt.status = 'running';
     const liveHtml = renderBeamerLivePhase(synthEvt);
     check('renderBeamerLivePhase zeigt Renn-Uhr', liveHtml.includes(t('beamer.raceClockLabel')));
@@ -503,6 +509,25 @@ async function runAlleycatTestSuite(){
     check('renderBeamerLivePhase zeigt DNF/DNS-Fußzeile', liveHtml.includes(t('beamer.dnsDnfFooter', {count: 1})));
     synthEvt.status = 'completed';
     check('renderBeamerLivePhase zeigt Abschluss-Banner', renderBeamerLivePhase(synthEvt).includes(t('beamer.raceCompletedBanner')));
+
+    /* Default-Ansicht ohne aktiven Spielmodus: Checkpoint-Karte + Rail
+       statt Tabelle (Beamer-Livekarte-Redesign, 2026-08-29). */
+    const mapEvt = {
+      name: 'Synth-Map-Event', status: 'running',
+      checkpoints: [
+        {id: 'c1', name: 'Start', mandatory: true, lat: 50.94, lng: 6.96},
+        {id: 'c2', name: 'Ziel', mandatory: false, lat: 50.95, lng: 6.97}
+      ],
+      riders: [
+        {bib: 5, name: 'Mara', completed: ['c1'], checkpointTimes: {c1: toLocalDateTimeInputValue(new Date(Date.now() - 300000))}, finishTime: '', raceStatus: ''}
+      ]
+    };
+    checkEqual('beamerUsesMapLayout ist true ohne aktive Spielmodi', beamerUsesMapLayout(getBeamerLayout(mapEvt)), true);
+    checkEqual('beamerUsesMapLayout ist false mit aktivem Spielmodus', beamerUsesMapLayout(getBeamerLayout(synthEvt)), false);
+    const mapHtml = renderBeamerLivePhase(mapEvt);
+    check('renderBeamerLivePhase zeigt Checkpoint-Karte ohne Spielmodi', mapHtml.includes('beamer-map-layout'));
+    check('renderBeamerLivePhase-Karte zeigt Checkpoint-Namen', mapHtml.includes('Ziel'));
+    check('renderBeamerLivePhase-Karte zeigt Fahrer unterwegs', mapHtml.includes('#5') && mapHtml.includes('Mara'));
 
     /* GO-Trigger: nur die synchrone Phase (inkl. abgewartetem Sound-Play)
        prüfen, nicht den vollen 4s-Timer bis zum Live-Übergang abwarten. */
