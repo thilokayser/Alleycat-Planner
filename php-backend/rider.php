@@ -107,13 +107,22 @@ if($action === 'sync'){
        Fahrer hat gerade sein Formular abgeschickt), würde sonst
        stillschweigend auf 'free' zurückfallen und die Anmeldung wäre
        weg. Der Organizer erfährt von 'pending' erst über ?a=log —
-       bis dahin ist die Datenbank die Wahrheit für diese Spalte. */
+       bis dahin ist die Datenbank die Wahrheit für diese Spalte.
+
+       Dieselbe Lücke gilt für 'confirmed': ?a=slotstatus (confirmPendingRider())
+       setzt es direkt in der DB, ohne Log-Zeile — ein zweites Organizer-Gerät
+       mit noch altem, lokalem 'pending' erfährt davon nie und würde es beim
+       nächsten unabhängigen Publish stillschweigend zurück auf 'pending'
+       setzen. Ein bereits bestätigter Fahrer könnte dann mitten im Rennen
+       nicht mehr einchecken (?a=checkin verlangt status='confirmed'), ohne
+       dass irgendein Organizer davon erfährt. Beide Zustände sind deshalb
+       gleich geschützt. */
     $keptBibs = [];
     $slotStmt = $pdo->prepare("INSERT INTO `{$slotT}` (`public_id`,`bib`,`token_hash`,`code_hash`,`status`)
                                VALUES (?,?,?,?,?)
                                ON DUPLICATE KEY UPDATE `token_hash`=VALUES(`token_hash`),
                                                        `code_hash`=VALUES(`code_hash`),
-                                                       `status`=IF(`status`='pending','pending',VALUES(`status`))");
+                                                       `status`=IF(`status` IN ('pending','confirmed'),`status`,VALUES(`status`))");
     foreach(($body['slots'] ?? []) as $slot){
       $bib = (int)($slot['bib'] ?? 0);
       if($bib <= 0) continue;
