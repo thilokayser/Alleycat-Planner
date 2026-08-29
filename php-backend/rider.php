@@ -135,10 +135,18 @@ if($action === 'sync'){
       ]);
     }
 
-    /* Entfernte Slots und Checkpoints werden gelöscht — außer es hängen
-       Log-Zeilen daran. Ein Fahrer, der nachweislich an einem Punkt war,
-       darf nicht durch eine Konfigurationsänderung spurlos verschwinden;
-       der Organizer sieht solche Zeilen stattdessen als verwaist. */
+    /* Entfernte Slots werden gelöscht — außer es hängen Log-Zeilen daran.
+       Ein Fahrer, der nachweislich an einem Punkt war, darf nicht durch
+       eine Konfigurationsänderung spurlos verschwinden; der Organizer
+       sieht solche Zeilen stattdessen als verwaist (siehe
+       mergeRiderLogRows() in rider-sync.js). Checkpoints unten haben
+       diese Ausnahme NICHT (frühere Fassung dieses Kommentars behauptete
+       das fälschlich für beide) — ihre rider_checkpoint-Zeile verschwindet
+       mit der Route, auch wenn Log-Zeilen dranhängen. Das ist hier
+       gewollt: die Log-Zeilen selbst (die tatsächliche Scan-Historie)
+       bleiben in rider_log unberührt, nur die Metadaten (Label, QR-Token,
+       Koordinaten) für einen nicht mehr existierenden Checkpoint sollen
+       nicht ewig herumliegen. */
     $keepList = $keptBibs ? implode(',', array_map('intval', $keptBibs)) : '-1';
     $pdo->prepare("DELETE FROM `{$slotT}`
                    WHERE `public_id` = ?
