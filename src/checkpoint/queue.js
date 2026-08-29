@@ -40,6 +40,14 @@ function cpQueueRemove(clientUuid){
 function cpQueueVerdict(res){
   if(res.ok) return {done: true, message: '', authDead: false};
   if(res.status === 401) return {done: false, message: '', authDead: true};
+  /* checkpoint-checkin hat wie checkpoint-me keinen 401-Pfad — eine tote/
+     entzogene Session kommt hier ebenfalls als 403 'unauthorized' zurück
+     (siehe die gleiche Anmerkung in init.js). Ohne diese Ausnahme würde
+     der Zweig direkt darunter (403/404 => done:true) den Scan als
+     endgültig erledigt markieren und aus der Queue werfen — genau das
+     "gesicherte Scans gehen verloren", das dieses Modul laut Kommentar
+     oben verhindern soll. */
+  if(res.status === 403 && res.error === 'unauthorized') return {done: false, message: '', authDead: true};
   if(res.status === 403 || res.status === 404) return {done: true, message: cpErrorMessage(res), authDead: false};
   return {done: false, message: '', authDead: false};
 }

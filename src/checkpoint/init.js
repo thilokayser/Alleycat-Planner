@@ -38,7 +38,14 @@ async function cpLoadMe(){
     return;
   }
 
-  if(res.status === 401){
+  /* ?a=checkpoint-me hat keinen 401-Pfad — checkpointResolveScope()
+     lehnt jede tote/entzogene Session über riderRejectAuth() ab, das
+     unabhängig vom Grund immer 403 sendet (siehe rider.php). Ohne die
+     error-Code-Prüfung hier bliebe cpGoLoginExpired() totes Frontend-
+     Wissen und ein abgemeldeter/umgesetzter Checkpoint-Helfer würde auf
+     einem stehenden Cache- oder generischen Fehlerbildschirm hängen,
+     statt zum Login zurückgeschickt zu werden. */
+  if(res.status === 401 || (res.status === 403 && res.error === 'unauthorized')){
     cpGoLoginExpired();
     return;
   }
