@@ -3,6 +3,18 @@ let state = {
   view: 'dashboard',
   eventsIndex: [],
   currentEvent: null,
+  /* Liga-System (season.js/league.js/roster.js): org-weite Register,
+     unabhängig von jedem einzelnen Event, plus die Saison-Liste. Analog
+     zu eventsIndex, aber Teams/Fahrer sind hier klein genug, um komplett
+     in einer Blob-Zeile statt Stub+Einzel-Blobs zu leben (siehe
+     roster.js). */
+  teamRoster: [],
+  riderRoster: [],
+  seasonsIndex: [],
+  selectedSeasonId: null,
+  confirmDeleteSeasonId: null,
+  leagueStandingsCache: null,
+  leagueStandingsTab: 'teams',
   addMode: false,
   editingId: null,
   confirmDeleteCpId: null,
@@ -253,7 +265,7 @@ async function init(){
   if(isBeamerRoute()){ await initBeamer(); return; }
   state.adminSession = loadAdminSession();
   if(!(await initStorageBackend())) return;
-  await Promise.all([loadAppSettings(), loadCustomLanguagePacks(), loadCustomCheckpointTypes(), loadEventsIndex()]);
+  await Promise.all([loadAppSettings(), loadCustomLanguagePacks(), loadCustomCheckpointTypes(), loadEventsIndex(), loadTeamRoster(), loadRiderRoster(), loadSeasonsIndex()]);
   applyAppSettings();
   await seedDemoEventIfNeeded();
   state.loading = false;
@@ -510,6 +522,7 @@ function render(){
   document.getElementById('view-checkin').classList.toggle('active', state.view === 'checkin');
   document.getElementById('view-leaderboard').classList.toggle('active', state.view === 'leaderboard');
   document.getElementById('view-settings').classList.toggle('active', state.view === 'settings');
+  document.getElementById('view-league').classList.toggle('active', state.view === 'league');
 
   if(state.view === 'dashboard') renderDashboard();
   if(state.view === 'overview') renderOverview();
@@ -519,6 +532,7 @@ function render(){
   if(state.view === 'checkin') renderCheckin();
   if(state.view === 'leaderboard') renderLeaderboard();
   if(state.view === 'settings') renderSettings();
+  if(state.view === 'league') renderLeague();
   syncWakeLockForView();
 }
 
@@ -644,6 +658,10 @@ const SETTINGS_NAV_GROUPS = [
   {id: 'event', label: () => t('settings.groupEvent'), items: [
     {id: 'checkpointTypes', icon: '📍', label: () => t('settings.navCheckpointTypes')}
   ]},
+  {id: 'league', label: () => t('league.settingsGroupLabel'), items: [
+    {id: 'teamRoster', icon: '🏳', label: () => t('league.navTeamRoster')},
+    {id: 'riderRoster', icon: '🚴', label: () => t('league.navRiderRoster')}
+  ]},
   {id: 'data', label: () => t('settings.groupData'), items: [
     {id: 'dataSafety', icon: '💾', label: () => t('settings.navDataSafety')}
   ]},
@@ -673,7 +691,8 @@ function renderSettingsSidebar(){
         <h2>${t('settings.title')}</h2>
         <p>${t('settings.intro')}</p>
       </div>
-      ${SETTINGS_NAV_GROUPS.filter(group => group.id !== 'account' || (hasAdminRoles() && currentUserCan('manageUsers'))).map(group => `
+      ${SETTINGS_NAV_GROUPS.filter(group => group.id !== 'account' || (hasAdminRoles() && currentUserCan('manageUsers')))
+        .filter(group => group.id !== 'league' || isFeatureEnabled('seasons_league')).map(group => `
         <div class="settings-nav-group">
           <div class="settings-nav-group-label">${group.label()}</div>
           ${group.items.map(item => `
@@ -873,6 +892,8 @@ function settingsSectionContent(id){
     case 'language': return renderSettingsSectionLanguage();
     case 'units': return renderSettingsSectionUnits();
     case 'checkpointTypes': return renderSettingsSectionCheckpointTypes();
+    case 'teamRoster': return renderSettingsSectionTeamRoster();
+    case 'riderRoster': return renderSettingsSectionRiderRoster();
     case 'dataSafety': return renderDataSafetySection();
     case 'documentation': return renderDocumentationSection();
     case 'users': return renderSettingsSectionUsers();

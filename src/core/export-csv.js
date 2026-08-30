@@ -76,3 +76,27 @@ function exportLeaderboardCSV(splitKey){
   downloadBlob(blob, (evt.name || 'leaderboard').replace(/\s+/g, '_').toLowerCase() + '-ergebnisse.csv');
 }
 
+/* ---------------- league standings export ---------------- */
+function buildStandingsCsvLines(rows, kind){
+  const header = [t('league.colRank'), kind === 'teams' ? t('league.colTeam') : t('league.colRider'), t('league.colPoints'), t('league.colEventsCounted')];
+  const lines = [header.map(csvEscape).join(';')];
+  rows.forEach((row, i) => {
+    lines.push([i + 1, kind === 'teams' ? row.rosterTeam.name : row.rosterRider.name, row.totalPoints, row.eventsCompleted].map(csvEscape).join(';'));
+  });
+  return lines;
+}
+async function exportTeamStandingsCSV(seasonId){
+  const season = await loadSeason(seasonId);
+  if(!season) return;
+  const standings = state.leagueStandingsCache || await loadSeasonEventsAndCompute(season);
+  const csv = '﻿' + buildStandingsCsvLines(standings.teamRows, 'teams').join('\r\n');
+  downloadBlob(new Blob([csv], {type: 'text/csv;charset=utf-8'}), (season.name || 'liga').replace(/\s+/g, '_').toLowerCase() + '-teams.csv');
+}
+async function exportRiderStandingsCSV(seasonId){
+  const season = await loadSeason(seasonId);
+  if(!season) return;
+  const standings = state.leagueStandingsCache || await loadSeasonEventsAndCompute(season);
+  const csv = '﻿' + buildStandingsCsvLines(standings.riderRows, 'riders').join('\r\n');
+  downloadBlob(new Blob([csv], {type: 'text/csv;charset=utf-8'}), (season.name || 'liga').replace(/\s+/g, '_').toLowerCase() + '-fahrer.csv');
+}
+

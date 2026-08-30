@@ -11,7 +11,8 @@ const FEATURE_REGISTRY = [
   {id: 'sound_hook', scope: 'device', icon: '🔊', name: () => t('featureRegistry.soundHookName'), description: () => t('featureRegistry.soundHookDesc'), defaultEnabled: true, configScreen: 'sound-settings'},
   {id: 'offline_map_cache', scope: 'device', icon: '🗺', name: () => t('featureRegistry.offlineCacheName'), description: () => t('featureRegistry.offlineCacheDesc'), defaultEnabled: false, configScreen: 'offline-settings'},
   {id: 'categories', scope: 'event', icon: '🎫', name: () => t('featureRegistry.categoriesName'), description: () => t('featureRegistry.categoriesDesc'), defaultEnabled: true, configScreen: 'category-settings'},
-  {id: 'game_modes', scope: 'event', icon: '🏆', name: () => t('featureRegistry.gameModesName'), description: () => t('featureRegistry.gameModesDesc'), defaultEnabled: true, configScreen: 'game-modes-settings'}
+  {id: 'game_modes', scope: 'event', icon: '🏆', name: () => t('featureRegistry.gameModesName'), description: () => t('featureRegistry.gameModesDesc'), defaultEnabled: true, configScreen: 'game-modes-settings'},
+  {id: 'seasons_league', scope: 'device', icon: '🏅', name: () => t('featureRegistry.seasonsLeagueName'), description: () => t('featureRegistry.seasonsLeagueDesc'), defaultEnabled: false, configScreen: null}
 ];
 function featureRegistryEntry(id){
   return FEATURE_REGISTRY.find(f => f.id === id);

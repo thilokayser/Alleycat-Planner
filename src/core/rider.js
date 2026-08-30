@@ -15,7 +15,8 @@ function withRiderDefaults(rider){
     riderCode: '',
     riderStatus: '',
     pendingData: null,
-    gpsFlags: {}
+    gpsFlags: {},
+    rosterRiderId: null
   }, rider);
 }
 
@@ -191,6 +192,13 @@ function renderRiderCardsHtml(evt, riders){
           ${teams.map(tm => `<option value="${tm.id}" ${r.teamId === tm.id ? 'selected' : ''}>${escapeHtml(tm.name)}</option>`).join('')}
         </select>
       </div>
+      ${isFeatureEnabled('seasons_league') ? `
+      <div class="rider-team-row">
+        <select class="rider-team-select" onchange="linkEventRiderToRoster(${r.bib}, this.value)" title="${t('league.linkToRosterTitle')}">
+          <option value="">${t('league.notLinked')}</option>
+          ${(state.riderRoster || []).map(rr => `<option value="${rr.id}" ${r.rosterRiderId === rr.id ? 'selected' : ''}>${escapeHtml(rr.name)}</option>`).join('')}
+        </select>
+      </div>` : ''}
       ${groups.length && categoriesEnabled ? `<div class="rider-categories-row">
         ${groups.map(g => `
           <div class="rider-category-field">
@@ -331,6 +339,12 @@ function renderRidersSectionTeams(evt){
       <div class="type-info">
         <input type="text" class="team-name-input" value="${escapeHtml(tm.name)}" onchange="renameTeam('${tm.id}', this.value)">
         <div class="type-meta">${t('rider.memberCount', {count: riders.filter(r => r.teamId === tm.id).length})}</div>
+        ${isFeatureEnabled('seasons_league') ? `
+          <select class="rider-team-select" onchange="linkEventTeamToRoster('${tm.id}', this.value)" title="${t('league.linkToRosterTitle')}">
+            <option value="">${t('league.notLinked')}</option>
+            ${(state.teamRoster || []).map(rt => `<option value="${rt.id}" ${tm.rosterTeamId === rt.id ? 'selected' : ''}>${escapeHtml(rt.name)}</option>`).join('')}
+          </select>
+        ` : ''}
       </div>
       <button class="btn btn-sm btn-danger" onclick="deleteTeam('${tm.id}')">${t('common.delete')}</button>
     </div>

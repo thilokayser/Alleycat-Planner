@@ -48,6 +48,7 @@ function withEventDefaults(evt){
   merged.gameModes = (merged.gameModes || []).map(withGameModeDefaults);
   merged.checkpoints = (merged.checkpoints || []).map(withCheckpointDefaults);
   merged.riders = (merged.riders || []).map(withRiderDefaults);
+  merged.teams = (merged.teams || []).map(withTeamDefaults);
   merged.manifestSettings = withManifestSettingsDefaults(merged.manifestSettings);
   merged.zones = (merged.zones || []).map(withZoneDefaults);
   merged.eventLocations = (merged.eventLocations || []).map(withEventLocationDefaults);
@@ -151,6 +152,7 @@ function renderDashboard(){
         <input type="file" id="import-event-file" accept="application/json,.json" style="display:none;" onchange="onImportEventFile(this)">
         <button class="btn" onclick="document.getElementById('import-event-file').click()">${t('dashboard.importEvent')}</button>
         ${renderStorageDashboardExtras()}
+        ${isFeatureEnabled('seasons_league') ? `<button class="btn" onclick="openLeague()">${t('league.dashboardButton')}</button>` : ''}
         <button class="btn btn-primary" onclick="createNewEvent()">${t('dashboard.newEvent')}</button>
       </div>
     </div>

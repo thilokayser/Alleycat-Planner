@@ -1,5 +1,13 @@
 /* ---------------- teams ---------------- */
 const TEAM_COLOR_PALETTE = ['#ff5f1f', '#5c8a5c', '#b23a2e', '#7c8388', '#ff8a3d', '#3a6ea5', '#8a5cb2'];
+/* rosterTeamId: optionale Verknüpfung zu einem org-weiten Register-Team
+   (siehe roster.js) — nur gesetzt, wenn der Organizer sie explizit
+   herstellt. Bestehende Events ohne dieses Feld bekommen es hier
+   nachgerüstet, exakt wie withCheckpointDefaults/withRiderDefaults es
+   für ihre eigenen neuen Felder tun. */
+function withTeamDefaults(tm){
+  return Object.assign({rosterTeamId: null}, tm);
+}
 function getTeam(evt, teamId){
   if(!teamId) return null;
   return (evt.teams || []).find(t => t.id === teamId) || null;
@@ -26,7 +34,7 @@ function addTeam(){
   const colorInput = document.getElementById('newteam-color').value;
   const color = colorInput || TEAM_COLOR_PALETTE[(evt.teams || []).length % TEAM_COLOR_PALETTE.length];
   evt.teams = evt.teams || [];
-  evt.teams.push({id: uid('team'), name, color});
+  evt.teams.push(withTeamDefaults({id: uid('team'), name, color}));
   state.newTeamFormOpen = false;
   debouncedSave();
   renderRiders();

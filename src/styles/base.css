@@ -206,7 +206,7 @@
   .view.active{display:flex;}
 
   /* ---------- Dashboard ---------- */
-  #view-dashboard{flex-direction:column; overflow:auto; padding:36px 40px;}
+  #view-dashboard, #view-league{flex-direction:column; overflow:auto; padding:36px 40px;}
   .dash-head{display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:28px; flex-wrap:wrap;}
   .dash-head h2{font-size:30px; color:var(--chalk);}
   .dash-head p{color:var(--steel); font-family:'IBM Plex Mono',monospace; font-size:12px; margin-top:6px;}
@@ -1724,7 +1724,7 @@
   }
 
   @media (max-width: 520px){
-    #view-dashboard{padding:22px 18px;}
+    #view-dashboard, #view-league{padding:22px 18px;}
     #view-overview{padding:22px 18px;}
     #view-leaderboard{padding:18px 16px;}
     .dash-head h2{font-size:24px;}

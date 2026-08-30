@@ -40,7 +40,10 @@
    für Checkpoint-Zeilen inkl. Sperr-Guard, In-Page-PDF-Vorschau-Modal),
    sowie Paket 2 (Phase 16: Feature-Registry mit Device-/Event-Scope-Toggles
    und Settings-Hub-Suche, generische Empty-State-Komponente, Social-Share-
-   Karten-Rendering per Canvas inkl. In-Page-Vorschau).
+   Karten-Rendering per Canvas inkl. In-Page-Vorschau), sowie Saisons/
+   Teams/Liga-System (org-weite Team-/Fahrer-Register mit expliziter
+   Event-Verknüpfung, Saison-CRUD, platzierungsbasierte Liga-Wertung
+   über mehrere abgeschlossene Events hinweg mit Fixture-Tests).
 
    Läuft UNVERÄNDERT gegen beide gebauten Varianten (erst `node build.js`):
      - dist/alleycat-dispatch-local.html   (SQLite via sql.js/IndexedDB, oder window.storage)
@@ -2605,8 +2608,8 @@ async function runAlleycatTestSuite(){
      vorher direkt im HTML nach jeder Überschrift zu suchen. */
   {
     const allNavIds = SETTINGS_NAV_GROUPS.flatMap(g => g.items.map(i => i.id));
-    checkEqual('SETTINGS_NAV_GROUPS hat 4 Gruppen', SETTINGS_NAV_GROUPS.length, 4);
-    checkEqual('SETTINGS_NAV_GROUPS listet 8 Screens', allNavIds.length, 8);
+    checkEqual('SETTINGS_NAV_GROUPS hat 6 Gruppen', SETTINGS_NAV_GROUPS.length, 6);
+    checkEqual('SETTINGS_NAV_GROUPS listet 11 Screens', allNavIds.length, 11);
     checkEqual('Alle Nav-IDs sind eindeutig', new Set(allNavIds).size, allNavIds.length);
 
     const viewBeforeNav = state.view;
@@ -3347,6 +3350,97 @@ async function runAlleycatTestSuite(){
     check('Leaderboard nennt die verwaiste Startnummer', lbHtml.includes('42'));
     state.currentEvent = evtBefore; state.view = viewBefore;
     render();
+  }
+
+  /* Saisons, Teams & Liga-System (roster.js/season.js/league.js) */
+  {
+    const rosterTeamBackup = state.teamRoster, rosterRiderBackup = state.riderRoster;
+    const rosterA = withRosterTeamDefaults({id: 'rt-a', name: 'Roster A'});
+    const rosterB = withRosterTeamDefaults({id: 'rt-b', name: 'Roster B'});
+    const rosterX = withRosterRiderDefaults({id: 'rr-x', name: 'Roster X'});
+    const rosterY = withRosterRiderDefaults({id: 'rr-y', name: 'Roster Y'});
+    state.teamRoster = [rosterA, rosterB];
+    state.riderRoster = [rosterX, rosterY];
+
+    /* Roster-CRUD: erzeugen/umbenennen/löschen (inkl. Kaskade auf ein
+       verlinktes Event) laufen rein auf state.teamRoster/riderRoster,
+       storageGet/Set sind hier nicht Teil des Tests (Storage-Roundtrip
+       wird schon anderswo in dieser Suite generisch geprüft). */
+    checkEqual('getRosterTeam findet per id', getRosterTeam('rt-a').name, 'Roster A');
+    checkEqual('getRosterRider findet per id', getRosterRider('rr-x').name, 'Roster X');
+    renameRosterTeam('rt-a', 'Roster A neu');
+    checkEqual('renameRosterTeam ändert den Namen', getRosterTeam('rt-a').name, 'Roster A neu');
+    renameRosterTeam('rt-a', 'Roster A'); // zurück für die Fixtures unten
+
+    const evt1 = withEventDefaults({
+      id: 'league-evt-1', name: 'Event 1', status: 'completed',
+      teams: [
+        withTeamDefaults({id: 't1', name: 'Team1', rosterTeamId: 'rt-a'}),
+        withTeamDefaults({id: 't2', name: 'Team2', rosterTeamId: 'rt-b'}),
+        withTeamDefaults({id: 't-unlinked', name: 'TeamOhneLink', rosterTeamId: null})
+      ],
+      riders: [
+        withRiderDefaults({bib: 1, name: 'R1', teamId: 't1', rosterRiderId: 'rr-x', finishTime: '2026-08-25T12:00'}),
+        withRiderDefaults({bib: 2, name: 'R2', teamId: 't2', rosterRiderId: 'rr-y', finishTime: '2026-08-25T12:10'}),
+        withRiderDefaults({bib: 3, name: 'R3-ohne-Link', teamId: 't-unlinked', rosterRiderId: null, finishTime: '2026-08-25T12:15'})
+      ]
+    });
+    const evt2 = withEventDefaults({
+      id: 'league-evt-2', name: 'Event 2', status: 'completed',
+      teams: [
+        withTeamDefaults({id: 't3', name: 'Team3', rosterTeamId: 'rt-a'}),
+        withTeamDefaults({id: 't4', name: 'Team4', rosterTeamId: 'rt-b'})
+      ],
+      riders: [
+        withRiderDefaults({bib: 1, name: 'R3', teamId: 't3', rosterRiderId: 'rr-x', finishTime: '2026-08-26T12:00'}),
+        withRiderDefaults({bib: 2, name: 'R4', teamId: 't4', rosterRiderId: 'rr-y', finishTime: '2026-08-26T12:10'})
+      ]
+    });
+    const evt3Pending = withEventDefaults({id: 'league-evt-3', name: 'Event 3 (läuft noch)', status: 'running', teams: [], riders: []});
+
+    const season = withSeasonDefaults({
+      id: 'league-season-test', name: 'Test-Saison',
+      linkedEventIds: ['league-evt-1', 'league-evt-2', 'league-evt-3'],
+      teamPointsTable: [25, 18, 15], riderPointsTable: [25, 18, 15], pointsForParticipation: 0
+    });
+
+    const standings = computeLeagueStandings(season, [evt1, evt2, evt3Pending]);
+    checkEqual('computeLeagueStandings: 2 gewertete Teams (unverlinktes Team ausgeschlossen)', standings.teamRows.length, 2);
+    checkEqual('computeLeagueStandings: 2 gewertete Fahrer (unverlinkter Fahrer ausgeschlossen)', standings.riderRows.length, 2);
+    const rowA = standings.teamRows.find(r => r.rosterTeamId === 'rt-a');
+    const rowB = standings.teamRows.find(r => r.rosterTeamId === 'rt-b');
+    checkEqual('Team-Punkte summieren sich über beide Events (Platz 1 + Platz 1)', rowA.totalPoints, 50);
+    checkEqual('Team-Punkte für Platz-2-Team summieren sich korrekt', rowB.totalPoints, 36);
+    const rowX = standings.riderRows.find(r => r.rosterRiderId === 'rr-x');
+    const rowY = standings.riderRows.find(r => r.rosterRiderId === 'rr-y');
+    checkEqual('Fahrer-Punkte summieren sich über beide Events', rowX.totalPoints, 50);
+    checkEqual('Fahrer-Punkte für Platz-2-Fahrer summieren sich korrekt', rowY.totalPoints, 36);
+    checkEqual('Standings sind nach Punkten absteigend sortiert', standings.teamRows[0].rosterTeamId, 'rt-a');
+    checkEqual('Nicht abgeschlossenes, verlinktes Event zählt nicht mit', standings.teamRows.reduce((s, r) => s + r.eventsCompleted, 0), 4);
+    checkEqual('Nicht abgeschlossenes Event erscheint als pending', standings.pendingEvents.length, 1);
+    checkEqual('Pending-Event ist das richtige', standings.pendingEvents[0].id, 'league-evt-3');
+
+    /* Kaskade: Register-Team löschen entfernt die Verlinkung im Event,
+       lässt das Event-Team selbst aber unangetastet (dieselbe
+       Last-Writer-Wins-Zusicherung wie deleteRosterTeam() im Kommentar
+       in roster.js). Hier ohne Storage-Rundtrip getestet — reine
+       Objekt-Mutation, wie unlinkRosterTeamFromAllEvents() sie auf einem
+       schon geladenen evt vornimmt. */
+    evt1.teams.forEach(tm => { if(tm.rosterTeamId === 'rt-a') tm.rosterTeamId = null; });
+    checkEqual('Team-Objekt bleibt nach Entlinken bestehen', evt1.teams.find(tm => tm.id === 't1').name, 'Team1');
+    checkEqual('rosterTeamId ist nach Entlinken null', evt1.teams.find(tm => tm.id === 't1').rosterTeamId, null);
+
+    /* openLeague() navigiert weg von jedem Event-Kontext, analog zu
+       goDashboard() — siehe render()-Dispatcher in ui-headquarter.js. */
+    const evtBeforeLeague = state.currentEvent, viewBeforeLeague = state.view;
+    state.currentEvent = evt1;
+    openLeague();
+    checkEqual('openLeague() setzt state.view auf "league"', state.view, 'league');
+    checkEqual('openLeague() setzt currentEvent zurück (event-unabhängige Ansicht)', state.currentEvent, null);
+    state.currentEvent = evtBeforeLeague; state.view = viewBeforeLeague; render();
+
+    state.teamRoster = rosterTeamBackup;
+    state.riderRoster = rosterRiderBackup;
   }
 
   /* Zusammenfassung */
