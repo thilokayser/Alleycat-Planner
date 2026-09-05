@@ -12,7 +12,21 @@ const FEATURE_REGISTRY = [
   {id: 'offline_map_cache', scope: 'device', icon: '🗺', name: () => t('featureRegistry.offlineCacheName'), description: () => t('featureRegistry.offlineCacheDesc'), defaultEnabled: false, configScreen: 'offline-settings'},
   {id: 'categories', scope: 'event', icon: '🎫', name: () => t('featureRegistry.categoriesName'), description: () => t('featureRegistry.categoriesDesc'), defaultEnabled: true, configScreen: 'category-settings'},
   {id: 'game_modes', scope: 'event', icon: '🏆', name: () => t('featureRegistry.gameModesName'), description: () => t('featureRegistry.gameModesDesc'), defaultEnabled: true, configScreen: 'game-modes-settings'},
-  {id: 'seasons_league', scope: 'device', icon: '🏅', name: () => t('featureRegistry.seasonsLeagueName'), description: () => t('featureRegistry.seasonsLeagueDesc'), defaultEnabled: false, configScreen: null}
+  {id: 'seasons_league', scope: 'device', icon: '🏅', name: () => t('featureRegistry.seasonsLeagueName'), description: () => t('featureRegistry.seasonsLeagueDesc'), defaultEnabled: false, configScreen: null},
+  /* Community-Verwaltung (Invite-Codes + Benutzerverwaltung), alle
+     device-scope: das ist eine Einstellung der Organizer-Oberfläche
+     dieses Browsers, nicht des Events. Reine UI-Ausblendung — die
+     Server-Endpunkte selbst existieren immer, ein deaktiviertes Feature
+     versteckt nur den Knopf/die Sektion, wie bei jedem anderen Eintrag
+     hier auch. */
+  {id: 'invite_default_expiry', scope: 'device', icon: '🕐', name: () => t('featureRegistry.inviteDefaultExpiryName'), description: () => t('featureRegistry.inviteDefaultExpiryDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'invite_registration_validity', scope: 'device', icon: '⏳', name: () => t('featureRegistry.inviteRegistrationValidityName'), description: () => t('featureRegistry.inviteRegistrationValidityDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_password_reset', scope: 'device', icon: '🔑', name: () => t('featureRegistry.userPasswordResetName'), description: () => t('featureRegistry.userPasswordResetDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_logout_all_sessions', scope: 'device', icon: '🚪', name: () => t('featureRegistry.userLogoutAllName'), description: () => t('featureRegistry.userLogoutAllDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_list_tools', scope: 'device', icon: '🔍', name: () => t('featureRegistry.userListToolsName'), description: () => t('featureRegistry.userListToolsDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_bulk_actions', scope: 'device', icon: '☑️', name: () => t('featureRegistry.userBulkActionsName'), description: () => t('featureRegistry.userBulkActionsDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_csv_export', scope: 'device', icon: '📤', name: () => t('featureRegistry.userCsvExportName'), description: () => t('featureRegistry.userCsvExportDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_audit_log', scope: 'device', icon: '📜', name: () => t('featureRegistry.userAuditLogName'), description: () => t('featureRegistry.userAuditLogDesc'), defaultEnabled: false, configScreen: null}
 ];
 function featureRegistryEntry(id){
   return FEATURE_REGISTRY.find(f => f.id === id);

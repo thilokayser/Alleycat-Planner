@@ -494,13 +494,22 @@ async function printSpokeCardsPDF(){
    gängige Business-Card-Maß — dieselbe Kraftpapier-Optik wie die
    Spokecards (drawSpokeCardFront/-Back), damit gedrucktes Material aus
    diesem Projekt durchgehend gleich aussieht. */
-function inviteQrPayload(code){
+function inviteQrPayload(code, expiresAt){
   /* Kein separates Bundle wie bei der Rider-App: die Registrierung ist
      Teil derselben dist/alleycat-dispatch-server.html, die gerade offen
      ist — Basis-URL deshalb zur Laufzeit aus dem eigenen Ursprung, keine
      neue Einstellung nötig. Setzt voraus, dass die Karten auf der
      tatsächlichen Live-Domain erzeugt werden. */
-  return `${location.origin}${location.pathname}?invite=${encodeURIComponent(code)}`;
+  let url = `${location.origin}${location.pathname}?invite=${encodeURIComponent(code)}`;
+  /* &exp ist nur ein Anzeige-Hinweis für renderAdminRegister() (Feature-
+     Registry: invite_registration_validity), keine echte Gültigkeits-
+     prüfung — die läuft weiterhin ausschließlich serverseitig bei
+     ?a=register. Ein manipulierter Wert hier ändert daran nichts. */
+  if(isFeatureEnabled('invite_registration_validity') && expiresAt){
+    const iso = new Date(expiresAt).toISOString();
+    if(!isNaN(Date.parse(iso))) url += `&exp=${encodeURIComponent(iso)}`;
+  }
+  return url;
 }
 function drawInviteCard(doc, x, y, w, h, code, expiresAt, qrDataUrl){
   doc.setFillColor('#eee5cd');
@@ -540,7 +549,7 @@ async function buildInviteCardsDoc(codes){
   const cardW = 85.6, cardH = 53.98;
   const {perPage, pos} = computeCardGrid(210, 297, cardW, cardH, 12, 12, 8, 8);
 
-  const qrCodes = await Promise.all(codes.map(c => renderQrDataUrl(inviteQrPayload(c.code), 300)));
+  const qrCodes = await Promise.all(codes.map(c => renderQrDataUrl(inviteQrPayload(c.code, c.expiresAt), 300)));
   codes.forEach((c, i) => {
     if(i > 0 && i % perPage === 0) doc.addPage();
     const {x, y} = pos(i);

@@ -168,6 +168,10 @@ async function createInviteCode(){ return null; }
 async function listInviteCodes(){ return null; }
 async function revokeInviteCode(){ return null; }
 async function registerWithInviteCode(){ return null; }
+async function createResetCode(){ return null; }
+async function resetPasswordWithCode(){ return null; }
+async function logoutAllSessions(){ return null; }
+async function listAuditLog(){ return null; }
 async function initStorageBackend(){
   await initSqliteStorage();
   return true;

@@ -22,6 +22,10 @@
      GET  ?a=invite-list    Liste aller Codes, ohne Klartext (nur admin)
      POST ?a=invite-revoke  offenen Code vorzeitig entwerten (nur admin)
      POST ?a=register       Selbstregistrierung mit Einladungscode (kein Token)
+     POST ?a=users/reset-code-create  Passwort-Reset-Code für einen Benutzer (nur admin)
+     POST ?a=reset-password  Passwort mit Reset-Code setzen (kein Token)
+     POST ?a=users/logout-all  alle Sessions eines Benutzers invalidieren (nur admin)
+     GET  ?a=audit-log      jüngste Audit-Log-Einträge (nur admin)
    ------------------------------------------------------------------ */
 
 require __DIR__ . '/bootstrap.php';
@@ -92,6 +96,30 @@ function inviteRow($row){
     'status' => inviteStatus($row)
   ];
 }
+/* Reset-Codes sind kurzlebig und vom Admin ausgelöst (nicht vom Nutzer
+   selbst angefordert, es gibt keine E-Mail-Infrastruktur) — 24h reicht,
+   um den Code weiterzugeben, ohne ein versehentlich liegen gelassenes
+   Fenster lange offen zu halten. */
+const RESET_CODE_TTL_HOURS = 24;
+function resetHashCode($code){
+  return hash('sha256', (string)$code);
+}
+function resetGenerateCode(){
+  return inviteGenerateCode(); // gleiches Alphabet/Länge, gleiche Abtipp-Anforderung
+}
+/* Reine Anhängeliste (siehe Migration 6) — Fehler beim Loggen dürfen die
+   eigentliche Aktion nie verhindern, deshalb schluckt der Aufrufer keine
+   Exception von hier, sondern diese Funktion wirft nie selbst. */
+function authLogAudit(PDO $pdo, $actorUserId, $actorUsername, $action, $targetUsername, $detail){
+  try{
+    $pdo->prepare("INSERT INTO `" . adminTableName('admin_audit_log') . "`
+                   (`actor_user_id`,`actor_username`,`action`,`target_username`,`detail`)
+                   VALUES (?,?,?,?,?)")
+        ->execute([$actorUserId, $actorUsername, $action, $targetUsername, $detail]);
+  }catch(Exception $e){
+    error_log('[alleycat audit] insert failed: ' . $e->getMessage());
+  }
+}
 function authUserRow($row){
   return [
     'id' => (int)$row['id'],
@@ -159,6 +187,7 @@ if($action === 'login'){
   $pdo->prepare("INSERT INTO `{$sessionTable}` (`token_hash`,`user_id`,`last_seen_at`) VALUES (?,?,UTC_TIMESTAMP())")
       ->execute([adminHashToken($token), $user['id']]);
   $pdo->prepare("UPDATE `{$userTable}` SET `last_seen_at` = UTC_TIMESTAMP() WHERE `id` = ?")->execute([$user['id']]);
+  authLogAudit($pdo, (int)$user['id'], $user['username'], 'login', null, null);
 
   authOut(['ok' => true, 'token' => $token, 'role' => $user['role'], 'username' => $user['username'], 'displayName' => $user['display_name']]);
 }
@@ -212,6 +241,10 @@ if($action === 'users/update'){
   $id = (int)($body['id'] ?? 0);
   if($id <= 0) apiSendJsonError(400, 'invalid_input');
 
+  $targetUsernameStmt = $pdo->prepare("SELECT `username` FROM `{$userTable}` WHERE `id` = ?");
+  $targetUsernameStmt->execute([$id]);
+  $targetUsername = $targetUsernameStmt->fetchColumn() ?: null;
+
   $sets = [];
   $params = [];
   if(isset($body['role'])){
@@ -247,20 +280,23 @@ if($action === 'users/update'){
 
   $params[] = $id;
   $pdo->prepare("UPDATE `{$userTable}` SET " . implode(', ', $sets) . " WHERE `id` = ?")->execute($params);
+  if(isset($body['role'])) authLogAudit($pdo, $access['userId'], $access['username'], 'role_change', $targetUsername, 'neue Rolle: ' . $body['role']);
+  if(isset($body['active'])) authLogAudit($pdo, $access['userId'], $access['username'], $body['active'] ? 'activate' : 'deactivate', $targetUsername, null);
+  if(isset($body['password'])) authLogAudit($pdo, $access['userId'], $access['username'], 'password_reset_by_admin', $targetUsername, null);
   authOut(['ok' => true]);
 }
 
 if($action === 'users/delete'){
   authRequirePost();
-  apiVerifyAccess($pdo, 'admin');
+  $access = apiVerifyAccess($pdo, 'admin');
   $body = authJsonBody();
   $id = (int)($body['id'] ?? 0);
   if($id <= 0) apiSendJsonError(400, 'invalid_input');
 
-  $target = $pdo->prepare("SELECT `role` FROM `{$userTable}` WHERE `id` = ?");
+  $target = $pdo->prepare("SELECT `role`,`username` FROM `{$userTable}` WHERE `id` = ?");
   $target->execute([$id]);
-  $role = $target->fetchColumn();
-  if($role === 'admin'){
+  $targetRow = $target->fetch(PDO::FETCH_ASSOC);
+  if($targetRow && $targetRow['role'] === 'admin'){
     $adminCount = (int)$pdo->query("SELECT COUNT(*) FROM `{$userTable}` WHERE `role`='admin' AND `active`=1")->fetchColumn();
     if($adminCount <= 1) apiSendJsonError(409, 'last_admin');
   }
@@ -268,6 +304,7 @@ if($action === 'users/delete'){
   $pdo->prepare("DELETE FROM `{$sessionTable}` WHERE `user_id` = ?")->execute([$id]);
   $pdo->prepare("DELETE FROM `" . adminTableName('checkpoint_staff') . "` WHERE `user_id` = ?")->execute([$id]);
   $pdo->prepare("DELETE FROM `{$userTable}` WHERE `id` = ?")->execute([$id]);
+  if($targetRow) authLogAudit($pdo, $access['userId'], $access['username'], 'delete_user', $targetRow['username'], null);
   authOut(['ok' => true]);
 }
 
@@ -399,8 +436,113 @@ if($action === 'register'){
   $pdo->prepare("INSERT INTO `{$sessionTable}` (`token_hash`,`user_id`,`last_seen_at`) VALUES (?,?,UTC_TIMESTAMP())")
       ->execute([adminHashToken($token), $newUserId]);
   $pdo->prepare("UPDATE `{$userTable}` SET `last_seen_at` = UTC_TIMESTAMP() WHERE `id` = ?")->execute([$newUserId]);
+  authLogAudit($pdo, $newUserId, $username, 'register_via_invite', null, 'Rolle: ' . $invite['role']);
 
   authOut(['ok' => true, 'token' => $token, 'role' => $invite['role'], 'username' => $username, 'displayName' => $username]);
+}
+
+$resetTable = adminTableName('admin_reset_code');
+
+if($action === 'users/reset-code-create'){
+  authRequirePost();
+  $access = apiVerifyAccess($pdo, 'admin');
+  $body = authJsonBody();
+  $userId = (int)($body['id'] ?? 0);
+  if($userId <= 0) apiSendJsonError(400, 'invalid_input');
+  $targetStmt = $pdo->prepare("SELECT `username` FROM `{$userTable}` WHERE `id` = ?");
+  $targetStmt->execute([$userId]);
+  $targetUsername = $targetStmt->fetchColumn();
+  if(!$targetUsername) apiSendJsonError(404, 'not_found');
+
+  $expiresAtSql = date('Y-m-d H:i:s', time() + RESET_CODE_TTL_HOURS * 3600);
+  $code = null;
+  for($attempt = 0; $attempt < 5; $attempt++){
+    $candidate = resetGenerateCode();
+    try{
+      $pdo->prepare("INSERT INTO `{$resetTable}` (`code_hash`,`target_user_id`,`expires_at`,`created_by_user_id`)
+                     VALUES (?,?,?,?)")
+          ->execute([resetHashCode($candidate), $userId, $expiresAtSql, $access['userId']]);
+      $code = $candidate;
+      break;
+    }catch(PDOException $e){
+      if($e->getCode() !== '23000' || $attempt === 4) throw $e;
+    }
+  }
+  authLogAudit($pdo, $access['userId'], $access['username'], 'reset_code_created', $targetUsername, null);
+  authOut(['ok' => true, 'code' => $code, 'expiresAt' => $expiresAtSql]);
+}
+
+if($action === 'reset-password'){
+  authRequirePost();
+  $body = authJsonBody();
+  $code = (string)($body['code'] ?? '');
+  $password = (string)($body['password'] ?? '');
+
+  riderCheckRateLimit($pdo); // dieselbe IP-Bremse wie Login/Register
+
+  if($code === '' || !authPasswordValid($password)){
+    riderRejectAuth($pdo, 'invalid_input');
+  }
+
+  $stmt = $pdo->prepare("SELECT * FROM `{$resetTable}` WHERE `code_hash` = ?");
+  $stmt->execute([resetHashCode($code)]);
+  $reset = $stmt->fetch(PDO::FETCH_ASSOC);
+
+  /* Generische Fehlermeldung wie bei ?a=register — kein Unterschied
+     zwischen existiert nicht/abgelaufen/benutzt. */
+  if(!$reset || $reset['used_at'] !== null || strtotime($reset['expires_at']) <= time()){
+    riderRejectAuth($pdo, 'reset_invalid');
+  }
+  riderClearFailures($pdo);
+
+  $targetStmt = $pdo->prepare("SELECT `username` FROM `{$userTable}` WHERE `id` = ?");
+  $targetStmt->execute([$reset['target_user_id']]);
+  $targetUsername = $targetStmt->fetchColumn();
+  if(!$targetUsername) apiSendJsonError(404, 'not_found');
+
+  $pdo->prepare("UPDATE `{$userTable}` SET `password_hash` = ? WHERE `id` = ?")
+      ->execute([password_hash($password, PASSWORD_DEFAULT), $reset['target_user_id']]);
+  $pdo->prepare("UPDATE `{$resetTable}` SET `used_at` = UTC_TIMESTAMP() WHERE `id` = ?")->execute([$reset['id']]);
+  /* Bestehende Sessions dieses Benutzers invalidieren — ein Passwort-
+     Reset soll ein womöglich kompromittiertes Konto auch dort abmelden,
+     wo noch ein alter Token gültig war. */
+  $pdo->prepare("DELETE FROM `{$sessionTable}` WHERE `user_id` = ?")->execute([$reset['target_user_id']]);
+  authLogAudit($pdo, (int)$reset['target_user_id'], $targetUsername, 'password_reset', null, null);
+
+  authOut(['ok' => true]);
+}
+
+if($action === 'users/logout-all'){
+  authRequirePost();
+  $access = apiVerifyAccess($pdo, 'admin');
+  $body = authJsonBody();
+  $userId = (int)($body['id'] ?? 0);
+  if($userId <= 0) apiSendJsonError(400, 'invalid_input');
+  $targetStmt = $pdo->prepare("SELECT `username` FROM `{$userTable}` WHERE `id` = ?");
+  $targetStmt->execute([$userId]);
+  $targetUsername = $targetStmt->fetchColumn();
+
+  $pdo->prepare("DELETE FROM `{$sessionTable}` WHERE `user_id` = ?")->execute([$userId]);
+  authLogAudit($pdo, $access['userId'], $access['username'], 'logout_all_sessions', $targetUsername ?: null, null);
+  authOut(['ok' => true]);
+}
+
+if($action === 'audit-log'){
+  authRequireGet();
+  apiVerifyAccess($pdo, 'admin');
+  $limit = max(1, min(500, (int)($_GET['limit'] ?? 200)));
+  $rows = $pdo->prepare("SELECT * FROM `" . adminTableName('admin_audit_log') . "` ORDER BY `id` DESC LIMIT " . $limit);
+  $rows->execute();
+  authOut(['ok' => true, 'entries' => array_map(function($r){
+    return [
+      'id' => (int)$r['id'],
+      'at' => $r['created_at'],
+      'actorUsername' => $r['actor_username'],
+      'action' => $r['action'],
+      'targetUsername' => $r['target_username'],
+      'detail' => $r['detail']
+    ];
+  }, $rows->fetchAll(PDO::FETCH_ASSOC))]);
 }
 
 apiSendJsonError(400, 'unknown_action');

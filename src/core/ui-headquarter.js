@@ -32,6 +32,12 @@ let state = {
   inviteError: '',
   inviteFormOpen: false,
   inviteJustCreated: null, // Klartext-Codes direkt nach dem Erstellen — werden nie wieder angezeigt
+  resetCodeJustCreated: null, // {userId, code, expiresAt} — wie inviteJustCreated, nur für Passwort-Reset
+  userListSearch: '',
+  userListRoleFilter: '',
+  userListSortBy: 'username',
+  userBulkSelectedIds: [],
+  auditLogList: null,
   checkinBibInput: '',
   checkinActiveBib: null,
   checkinNotFound: false,
@@ -954,9 +960,100 @@ async function toggleUserActive(id, active){
 async function resetUserPasswordPrompt(id, username){
   const password = prompt(t('auth.usersResetPasswordButton') + ' — ' + username);
   if(password === null) return;
-  if(password.length < 8){ alert(t('auth.usersPasswordLabel')); return; }
+  if(!validatePasswordStrength(password).valid){ alert(t('auth.passwordHintMinLength', {min: PASSWORD_MIN_LENGTH})); return; }
   await adminUpdateUser({id, password});
   alert(t('auth.usersSaveButton'));
+}
+/* ---------------- Passwort-Reset-Code / Überall abmelden (Feature-Registry) ---------------- */
+async function createResetCodeForUser(id){
+  const res = await createResetCode(id);
+  if(!res.ok){ alert(t('auth.resetCodeErrorGeneric')); return; }
+  /* Wie inviteJustCreated: der Klartext-Code ist danach nirgendwo mehr
+     abrufbar (der Server speichert nur den Hash), deshalb bis zum
+     nächsten Neuladen/Schließen im UI-State gehalten. */
+  state.resetCodeJustCreated = {userId: id, code: res.code, expiresAt: res.expiresAt};
+  renderSettings();
+}
+function copyResetCode(code){
+  if(!navigator.clipboard || !navigator.clipboard.writeText) return;
+  navigator.clipboard.writeText(code).then(() => showToast({message: t('auth.inviteCopiedToast')})).catch(() => {});
+}
+async function logoutAllSessionsForUser(id, username){
+  if(!confirm(t('auth.usersLogoutAllConfirm', {username}))) return;
+  await logoutAllSessions(id);
+  showToast({message: t('auth.usersLogoutAllDoneToast')});
+}
+/* ---------------- Suche/Filter/Sortierung + Bulk-Aktionen (Feature-Registry) ---------------- */
+function onUserListSearchInput(value){ state.userListSearch = value; renderSettings(); }
+function onUserListRoleFilterChange(value){ state.userListRoleFilter = value; renderSettings(); }
+function onUserListSortByChange(value){ state.userListSortBy = value; renderSettings(); }
+function filteredSortedUsers(){
+  const users = state.adminUsersList || [];
+  const q = (state.userListSearch || '').trim().toLowerCase();
+  let list = users.filter(u =>
+    (!q || u.username.toLowerCase().includes(q) || (u.displayName || '').toLowerCase().includes(q)) &&
+    (!state.userListRoleFilter || u.role === state.userListRoleFilter)
+  );
+  const sortBy = state.userListSortBy || 'username';
+  list = list.slice().sort((a, b) => {
+    if(sortBy === 'lastSeenAt') return (b.lastSeenAt || '').localeCompare(a.lastSeenAt || '');
+    if(sortBy === 'role') return a.role.localeCompare(b.role);
+    return a.username.localeCompare(b.username);
+  });
+  return list;
+}
+function toggleUserBulkSelected(id, checked){
+  const ids = new Set(state.userBulkSelectedIds);
+  if(checked) ids.add(id); else ids.delete(id);
+  state.userBulkSelectedIds = [...ids];
+  renderSettings();
+}
+async function applyBulkRoleChange(){
+  const role = document.getElementById('user-bulk-role').value;
+  for(const id of state.userBulkSelectedIds) await adminUpdateUser({id, role});
+  state.userBulkSelectedIds = [];
+  await loadAdminUsersIfNeeded(true);
+}
+async function applyBulkActiveChange(active){
+  for(const id of state.userBulkSelectedIds) await adminUpdateUser({id, active});
+  state.userBulkSelectedIds = [];
+  await loadAdminUsersIfNeeded(true);
+}
+/* ---------------- CSV-Export der Userliste (Feature-Registry) ---------------- */
+function exportUsersCSV(){
+  const header = [t('auth.usersUsernameLabel'), t('auth.usersDisplayNameLabel'), t('auth.usersRoleLabel'), t('auth.usersActiveLabel'), t('auth.usersLastSeen')];
+  const lines = [header.map(csvEscape).join(';')];
+  filteredSortedUsers().forEach(u => {
+    lines.push([u.username, u.displayName || '', adminRoleLabel(u.role), u.active ? 'x' : '', u.lastSeenAt || ''].map(csvEscape).join(';'));
+  });
+  downloadBlob(new Blob([lines.join('\n')], {type: 'text/csv;charset=utf-8'}), 'alleycat-benutzer.csv');
+}
+/* ---------------- Audit-Log (Feature-Registry) ---------------- */
+async function loadAuditLogIfNeeded(force){
+  if(state.auditLogList && !force) return;
+  const res = await listAuditLog();
+  state.auditLogList = (res && res.ok) ? res.entries : [];
+  if(state.settingsSection === 'users') renderSettings();
+}
+function renderAuditLogSection(){
+  if(!isFeatureEnabled('user_audit_log')) return '';
+  const entries = state.auditLogList || [];
+  const rows = entries.map(e => `
+    <div style="display:flex; gap:10px; padding:6px 0; border-bottom:1px solid var(--asphalt-3); font-size:12px; flex-wrap:wrap;">
+      <span style="color:var(--steel); font-family:monospace;">${escapeHtml(e.at)}</span>
+      <strong>${escapeHtml(e.actorUsername || '—')}</strong>
+      <span>${escapeHtml(e.action)}</span>
+      ${e.targetUsername ? `<span style="color:var(--steel);">→ ${escapeHtml(e.targetUsername)}</span>` : ''}
+      ${e.detail ? `<span style="color:var(--steel);">(${escapeHtml(e.detail)})</span>` : ''}
+    </div>
+  `).join('');
+  return `
+    <div class="settings-section" style="margin-top:24px;">
+      <h3>${t('auth.auditLogHeading')}</h3>
+      <div class="settings-section-desc">${t('auth.auditLogDesc')}</div>
+      ${rows || `<div class="settings-section-desc">${t('auth.auditLogEmpty')}</div>`}
+    </div>
+  `;
 }
 async function deleteUserRow(id, username){
   if(!confirm(t('auth.usersDeleteConfirm', {username}))) return;
@@ -1030,7 +1127,7 @@ function renderInviteCodesSection(){
       <div class="rider-field"><label>${t('auth.usersRoleLabel')}</label>
         <select id="newinvite-role">${ADMIN_ROLE_OPTIONS.map(r => `<option value="${r}">${escapeHtml(adminRoleLabel(r))}</option>`).join('')}</select>
       </div>
-      <div class="rider-field"><label>${t('auth.inviteExpiresLabel')}</label><input type="datetime-local" id="newinvite-expires"></div>
+      <div class="rider-field"><label>${t('auth.inviteExpiresLabel')}</label><input type="datetime-local" id="newinvite-expires" value="${isFeatureEnabled('invite_default_expiry') ? toLocalDateTimeInputValue(new Date(Date.now() + 7 * 86400000)) : ''}"></div>
       <div class="rider-field"><label>${t('auth.inviteCountLabel')}</label><input type="number" id="newinvite-count" value="1" min="1" max="50"></div>
       <div class="rider-field"><label>${t('auth.inviteNoteLabel')}</label><input type="text" id="newinvite-note" placeholder="${t('auth.inviteNotePlaceholder')}"></div>
       <button class="btn btn-primary" onclick="submitCreateInviteCode()">${t('auth.inviteCreateButton')}</button>
@@ -1088,14 +1185,18 @@ function renderSettingsSectionUsers(){
   if(!hasAdminRoles()){
     return `<div class="settings-section"><h3>${t('auth.usersHeading')}</h3><div class="settings-section-desc">${t('auth.usersDesc')}</div></div>`;
   }
-  const users = state.adminUsersList || [];
+  const listToolsOn = isFeatureEnabled('user_list_tools');
+  const bulkOn = isFeatureEnabled('user_bulk_actions');
+  const users = listToolsOn ? filteredSortedUsers() : (state.adminUsersList || []);
   const rows = users.map(u => {
     const assignOpen = state.adminAssignEditingId === u.id;
     const cps = (state.currentEvent && state.currentEvent.checkpoints) || [];
     const assigned = new Set((state.adminAssignCache || []).filter(a => a.user_id == u.id).map(a => a.cp_id));
+    const resetJustCreated = state.resetCodeJustCreated && state.resetCodeJustCreated.userId === u.id ? state.resetCodeJustCreated : null;
     return `
       <div class="admin-user-row" style="border:1px solid var(--asphalt-3); border-radius:4px; padding:12px 14px; margin-bottom:10px;">
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          ${bulkOn ? `<input type="checkbox" onchange="toggleUserBulkSelected(${u.id}, this.checked)" ${state.userBulkSelectedIds.includes(u.id) ? 'checked' : ''}>` : ''}
           <strong>${escapeHtml(u.username)}</strong>
           <span style="color:var(--steel); font-size:12px;">${escapeHtml(u.displayName || '')}</span>
           <select onchange="updateUserRole(${u.id}, this.value)" style="margin-left:auto;">
@@ -1103,9 +1204,18 @@ function renderSettingsSectionUsers(){
           </select>
           <button class="btn btn-ghost" onclick="toggleUserActive(${u.id}, ${!u.active})">${u.active ? t('auth.usersDeactivateButton') : t('auth.usersActivateButton')}</button>
           <button class="btn btn-ghost" onclick="resetUserPasswordPrompt(${u.id}, '${escapeHtml(u.username)}')">${t('auth.usersResetPasswordButton')}</button>
+          ${isFeatureEnabled('user_password_reset') ? `<button class="btn btn-ghost" onclick="createResetCodeForUser(${u.id})">${t('auth.resetCodeCreateButton')}</button>` : ''}
+          ${isFeatureEnabled('user_logout_all_sessions') ? `<button class="btn btn-ghost" onclick="logoutAllSessionsForUser(${u.id}, '${escapeHtml(u.username)}')">${t('auth.usersLogoutAllButton')}</button>` : ''}
           <button class="btn btn-ghost" onclick="deleteUserRow(${u.id}, '${escapeHtml(u.username)}')">${t('auth.usersDeleteButton')}</button>
         </div>
         <div style="color:var(--steel); font-size:11px; margin-top:4px;">${t('auth.usersLastSeen')}: ${u.lastSeenAt ? escapeHtml(u.lastSeenAt) : t('auth.usersLastSeenNever')}${u.active ? '' : ' · ' + t('auth.usersActiveLabel') + ': ✕'}</div>
+        ${resetJustCreated ? `
+          <div style="border:1px solid var(--hivis); border-radius:4px; padding:8px 10px; margin-top:8px; background:var(--asphalt); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="color:var(--steel); font-size:11.5px;">${t('auth.resetCodeJustCreatedHint')}</span>
+            <strong style="font-family:monospace; letter-spacing:0.06em;">${escapeHtml(resetJustCreated.code)}</strong>
+            <button class="btn btn-ghost btn-sm" onclick="copyResetCode('${resetJustCreated.code}')">${t('common.copy')}</button>
+          </div>
+        ` : ''}
         ${u.role === 'checkpoint_staff' ? `
           <div style="margin-top:8px;">
             <button class="btn btn-ghost" onclick="toggleAssignForUser(${u.id})">${t('auth.usersCheckpointAssignHeading')}</button>
@@ -1140,16 +1250,45 @@ function renderSettingsSectionUsers(){
     </div>
   ` : '';
 
+  const listToolsBar = listToolsOn ? `
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+      <input type="text" placeholder="${t('auth.usersSearchPlaceholder')}" value="${escapeHtml(state.userListSearch || '')}" oninput="onUserListSearchInput(this.value)" style="flex:1; min-width:160px;">
+      <select onchange="onUserListRoleFilterChange(this.value)">
+        <option value="">${t('auth.usersFilterAllRoles')}</option>
+        ${ADMIN_ROLE_OPTIONS.map(r => `<option value="${r}" ${state.userListRoleFilter === r ? 'selected' : ''}>${escapeHtml(adminRoleLabel(r))}</option>`).join('')}
+      </select>
+      <select onchange="onUserListSortByChange(this.value)">
+        <option value="username" ${state.userListSortBy === 'username' ? 'selected' : ''}>${t('auth.usersSortUsername')}</option>
+        <option value="role" ${state.userListSortBy === 'role' ? 'selected' : ''}>${t('auth.usersSortRole')}</option>
+        <option value="lastSeenAt" ${state.userListSortBy === 'lastSeenAt' ? 'selected' : ''}>${t('auth.usersSortLastSeen')}</option>
+      </select>
+    </div>
+  ` : '';
+  const bulkBar = (bulkOn && state.userBulkSelectedIds.length) ? `
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; padding:8px 10px; background:var(--asphalt); border-radius:4px;">
+      <span style="font-size:12px;">${t('auth.usersBulkSelectedCount', {count: state.userBulkSelectedIds.length})}</span>
+      <select id="user-bulk-role">${ADMIN_ROLE_OPTIONS.map(r => `<option value="${r}">${escapeHtml(adminRoleLabel(r))}</option>`).join('')}</select>
+      <button class="btn btn-ghost btn-sm" onclick="applyBulkRoleChange()">${t('auth.usersBulkApplyRole')}</button>
+      <button class="btn btn-ghost btn-sm" onclick="applyBulkActiveChange(false)">${t('auth.usersDeactivateButton')}</button>
+      <button class="btn btn-ghost btn-sm" onclick="applyBulkActiveChange(true)">${t('auth.usersActivateButton')}</button>
+    </div>
+  ` : '';
   return `
     <div class="settings-section">
       <h3>${t('auth.usersHeading')}</h3>
       <div class="settings-section-desc">${t('auth.usersDesc')}</div>
       ${state.adminUsersError ? `<div class="rider-note rider-note-error">${escapeHtml(state.adminUsersError)}</div>` : ''}
-      <button class="btn btn-primary" style="margin:12px 0;" onclick="toggleAddUserForm()">${t('auth.usersAddButton')}</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin:12px 0;">
+        <button class="btn btn-primary" onclick="toggleAddUserForm()">${t('auth.usersAddButton')}</button>
+        ${isFeatureEnabled('user_csv_export') ? `<button class="btn" onclick="exportUsersCSV()">${t('auth.usersCsvExportButton')}</button>` : ''}
+      </div>
       ${addForm}
+      ${listToolsBar}
+      ${bulkBar}
       ${rows || `<div class="settings-section-desc">…</div>`}
     </div>
     ${renderInviteCodesSection()}
+    ${renderAuditLogSection()}
   `;
 }
 
@@ -1181,7 +1320,10 @@ function renderSettings(){
   }
   if(state.settingsSection === 'users' && hasAdminRoles()){
     loadAdminUsersIfNeeded();
-    if(currentUserCan('manageUsers')) loadInviteCodesIfNeeded();
+    if(currentUserCan('manageUsers')){
+      loadInviteCodesIfNeeded();
+      if(isFeatureEnabled('user_audit_log')) loadAuditLogIfNeeded();
+    }
   }
 }
 

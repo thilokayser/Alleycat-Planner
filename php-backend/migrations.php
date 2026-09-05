@@ -266,6 +266,48 @@ function migrationsList($table, $charset){
         UNIQUE KEY `uq_code_hash` (`code_hash`)
       ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
     },
+
+    /* Passwort-Reset ohne E-Mail-Infrastruktur + Admin-Audit-Log. Zwei
+       unabhängige, additive Tabellen — beide optional aus Admin-Sicht
+       (Feature-Registry-Einträge, Default aus), keine berührt bestehende
+       Tabellen aus Migration 4/5. */
+    6 => function(PDO $pdo) use ($table, $charset){
+      /* Eigene Tabelle statt Wiederverwendung von invite_code: ein
+         Reset-Code zielt auf einen bestimmten, bereits existierenden
+         Benutzer (target_user_id) statt eine offene Rolle zu vergeben,
+         und braucht eine deutlich kürzere, serverseitig fest verdrahtete
+         Gültigkeit (siehe RESET_CODE_TTL_HOURS in auth.php) statt eines
+         vom Admin frei wählbaren Datums — ein gemeinsames Schema hätte
+         beide Formen durch nullbare Spalten verwässert. */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_admin_reset_code` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `code_hash` CHAR(64) NOT NULL,
+        `target_user_id` INT UNSIGNED NOT NULL,
+        `expires_at` DATETIME NOT NULL,
+        `used_at` DATETIME NULL,
+        `created_by_user_id` INT UNSIGNED NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY `uq_code_hash` (`code_hash`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      /* Reine Anhängeliste, kein Undo — anders als das event-gebundene
+         actionLog (action-log.js): Login/Rollenänderung/Passwort-Reset
+         sind installationsweit, nicht an ein offenes Event gebunden.
+         actor_* und target_username sind Klartext-Spalten statt
+         Fremdschlüssel, damit ein später gelöschtes Benutzerkonto die
+         historischen Log-Zeilen nicht verwaist zurücklässt (gleiches
+         Muster wie staff_ref in rider_log, Migration 4). */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_admin_audit_log` (
+        `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `actor_user_id` INT UNSIGNED NULL,
+        `actor_username` VARCHAR(64) NULL,
+        `action` VARCHAR(40) NOT NULL,
+        `target_username` VARCHAR(64) NULL,
+        `detail` VARCHAR(191) NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        KEY `idx_created` (`created_at`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+    },
   ];
 }
 

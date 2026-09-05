@@ -122,6 +122,27 @@ async function registerWithInviteCode(code, username, password){
   if(res.ok) saveAdminSession({token: res.token, role: res.role, username: res.username, displayName: res.displayName});
   return res;
 }
+/* ---------------- Passwort-Reset / Überall abmelden / Audit-Log ----------------
+   Gleiches Transport-Muster wie oben. resetPasswordWithCode() speichert
+   bewusst keine Session — anders als registerWithInviteCode() landet ein
+   Reset nicht automatisch eingeloggt, das bestehende Konto behält seine
+   Rolle unverändert, nur das Passwort ändert sich. */
+async function createResetCode(userId){
+  if(!hasAdminRoles()) return null;
+  return authRequest('POST', 'a=users/reset-code-create', {id: userId});
+}
+async function resetPasswordWithCode(code, password){
+  if(!hasAdminRoles()) return null;
+  return authRequest('POST', 'a=reset-password', {code, password});
+}
+async function logoutAllSessions(userId){
+  if(!hasAdminRoles()) return null;
+  return authRequest('POST', 'a=users/logout-all', {id: userId});
+}
+async function listAuditLog(){
+  if(!hasAdminRoles()) return null;
+  return authRequest('GET', 'a=audit-log');
+}
 /* Admin-Rollen-Seam (siehe auth.js currentUserRole()): unter geteiltem
    window.storage gibt es kein PHP-Backend und damit keine Konten. */
 function hasAdminRoles(){
@@ -237,12 +258,13 @@ async function submitPhpSetup(){
    gespeicherter Master-Key vorliegt — siehe currentAuthHeaders()-
    Kommentar oben: mit gespeichertem Key bleibt der Browser wie bisher
    sofort im Vollzugriff, ganz ohne diesen Bildschirm. */
-function renderAdminLogin(error){
+function renderAdminLogin(error, notice){
   document.getElementById('app').innerHTML = `
     <div style="max-width:420px; margin:60px auto; padding:32px; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:3px solid var(--hivis); border-radius:6px;">
       <h2 style="margin:0 0 4px;">Alleycat Dispatch</h2>
       <div style="color:var(--steel); font-size:13px; font-family:'JetBrains Mono'; margin-bottom:22px;">${t('auth.loginTitle')}</div>
       ${error ? `<div style="background:rgba(178,58,46,0.15); border:1px solid var(--stamp); color:#ff9a8f; padding:10px 12px; border-radius:4px; font-size:13px; margin-bottom:14px;">${escapeHtml(error)}</div>` : ''}
+      ${notice ? `<div style="background:rgba(58,154,92,0.15); border:1px solid #3a9a5c; color:#8fd6a8; padding:10px 12px; border-radius:4px; font-size:13px; margin-bottom:14px;">${escapeHtml(notice)}</div>` : ''}
       <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.loginUsernameLabel')}</label>
       <input type="text" id="admin-login-username" autocomplete="username"
         style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
@@ -252,6 +274,7 @@ function renderAdminLogin(error){
       <button class="btn btn-primary" style="width:100%;" onclick="submitAdminLogin()">${t('auth.loginButton')}</button>
       <div style="text-align:center; margin-top:16px; display:flex; flex-direction:column; gap:6px;">
         <button type="button" style="background:none; border:none; color:var(--steel); font-size:12px; text-decoration:underline; cursor:pointer;" onclick="renderAdminRegister()">${t('auth.inviteLoginLink')}</button>
+        <button type="button" style="background:none; border:none; color:var(--steel); font-size:12px; text-decoration:underline; cursor:pointer;" onclick="renderAdminResetPassword()">${t('auth.resetLoginLink')}</button>
         <button type="button" style="background:none; border:none; color:var(--steel); font-size:12px; text-decoration:underline; cursor:pointer;" onclick="renderAdminBootstrap()">${t('auth.bootstrapTitle')}</button>
       </div>
     </div>
@@ -316,10 +339,22 @@ function inviteCodeFromUrl(){
 }
 function renderAdminRegister(prefilledCode, error){
   const code = prefilledCode || inviteCodeFromUrl();
+  /* Reine Anzeige: der Wert kommt unverifiziert aus der URL (siehe
+     inviteQrPayload() in export-pdf.js) und hat keinerlei Einfluss auf
+     die Validierung, die läuft ausschließlich serverseitig bei
+     ?a=register. Nur sichtbar, wenn der Link/QR-Code den Parameter
+     trägt — das war eine bewusste Entscheidung des Admins beim
+     Erstellen (Feature-Registry: invite_registration_validity). */
+  const expParam = new URLSearchParams(location.search).get('exp');
+  const expDate = expParam ? new Date(expParam) : null;
+  const validityHint = (expDate && !isNaN(expDate.getTime()))
+    ? `<div style="color:var(--steel); font-size:12px; margin-bottom:14px;">${t('auth.registerValidUntil', {date: expDate.toLocaleDateString('de-DE')})}</div>`
+    : '';
   document.getElementById('app').innerHTML = `
     <div style="max-width:420px; margin:60px auto; padding:32px; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:3px solid var(--hivis); border-radius:6px;">
       <h2 style="margin:0 0 4px;">${t('auth.registerTitle')}</h2>
       <div style="color:var(--steel); font-size:12.5px; margin-bottom:20px; line-height:1.5;">${t('auth.registerDesc')}</div>
+      ${validityHint}
       ${error ? `<div style="background:rgba(178,58,46,0.15); border:1px solid var(--stamp); color:#ff9a8f; padding:10px 12px; border-radius:4px; font-size:13px; margin-bottom:14px;">${escapeHtml(error)}</div>` : ''}
       <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.registerCodeLabel')}</label>
       <input type="text" id="admin-register-code" value="${escapeHtml(code)}" style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px; text-transform:uppercase;">
@@ -348,6 +383,48 @@ async function submitAdminRegister(){
     return;
   }
   location.href = location.pathname;
+}
+
+/* ---------------- Passwort-Reset mit Admin-Code ----------------
+   Gegenstück zu renderAdminRegister(): auch hier ist der Code der
+   Ausweis, aber er zielt auf ein BESTEHENDES Konto statt eins neu
+   anzulegen — der Admin erzeugt ihn gezielt für einen Benutzer (siehe
+   "Passwort ändern"-Button in renderSettingsSectionUsers()), es gibt
+   keine Selbstauslösung à la "Passwort vergessen"-E-Mail, weil diese
+   Installation keine E-Mail-Infrastruktur hat. */
+function resetCodeFromUrl(){
+  return new URLSearchParams(location.search).get('reset') || '';
+}
+function renderAdminResetPassword(prefilledCode, error){
+  const code = prefilledCode || resetCodeFromUrl();
+  document.getElementById('app').innerHTML = `
+    <div style="max-width:420px; margin:60px auto; padding:32px; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:3px solid var(--hivis); border-radius:6px;">
+      <h2 style="margin:0 0 4px;">${t('auth.resetTitle')}</h2>
+      <div style="color:var(--steel); font-size:12.5px; margin-bottom:20px; line-height:1.5;">${t('auth.resetDesc')}</div>
+      ${error ? `<div style="background:rgba(178,58,46,0.15); border:1px solid var(--stamp); color:#ff9a8f; padding:10px 12px; border-radius:4px; font-size:13px; margin-bottom:14px;">${escapeHtml(error)}</div>` : ''}
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.resetCodeLabel')}</label>
+      <input type="text" id="admin-reset-code" value="${escapeHtml(code)}" style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px; text-transform:uppercase;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.resetPasswordLabel')}</label>
+      <input type="password" id="admin-reset-password" autocomplete="new-password" oninput="updatePasswordStrengthMeter('admin-reset-password','admin-reset-password-meter')" style="width:100%; padding:9px 10px; margin-bottom:4px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <div id="admin-reset-password-meter">${renderPasswordStrengthMeter('')}</div>
+      <button class="btn btn-primary" style="width:100%;" onclick="submitAdminResetPassword()">${t('auth.resetButton')}</button>
+      <div style="text-align:center; margin-top:16px;">
+        <button type="button" style="background:none; border:none; color:var(--steel); font-size:12px; text-decoration:underline; cursor:pointer;" onclick="renderAdminLogin()">${t('auth.loginButton')}</button>
+      </div>
+    </div>
+  `;
+}
+async function submitAdminResetPassword(){
+  const code = (document.getElementById('admin-reset-code').value || '').trim().toUpperCase();
+  const password = document.getElementById('admin-reset-password').value || '';
+  if(!code || !validatePasswordStrength(password).valid){ renderAdminResetPassword(code, t('auth.resetErrorInvalid')); return; }
+  const res = await resetPasswordWithCode(code, password);
+  if(!res.ok){
+    if(res.status === 429) renderAdminResetPassword(code, t('auth.loginErrorRateLimited', {seconds: res.retryAfter || 60}));
+    else renderAdminResetPassword(code, t('auth.resetErrorInvalid'));
+    return;
+  }
+  renderAdminLogin(null, t('auth.resetSuccessMessage'));
 }
 
 async function exportBackupBlob(evt){
@@ -440,6 +517,7 @@ async function initStorageBackend(){
      fehlschlagenden Requests im toten Fall. */
   if(!cfg.apiKey && !loadAdminSession()){
     if(inviteCodeFromUrl()) renderAdminRegister();
+    else if(resetCodeFromUrl()) renderAdminResetPassword();
     else renderAdminLogin();
     return false;
   }
