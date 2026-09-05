@@ -164,6 +164,10 @@ async function adminUpdateUser(){ return {ok: false, error: 'not_supported'}; }
 async function adminDeleteUser(){ return {ok: false, error: 'not_supported'}; }
 async function adminGetCheckpointStaff(){ return {ok: false, error: 'not_supported'}; }
 async function adminSetCheckpointStaff(){ return {ok: false, error: 'not_supported'}; }
+async function createInviteCode(){ return null; }
+async function listInviteCodes(){ return null; }
+async function revokeInviteCode(){ return null; }
+async function registerWithInviteCode(){ return null; }
 async function initStorageBackend(){
   await initSqliteStorage();
   return true;

@@ -242,6 +242,30 @@ function migrationsList($table, $charset){
         }
       }
     },
+
+    /* Einladungscodes für Selbstregistrierung (auth.php ?a=invite-create/
+       -list/-revoke, ?a=register). Additiv, eigene Tabelle, berührt
+       admin_user/admin_session aus Migration 4 nicht — eine Installation
+       ohne diese Migration bleibt mit der bestehenden manuellen
+       Benutzerverwaltung voll funktionsfähig. */
+    5 => function(PDO $pdo) use ($table, $charset){
+      /* code_hash wie staff_code_hash gehasht: der Code ist ein
+         kryptografischer Zufallswert, kein vom Menschen gewähltes
+         Geheimnis — anders als das Passwort, das dieselbe Registrierung
+         im selben Zug anlegt (dort password_hash, siehe admin_user). */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_invite_code` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `code_hash` CHAR(64) NOT NULL,
+        `role` VARCHAR(20) NOT NULL,
+        `note` VARCHAR(191) NULL,
+        `expires_at` DATETIME NOT NULL,
+        `used_at` DATETIME NULL,
+        `used_by_user_id` INT UNSIGNED NULL,
+        `created_by_user_id` INT UNSIGNED NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY `uq_code_hash` (`code_hash`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+    },
   ];
 }
 

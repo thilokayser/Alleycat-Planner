@@ -56,3 +56,34 @@ function currentUserCan(action){
 function isViewerRole(){
   return currentUserRole() === 'viewer';
 }
+
+/* Eine Policy für jeden Passwort-Eingabepunkt (Bootstrap, Einladungs-
+   Registrierung, ein späterer Passwort-Ändern-Screen) statt mehrerer
+   divergierender Regeln. Mindestlänge statt Zeichenklassen-Zwang (NIST
+   SP 800-63B statt veralteter Komplexitätsregeln) — Nutzer weichen bei
+   erzwungenem Sonderzeichen-/Großbuchstaben-Mix erfahrungsgemäß auf
+   vorhersehbare Muster aus. Rein clientseitiges Feedback, kein
+   Blocker — spiegelt authPasswordValid() in auth.php, die einzige
+   wirklich durchgesetzte Instanz. */
+const PASSWORD_MIN_LENGTH = 12;
+function validatePasswordStrength(password){
+  const len = (password || '').length;
+  if(len === 0) return {valid: false, level: 'empty', message: t('auth.passwordHintMinLength', {min: PASSWORD_MIN_LENGTH})};
+  if(len < PASSWORD_MIN_LENGTH) return {valid: false, level: 'weak', message: t('auth.passwordHintMinLength', {min: PASSWORD_MIN_LENGTH})};
+  if(len < PASSWORD_MIN_LENGTH + 6) return {valid: true, level: 'ok', message: t('auth.passwordHintOk')};
+  return {valid: true, level: 'strong', message: t('auth.passwordHintStrong')};
+}
+/* Gemeinsame UI-Komponente statt Insel je Formular — Bootstrap,
+   Registrierung und ein späterer Passwort-Ändern-Screen bleiben damit
+   optisch/funktional identisch. Reines Feedback: aktualisiert nur eine
+   vorhandene Anzeige-Zeile, blockiert kein Absenden selbst. */
+function renderPasswordStrengthMeter(password){
+  const r = validatePasswordStrength(password);
+  const color = r.level === 'strong' ? '#3a9a5c' : r.level === 'ok' ? 'var(--hivis)' : 'var(--steel)';
+  return `<div style="color:${color}; font-size:11.5px; margin:-8px 0 14px;">${escapeHtml(r.message)}</div>`;
+}
+function updatePasswordStrengthMeter(inputId, meterId){
+  const meterEl = document.getElementById(meterId);
+  if(!meterEl) return;
+  meterEl.outerHTML = renderPasswordStrengthMeter(document.getElementById(inputId).value || '').replace('<div', `<div id="${meterId}"`);
+}

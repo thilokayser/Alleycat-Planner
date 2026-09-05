@@ -483,6 +483,79 @@ async function printSpokeCardsPDF(){
   state.spokeCardsGenerating = false;
   renderRiders();
 }
+/* ---------------- Einladungscodes: Visitenkarten ----------------
+   Gedruckte Karten zum Verteilen an Tester, kein Netzwerk beim Verteilen
+   nötig — nur das spätere Einlösen selbst braucht eine Serververbindung.
+   Muss im selben Request-Zyklus wie invite-create passieren (siehe
+   submitCreateInviteCode() in ui-headquarter.js): der Klartext-Code ist
+   danach nirgendwo mehr abrufbar, auth.php speichert nur den Hash.
+
+   Kreditkarten-Format (ISO/IEC 7810 ID-1, 85,60 × 53,98mm), nicht das
+   gängige Business-Card-Maß — dieselbe Kraftpapier-Optik wie die
+   Spokecards (drawSpokeCardFront/-Back), damit gedrucktes Material aus
+   diesem Projekt durchgehend gleich aussieht. */
+function inviteQrPayload(code){
+  /* Kein separates Bundle wie bei der Rider-App: die Registrierung ist
+     Teil derselben dist/alleycat-dispatch-server.html, die gerade offen
+     ist — Basis-URL deshalb zur Laufzeit aus dem eigenen Ursprung, keine
+     neue Einstellung nötig. Setzt voraus, dass die Karten auf der
+     tatsächlichen Live-Domain erzeugt werden. */
+  return `${location.origin}${location.pathname}?invite=${encodeURIComponent(code)}`;
+}
+function drawInviteCard(doc, x, y, w, h, code, expiresAt, qrDataUrl){
+  doc.setFillColor('#eee5cd');
+  doc.roundedRect(x, y, w, h, 2.5, 2.5, 'F');
+  doc.setDrawColor('#241f18');
+  doc.setLineWidth(0.4);
+  doc.roundedRect(x, y, w, h, 2.5, 2.5, 'S');
+
+  doc.setFillColor('#b23a2e');
+  doc.circle(x + 11, y + 11, 6, 'F');
+  doc.setTextColor('#f3f1e8');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+  doc.text('AC', x + 11, y + 12.7, {align: 'center'});
+
+  doc.setTextColor('#241f18');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+  doc.text(t('auth.inviteCardTitle').toUpperCase(), x + w - 6, y + 12.5, {align: 'right'});
+
+  if(qrDataUrl){
+    const qrSize = h - 24;
+    doc.addImage(qrDataUrl, 'PNG', x + (w - qrSize) / 2, y + 19, qrSize, qrSize);
+  }
+
+  doc.setFont('courier', 'bold'); doc.setFontSize(10);
+  doc.setTextColor('#241f18');
+  doc.text(code.split('').join(' '), x + w / 2, y + h - 10, {align: 'center'});
+
+  const expiresDate = expiresAt ? new Date(expiresAt) : null;
+  const expiresLabel = (expiresDate && !isNaN(expiresDate.getTime())) ? expiresDate.toLocaleDateString('de-DE') : (expiresAt || '');
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5);
+  doc.setTextColor('#5b5340');
+  doc.text(t('auth.inviteCardExpiresLabel', {date: expiresLabel}), x + w / 2, y + h - 4.5, {align: 'center'});
+}
+async function buildInviteCardsDoc(codes){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit: 'mm', format: 'a4'});
+  const cardW = 85.6, cardH = 53.98;
+  const {perPage, pos} = computeCardGrid(210, 297, cardW, cardH, 12, 12, 8, 8);
+
+  const qrCodes = await Promise.all(codes.map(c => renderQrDataUrl(inviteQrPayload(c.code), 300)));
+  codes.forEach((c, i) => {
+    if(i > 0 && i % perPage === 0) doc.addPage();
+    const {x, y} = pos(i);
+    drawInviteCard(doc, x, y, cardW, cardH, c.code, c.expiresAt, qrCodes[i]);
+  });
+  return doc;
+}
+/* codes: [{code, expiresAt}] — siehe state.inviteJustCreated in
+   ui-headquarter.js, direkt nach submitCreateInviteCode() befüllt. */
+async function exportInviteCardsPDF(codes){
+  if(!window.jspdf || !codes || !codes.length) return;
+  const doc = await buildInviteCardsDoc(codes);
+  doc.save('alleycat-einladungscodes.pdf');
+}
+
 /* ---------------- Checkpoint-QR-Blätter ----------------
    Eine Seite je Checkpoint mit aktivem QR-Check-In, zum Laminieren und
    Aufstellen. Nichts wird nebeneinander gesetzt: der Code wird aus

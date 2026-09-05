@@ -99,6 +99,29 @@ async function adminGetCheckpointStaff(publicId){
 async function adminSetCheckpointStaff(userId, publicId, cpIds){
   return authRequest('POST', 'a=checkpointstaff/set', {userId, publicId, cpIds});
 }
+/* ---------------- Einladungscodes ----------------
+   Vier Funktionen, analog zu adminLogin() & Co. oben — reiner Transport,
+   die Endpunkte selbst sind in auth.php. Unter geteiltem window.storage
+   liefern alle vier null (siehe hasAdminRoles()), die aufrufende UI
+   blendet die Sektion dann ganz aus statt mit leeren Listen zu arbeiten. */
+async function createInviteCode(payload){
+  if(!hasAdminRoles()) return null;
+  return authRequest('POST', 'a=invite-create', payload);
+}
+async function listInviteCodes(){
+  if(!hasAdminRoles()) return null;
+  return authRequest('GET', 'a=invite-list');
+}
+async function revokeInviteCode(id){
+  if(!hasAdminRoles()) return null;
+  return authRequest('POST', 'a=invite-revoke', {id});
+}
+async function registerWithInviteCode(code, username, password){
+  if(!hasAdminRoles()) return null;
+  const res = await authRequest('POST', 'a=register', {code, username, password});
+  if(res.ok) saveAdminSession({token: res.token, role: res.role, username: res.username, displayName: res.displayName});
+  return res;
+}
 /* Admin-Rollen-Seam (siehe auth.js currentUserRole()): unter geteiltem
    window.storage gibt es kein PHP-Backend und damit keine Konten. */
 function hasAdminRoles(){
@@ -227,7 +250,8 @@ function renderAdminLogin(error){
       <input type="password" id="admin-login-password" autocomplete="current-password" onkeydown="if(event.key==='Enter') submitAdminLogin();"
         style="width:100%; padding:9px 10px; margin-bottom:20px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
       <button class="btn btn-primary" style="width:100%;" onclick="submitAdminLogin()">${t('auth.loginButton')}</button>
-      <div style="text-align:center; margin-top:16px;">
+      <div style="text-align:center; margin-top:16px; display:flex; flex-direction:column; gap:6px;">
+        <button type="button" style="background:none; border:none; color:var(--steel); font-size:12px; text-decoration:underline; cursor:pointer;" onclick="renderAdminRegister()">${t('auth.inviteLoginLink')}</button>
         <button type="button" style="background:none; border:none; color:var(--steel); font-size:12px; text-decoration:underline; cursor:pointer;" onclick="renderAdminBootstrap()">${t('auth.bootstrapTitle')}</button>
       </div>
     </div>
@@ -257,7 +281,8 @@ function renderAdminBootstrap(error){
       <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.bootstrapUsernameLabel')}</label>
       <input type="text" id="admin-bootstrap-username" style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
       <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.bootstrapPasswordLabel')}</label>
-      <input type="password" id="admin-bootstrap-password" style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <input type="password" id="admin-bootstrap-password" oninput="updatePasswordStrengthMeter('admin-bootstrap-password','admin-bootstrap-password-meter')" style="width:100%; padding:9px 10px; margin-bottom:4px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <div id="admin-bootstrap-password-meter">${renderPasswordStrengthMeter('')}</div>
       <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.bootstrapDisplayNameLabel')}</label>
       <input type="text" id="admin-bootstrap-displayname" style="width:100%; padding:9px 10px; margin-bottom:20px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
       <button class="btn btn-primary" style="width:100%;" onclick="submitAdminBootstrap()">${t('auth.bootstrapButton')}</button>
@@ -272,10 +297,57 @@ async function submitAdminBootstrap(){
   const username = (document.getElementById('admin-bootstrap-username').value || '').trim();
   const password = document.getElementById('admin-bootstrap-password').value || '';
   const displayName = (document.getElementById('admin-bootstrap-displayname').value || '').trim();
-  if(!apiKey || !username || password.length < 8){ renderAdminBootstrap(t('auth.bootstrapError')); return; }
+  if(!apiKey || !username || !validatePasswordStrength(password).valid){ renderAdminBootstrap(t('auth.bootstrapError')); return; }
   const res = await adminBootstrap(apiKey, username, password, displayName);
   if(!res.ok){ renderAdminBootstrap(t('auth.bootstrapError')); return; }
   renderAdminLogin();
+}
+
+/* ---------------- Selbstregistrierung mit Einladungscode ----------------
+   Öffentlich erreichbar, kein Login nötig — der Code selbst ist der
+   Ausweis. Vorausgefüllt, wenn per ?invite=<code> aufgerufen (Link/
+   QR-Code von der Visitenkarte, siehe exportInviteCardsPDF() in
+   export-pdf.js); die URL trägt die Query weiter, bis initStorageBackend()
+   sie einmalig ausliest (siehe dort) — kein eigener Routing-Zustand nötig,
+   das ist derselbe dist/alleycat-dispatch-server.html-Ladevorgang wie
+   jeder andere Seiteneinstieg auch. */
+function inviteCodeFromUrl(){
+  return new URLSearchParams(location.search).get('invite') || '';
+}
+function renderAdminRegister(prefilledCode, error){
+  const code = prefilledCode || inviteCodeFromUrl();
+  document.getElementById('app').innerHTML = `
+    <div style="max-width:420px; margin:60px auto; padding:32px; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-top:3px solid var(--hivis); border-radius:6px;">
+      <h2 style="margin:0 0 4px;">${t('auth.registerTitle')}</h2>
+      <div style="color:var(--steel); font-size:12.5px; margin-bottom:20px; line-height:1.5;">${t('auth.registerDesc')}</div>
+      ${error ? `<div style="background:rgba(178,58,46,0.15); border:1px solid var(--stamp); color:#ff9a8f; padding:10px 12px; border-radius:4px; font-size:13px; margin-bottom:14px;">${escapeHtml(error)}</div>` : ''}
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.registerCodeLabel')}</label>
+      <input type="text" id="admin-register-code" value="${escapeHtml(code)}" style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px; text-transform:uppercase;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.registerUsernameLabel')}</label>
+      <input type="text" id="admin-register-username" autocomplete="username" style="width:100%; padding:9px 10px; margin-bottom:14px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('auth.registerPasswordLabel')}</label>
+      <input type="password" id="admin-register-password" autocomplete="new-password" oninput="updatePasswordStrengthMeter('admin-register-password','admin-register-password-meter')" style="width:100%; padding:9px 10px; margin-bottom:4px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
+      <div id="admin-register-password-meter">${renderPasswordStrengthMeter('')}</div>
+      <button class="btn btn-primary" style="width:100%;" onclick="submitAdminRegister()">${t('auth.registerButton')}</button>
+      <div style="text-align:center; margin-top:16px;">
+        <button type="button" style="background:none; border:none; color:var(--steel); font-size:12px; text-decoration:underline; cursor:pointer;" onclick="renderAdminLogin()">${t('auth.loginButton')}</button>
+      </div>
+    </div>
+  `;
+}
+async function submitAdminRegister(){
+  const code = (document.getElementById('admin-register-code').value || '').trim().toUpperCase();
+  const username = (document.getElementById('admin-register-username').value || '').trim();
+  const password = document.getElementById('admin-register-password').value || '';
+  if(!code || !username || !validatePasswordStrength(password).valid){ renderAdminRegister(code, t('auth.registerErrorInvalid')); return; }
+  const res = await registerWithInviteCode(code, username, password);
+  if(!res.ok){
+    if(res.status === 429) renderAdminRegister(code, t('auth.loginErrorRateLimited', {seconds: res.retryAfter || 60}));
+    else if(res.error === 'username_taken') renderAdminRegister(code, t('auth.usersUsernameTaken'));
+    else renderAdminRegister(code, t('auth.registerErrorInvalid'));
+    return;
+  }
+  location.href = location.pathname;
 }
 
 async function exportBackupBlob(evt){
@@ -367,7 +439,8 @@ async function initStorageBackend(){
      einen Roundtrip bei jedem Start, auf Kosten eines einzigen
      fehlschlagenden Requests im toten Fall. */
   if(!cfg.apiKey && !loadAdminSession()){
-    renderAdminLogin();
+    if(inviteCodeFromUrl()) renderAdminRegister();
+    else renderAdminLogin();
     return false;
   }
   return true;

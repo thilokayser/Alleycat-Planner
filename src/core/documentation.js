@@ -11,7 +11,8 @@ const DOC_TOPICS = [
   {id: 'beamer', icon: '📺', titleKey: 'docs.beamerTitle', bodyKey: 'docs.beamerBody'},
   {id: 'offline', icon: '📡', titleKey: 'docs.offlineTitle', bodyKey: 'docs.offlineBody'},
   {id: 'delivery', icon: '📦', titleKey: 'docs.deliveryTitle', bodyKey: 'docs.deliveryBody'},
-  {id: 'riderApp', icon: '📱', titleKey: 'docs.riderAppTitle', bodyKey: 'docs.riderAppBody'}
+  {id: 'riderApp', icon: '📱', titleKey: 'docs.riderAppTitle', bodyKey: 'docs.riderAppBody'},
+  {id: 'inviteCodes', icon: '🎟️', titleKey: 'docs.inviteCodesTitle', bodyKey: 'docs.inviteCodesBody'}
 ];
 
 function filteredDocTopics(){

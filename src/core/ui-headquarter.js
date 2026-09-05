@@ -28,6 +28,10 @@ let state = {
   adminUsersError: '',
   adminUsersEditingId: null,
   adminAssignEditingId: null,
+  inviteList: null,    // gecachte ?a=invite-list-Antwort
+  inviteError: '',
+  inviteFormOpen: false,
+  inviteJustCreated: null, // Klartext-Codes direkt nach dem Erstellen — werden nie wieder angezeigt
   checkinBibInput: '',
   checkinActiveBib: null,
   checkinNotFound: false,
@@ -960,6 +964,104 @@ async function deleteUserRow(id, username){
   if(!res.ok && res.error === 'last_admin') alert(t('auth.usersLastAdminError'));
   await loadAdminUsersIfNeeded(true);
 }
+/* ---------------- Einladungscodes ---------------- */
+async function loadInviteCodesIfNeeded(force){
+  if(state.inviteList && !force) return;
+  const res = await listInviteCodes();
+  state.inviteError = (res && res.ok) ? '' : ((res && res.error) || 'error');
+  state.inviteList = (res && res.ok) ? res.invites : [];
+  if(state.settingsSection === 'users') renderSettings();
+}
+function toggleInviteCreateForm(){
+  state.inviteFormOpen = !state.inviteFormOpen;
+  state.inviteJustCreated = null;
+  renderSettings();
+}
+async function submitCreateInviteCode(){
+  const role = document.getElementById('newinvite-role').value;
+  const expiresAt = document.getElementById('newinvite-expires').value;
+  const count = parseInt(document.getElementById('newinvite-count').value, 10) || 1;
+  const note = (document.getElementById('newinvite-note').value || '').trim();
+  if(!expiresAt){ alert(t('auth.inviteErrorExpiresRequired')); return; }
+  const res = await createInviteCode({role, expiresAt: new Date(expiresAt).toISOString(), count, note});
+  if(!res.ok){ alert(t('auth.inviteErrorGeneric')); return; }
+  /* Die Klartext-Codes sind ab jetzt nirgendwo sonst mehr abrufbar
+     (auth.php speichert nur den Hash) — deshalb hier im UI-State
+     zwischengehalten, bis der Admin sie kopiert oder als PDF exportiert
+     hat, statt sie nach dem Schließen des Formulars zu verlieren. */
+  state.inviteJustCreated = res.codes.map(code => ({code, role, expiresAt}));
+  state.inviteFormOpen = false;
+  await loadInviteCodesIfNeeded(true);
+}
+function copyInviteCode(code){
+  if(!navigator.clipboard || !navigator.clipboard.writeText) return;
+  navigator.clipboard.writeText(code).then(() => showToast({message: t('auth.inviteCopiedToast')})).catch(() => {});
+}
+async function revokeInviteCodeRow(id){
+  if(!confirm(t('auth.inviteRevokeConfirm'))) return;
+  await revokeInviteCode(id);
+  await loadInviteCodesIfNeeded(true);
+}
+function inviteStatusBadgeHtml(status){
+  const map = {
+    open: {label: t('auth.inviteStatusOpen'), color: 'var(--hivis)'},
+    used: {label: t('auth.inviteStatusUsed'), color: '#3a9a5c'},
+    expired: {label: t('auth.inviteStatusExpired'), color: 'var(--steel)'}
+  };
+  const s = map[status] || map.expired;
+  return `<span style="color:${s.color}; font-size:11px; text-transform:uppercase; letter-spacing:0.04em;">${s.label}</span>`;
+}
+function renderInviteCodesSection(){
+  const invites = state.inviteList || [];
+  const createdBlock = state.inviteJustCreated ? `
+    <div style="border:1px solid var(--hivis); border-radius:4px; padding:12px 14px; margin-bottom:14px; background:var(--asphalt);">
+      <div style="color:var(--steel); font-size:11.5px; margin-bottom:8px;">${t('auth.inviteJustCreatedHint')}</div>
+      ${state.inviteJustCreated.map(c => `
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; font-family:monospace;">
+          <strong style="letter-spacing:0.06em;">${escapeHtml(c.code)}</strong>
+          <button class="btn btn-ghost btn-sm" onclick="copyInviteCode('${c.code}')">${t('common.copy')}</button>
+        </div>
+      `).join('')}
+      <button class="btn btn-sm" style="margin-top:8px;" onclick="exportInviteCardsPDF(state.inviteJustCreated)">${t('auth.inviteExportCardsButton')}</button>
+    </div>
+  ` : '';
+  const createForm = state.inviteFormOpen ? `
+    <div class="admin-user-row" style="border:1px solid var(--asphalt-3); border-radius:4px; padding:12px 14px; margin-bottom:14px;">
+      <div class="rider-field"><label>${t('auth.usersRoleLabel')}</label>
+        <select id="newinvite-role">${ADMIN_ROLE_OPTIONS.map(r => `<option value="${r}">${escapeHtml(adminRoleLabel(r))}</option>`).join('')}</select>
+      </div>
+      <div class="rider-field"><label>${t('auth.inviteExpiresLabel')}</label><input type="datetime-local" id="newinvite-expires"></div>
+      <div class="rider-field"><label>${t('auth.inviteCountLabel')}</label><input type="number" id="newinvite-count" value="1" min="1" max="50"></div>
+      <div class="rider-field"><label>${t('auth.inviteNoteLabel')}</label><input type="text" id="newinvite-note" placeholder="${t('auth.inviteNotePlaceholder')}"></div>
+      <button class="btn btn-primary" onclick="submitCreateInviteCode()">${t('auth.inviteCreateButton')}</button>
+    </div>
+  ` : '';
+  const rows = invites.map(i => `
+    <div class="admin-user-row" style="border:1px solid var(--asphalt-3); border-radius:4px; padding:10px 14px; margin-bottom:8px;">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <strong>${escapeHtml(adminRoleLabel(i.role))}</strong>
+        ${i.note ? `<span style="color:var(--steel); font-size:12px;">${escapeHtml(i.note)}</span>` : ''}
+        <span style="margin-left:auto;">${inviteStatusBadgeHtml(i.status)}</span>
+        ${i.status === 'open' ? `<button class="btn btn-ghost btn-sm" onclick="revokeInviteCodeRow(${i.id})">${t('auth.inviteRevokeButton')}</button>` : ''}
+      </div>
+      <div style="color:var(--steel); font-size:11px; margin-top:4px;">
+        ${t('auth.inviteExpiresLabel')}: ${escapeHtml(i.expiresAt)}
+        ${i.usedByUsername ? ` · ${t('auth.inviteUsedByLabel')}: ${escapeHtml(i.usedByUsername)}` : ''}
+      </div>
+    </div>
+  `).join('');
+  return `
+    <div class="settings-section" style="margin-top:24px;">
+      <h3>${t('auth.inviteHeading')}</h3>
+      <div class="settings-section-desc">${t('auth.inviteDesc')}</div>
+      ${state.inviteError ? `<div class="rider-note rider-note-error">${escapeHtml(state.inviteError)}</div>` : ''}
+      ${createdBlock}
+      <button class="btn btn-primary" style="margin:12px 0;" onclick="toggleInviteCreateForm()">${t('auth.inviteCreateButton')}</button>
+      ${createForm}
+      ${rows || `<div class="settings-section-desc">${t('auth.inviteEmpty')}</div>`}
+    </div>
+  `;
+}
 function toggleAssignForUser(id){
   state.adminAssignEditingId = state.adminAssignEditingId === id ? null : id;
   if(state.adminAssignEditingId && state.currentEvent){
@@ -1047,6 +1149,7 @@ function renderSettingsSectionUsers(){
       ${addForm}
       ${rows || `<div class="settings-section-desc">…</div>`}
     </div>
+    ${renderInviteCodesSection()}
   `;
 }
 
@@ -1076,6 +1179,9 @@ function renderSettings(){
     refreshStorageEstimate();
     if(isFeatureEnabled('offline_map_cache')) refreshTileCacheTotal();
   }
-  if(state.settingsSection === 'users' && hasAdminRoles()) loadAdminUsersIfNeeded();
+  if(state.settingsSection === 'users' && hasAdminRoles()){
+    loadAdminUsersIfNeeded();
+    if(currentUserCan('manageUsers')) loadInviteCodesIfNeeded();
+  }
 }
 
