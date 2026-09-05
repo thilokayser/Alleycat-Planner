@@ -112,6 +112,12 @@ let searchResultsData = [];
 function showToast({message, actionLabel, onAction, duration = 6000}){
   const root = document.getElementById('toast-root');
   if(!root) return;
+  /* Nur ein aktiver Toast gleichzeitig — sonst kann z. B. "Bestätigen"
+     gefolgt von schnellem "Zurücksetzen" zwei Toasts mit je eigenem
+     "Rückgängig" stapeln, deren Buttons Gegenteiliges tun; ein Klick auf
+     den (DOM-älteren, optisch aber nicht unbedingt hinteren) Button löst
+     dann die falsche Aktion aus. */
+  root.querySelectorAll('.toast').forEach(el => el.remove());
   const toastEl = document.createElement('div');
   toastEl.className = 'toast';
   toastEl.innerHTML = `
@@ -208,6 +214,10 @@ function debouncedSave(){
   setSaveStatus('pending');
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(saveCurrentEvent, 450);
+}
+function cancelPendingSave(){
+  clearTimeout(saveTimeout);
+  saveTimeout = null;
 }
 function flushPendingSave(){
   if(saveTimeout){

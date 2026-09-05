@@ -72,6 +72,10 @@ function askDeleteEvent(id){
   render();
 }
 async function confirmDeleteEvent(id){
+  /* Ein noch ausstehender debouncedSave() für dieses Event (450ms-Timer)
+     würde sonst nach dem Löschen feuern und das Event mit dem letzten
+     In-Memory-Stand wieder anlegen. */
+  if(state.currentEvent && state.currentEvent.id === id) cancelPendingSave();
   state.eventsIndex = state.eventsIndex.filter(e => e.id !== id);
   await saveEventsIndex();
   await storageDelete('event:' + id);
