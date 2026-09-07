@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alleycat Dispatch — Organizer-Tool für Alleycat-Rennen</title>
+<meta name="description" content="Checkpoint-Rennen planen, drucken, leiten und live auswerten. Läuft als einzelne HTML-Datei im Browser oder auf deinem eigenen Server. Kein Account, kein Abo, keine Cloud-Pflicht.">
+<link rel="stylesheet" href="styles.css">
+<style>
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+.hazard{height:8px;background:var(--hazard)}
+/* --- nav --- */
+header.nav{position:sticky;top:0;z-index:20;background:rgba(23,25,26,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--asphalt-3)}
+.nav-in{display:flex;align-items:center;gap:20px;padding:14px 24px;max-width:1180px;margin:0 auto}
+.mark{width:38px;height:38px;flex:0 0 38px;background:var(--hivis);color:var(--ink);border-radius:var(--r-md);display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:.02em}
+.brand{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:22px;letter-spacing:.03em;line-height:1}
+.brand small{display:block;font-family:var(--font-mono);font-size:9.5px;letter-spacing:var(--tracking-mono);color:var(--steel);font-weight:400;margin-top:3px}
+.nav-sp{flex:1}
+.langsw{display:flex;border:1px solid var(--asphalt-3);border-radius:var(--r-sm);overflow:hidden}
+.langsw button{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;background:transparent;color:var(--steel);border:0;padding:7px 11px;cursor:pointer}
+.langsw button[aria-pressed="true"]{background:var(--chalk);color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-mono);font-size:12px;text-transform:uppercase;letter-spacing:.07em;padding:13px 20px;border-radius:var(--r-sm);border:1px solid transparent;cursor:pointer;text-decoration:none}
+.btn-primary{background:var(--hivis);color:var(--ink);font-weight:500;box-shadow:3px 3px 0 rgba(0,0,0,.45)}
+.btn-primary:hover{background:var(--chalk);color:var(--ink);border-color:transparent}
+.btn-ghost{border-color:var(--steel);color:var(--chalk)}
+.btn-ghost:hover{border-color:var(--hivis);color:var(--hivis)}
+.nav .btn{padding:10px 16px}
+@media(max-width:820px){.nav-in .btn-ghost{display:none}}
+/* --- sections --- */
+section{padding:var(--space-6) 0}
+.eyebrow{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--hivis);display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.eyebrow::after{content:"";height:1px;flex:1;background:var(--asphalt-3)}
+h1{font-size:clamp(44px,7.4vw,92px)}
+h2{font-size:clamp(30px,4.4vw,50px)}
+h3{font-size:22px}
+.lede{font-size:19px;color:#cfcdc4;max-width:60ch}
+/* --- hero --- */
+.hero{padding-top:var(--space-5);padding-bottom:var(--space-5)}
+.hero h1{max-width:20ch}
+.hero h1 em{font-style:normal;color:var(--hivis)}
+.hero .lede{margin-top:22px}
+.cta-row{display:flex;flex-wrap:wrap;gap:14px;margin-top:32px}
+.stub{margin-top:38px;display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--asphalt-3);border-radius:var(--r-sm);overflow:hidden}
+.stub div{padding:12px 18px;border-right:1px solid var(--asphalt-3);font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--steel)}
+.stub div:last-child{border-right:0}
+.stub b{color:var(--chalk);font-weight:500}
+.shot{border:1px solid var(--asphalt-3);border-radius:var(--r-md);overflow:hidden;background:var(--asphalt-2)}
+.shot img{display:block;width:100%;height:auto}
+.shot figcaption{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--steel);padding:10px 14px;border-top:1px solid var(--asphalt-3);background:#1c1f20}
+.hero-shot{margin-top:var(--space-5)}
+/* --- paper --- */
+.paper{background:var(--paper);color:var(--ink);border-radius:var(--r-md);padding:32px}
+.paper h2,.paper h3{color:var(--ink)}
+.paper p{color:#443b30}
+.perf{background:linear-gradient(var(--paper),var(--paper)) padding-box;border-top:3px double #cbbf9f;border-bottom:3px double #cbbf9f}
+.stamp{display:inline-block;font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--stamp);border:1.5px solid var(--stamp);border-radius:var(--r-sm);padding:4px 9px;transform:rotate(-2.5deg)}
+/* --- pitch --- */
+.pitch{display:grid;grid-template-columns:1.35fr 1fr;gap:28px;align-items:start}
+.pitch .paper p+p{margin-top:14px}
+.pitch aside{border:1px solid var(--asphalt-3);border-radius:var(--r-md);padding:28px}
+.pitch aside h3{color:var(--hivis);font-size:19px}
+.pitch aside ul{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:12px}
+.pitch aside li{font-size:15.5px;color:#cfcdc4;padding-left:22px;position:relative}
+.pitch aside li::before{content:"";position:absolute;left:0;top:.6em;width:9px;height:9px;background:var(--hivis)}
+/* --- apps --- */
+.apps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin-top:var(--space-4)}
+.app{background:var(--paper);color:var(--ink);border-radius:var(--r-md);overflow:hidden;display:flex;flex-direction:column}
+.app-hd{padding:22px 24px 18px;display:flex;align-items:flex-start;gap:14px}
+.app-no{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;color:#8a7f6c;padding-top:5px}
+.app h3{font-size:24px}
+.app-role{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--stamp);margin-top:5px}
+.app p{padding:0 24px 20px;font-size:15.5px;color:#443b30}
+.app figure{margin:0 auto;padding:0 14px 14px;width:100%}
+.app img{display:block;width:100%;height:auto;border:1px solid #cbbf9f;border-radius:var(--r-sm)}
+.app figcaption{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:#8a7f6c;padding-top:8px;line-height:1.5}
+.slot{width:100%;aspect-ratio:16/10;border:1px solid #cbbf9f;border-radius:var(--r-sm);background:repeating-linear-gradient(45deg,#e6dcc0 0 6px,#ded3b4 6px 12px);display:grid;place-items:center;text-align:center;padding:16px}
+.slot span{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#7c7160;line-height:1.6}
+/* --- features --- */
+.feat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--asphalt-3);border:1px solid var(--asphalt-3);border-radius:var(--r-md);overflow:hidden;margin-top:var(--space-4)}
+.feat>div{background:var(--asphalt);padding:26px 24px}
+.feat h3{font-size:19px;margin-bottom:4px}
+.feat .mono{display:block;margin-bottom:12px}
+.feat ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.feat li{font-size:15px;color:#c3c1b9;padding-left:20px;position:relative;line-height:1.5}
+.feat li::before{content:"";position:absolute;left:0;top:.55em;width:8px;height:8px;background:var(--stamp)}
+.gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:24px}
+/* --- steps --- */
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:var(--space-4)}
+.step{background:var(--paper);color:var(--ink);border-radius:var(--r-md);padding:26px;position:relative;border-left:6px solid var(--hivis)}
+.step .n{font-family:var(--font-display);font-weight:700;font-size:56px;line-height:.8;color:#cbbf9f}
+.step h3{margin:14px 0 8px;font-size:21px}
+.step p{font-size:15.5px;color:#443b30}
+.step .stamp{margin-top:16px}
+/* --- arch --- */
+.arch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin-top:var(--space-4)}
+.arch>div{border:1px solid var(--asphalt-3);border-radius:var(--r-md);padding:28px}
+.arch h3{font-size:21px;color:var(--hivis)}
+.arch .badge{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--steel);margin-bottom:14px;display:block}
+.arch dl{margin:20px 0 0;display:grid;gap:0;font-family:var(--font-mono);font-size:12px}
+.arch dt{color:var(--steel);text-transform:uppercase;letter-spacing:.06em;font-size:10px;padding-top:12px;border-top:1px solid var(--asphalt-3)}
+.arch dd{margin:4px 0 12px;color:var(--chalk);font-size:13px;line-height:1.5}
+.arch p{color:#c3c1b9;font-size:15.5px}
+.offline{margin-top:24px;border:1px dashed var(--steel);border-radius:var(--r-md);padding:24px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+.offline h4{font-size:16px;color:var(--chalk);margin-bottom:6px}
+.offline p{font-size:14.5px;color:#a9a7a0}
+/* --- faq --- */
+.faq{margin-top:var(--space-4);border-top:1px solid var(--asphalt-3)}
+details{border-bottom:1px solid var(--asphalt-3)}
+summary{cursor:pointer;list-style:none;padding:22px 0;display:flex;align-items:baseline;gap:16px;font-family:var(--font-display);font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:21px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";color:var(--hivis);font-family:var(--font-mono);font-size:18px;flex:0 0 14px}
+details[open] summary::before{content:"–"}
+details p{padding:0 0 24px 30px;color:#c3c1b9;max-width:80ch}
+details p+p{padding-top:0;margin-top:-10px;padding-bottom:24px}
+/* --- footer --- */
+footer{border-top:1px solid var(--asphalt-3);padding:var(--space-4) 0 var(--space-4)}
+.foot{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:32px}
+.foot h4{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--steel);font-weight:400;margin:0 0 14px}
+.foot ul{list-style:none;margin:0;padding:0;display:grid;gap:9px;font-size:15px}
+.foot a{color:#c3c1b9;border-bottom-color:transparent}
+.foot a:hover{color:var(--hivis)}
+.privacy{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--steel);margin-top:32px;padding-top:20px;border-top:1px solid var(--asphalt-3);display:flex;flex-wrap:wrap;gap:8px 24px}
+@media(max-width:960px){
+.pitch,.apps,.feat,.steps,.arch,.gallery,.offline,.foot{grid-template-columns:1fr}
+section{padding:var(--space-5) 0}
+.feat>div{padding:24px 20px}
+}
+</style>
+</head>
+<body>
+<header class="nav">
+<div class="nav-in">
+<div class="mark">AC</div>
+<div class="brand">Alleycat Dispatch<small data-en="Organizer tool · checkpoint races">Organizer-Tool · Checkpoint-Rennen</small></div>
+<div class="nav-sp"></div>
+<div class="langsw"><button type="button" data-lang-btn="de" aria-pressed="true">DE</button><button type="button" data-lang-btn="en" aria-pressed="false">EN</button></div>
+<a class="btn btn-ghost" href="#hosten" data-en="Self-host">Selbst hosten</a>
+<a class="btn btn-primary" href="#demo" data-en="Start live demo">Live-Demo starten</a>
+</div>
+<div class="hazard"></div>
+</header>
+
+<div class="wrap">
+
+<section class="hero">
+<div class="eyebrow" data-en="Dispatch · Cologne · Checkpoint race">Dispatch · Köln · Checkpoint-Rennen</div>
+<h1 data-en="Set checkpoints. Run the race. <em>No foreign server.</em>">Checkpoints setzen. Rennen leiten. <em>Ohne fremden Server.</em></h1>
+<p class="lede" data-en="Alleycat Dispatch plans your checkpoint race, prints bib numbers, spokecards and the manifest, runs the finish-line check-in and puts the leaderboard live on the projector. It ships as a single HTML file you open in a browser — or you host it yourself on PHP and MySQL.">Alleycat Dispatch plant dein Checkpoint-Rennen, druckt Startnummern, Spokecards und Manifest, führt den Ziel-Check-in und zeigt das Leaderboard live auf dem Beamer. Ausgeliefert als eine einzelne HTML-Datei, die du im Browser öffnest — oder self-hosted auf PHP und MySQL.</p>
+<div class="cta-row">
+<a class="btn btn-primary" id="demo" href="#" data-en="Start live demo">Live-Demo starten</a>
+<a class="btn btn-ghost" id="hosten" href="https://github.com/thilokayser/Alleycat-Planner" data-en="Self-host →">Selbst hosten →</a>
+</div>
+<div class="stub">
+<div data-en="No account">Kein Account</div>
+<div data-en="No subscription">Kein Abo</div>
+<div data-en="No mandatory cloud">Keine Cloud-Pflicht</div>
+<div><b data-en="1 HTML file">1 HTML-Datei</b></div>
+<div><b data-en="0 build dependencies">0 Fremd-Dependencies im Build</b></div>
+</div>
+<figure class="shot hero-shot">
+<img src="screenshots/02-map-checkpoints.png" alt="Checkpoint-Editor auf der Karte" width="1440" height="900">
+<figcaption data-en="Checkpoint editor — demo event “Kölner Kurierrennen”, checkpoint types, order and route distances">Checkpoint-Editor — Demo-Event „Kölner Kurierrennen“, Checkpoint-Typen, Reihenfolge und Routen-Distanzen</figcaption>
+</figure>
+</section>
+
+<section>
+<div class="eyebrow" data-en="What this is">Was das ist</div>
+<div class="pitch">
+<div class="paper perf">
+<h2 data-en="Race software for people who run races, not for a sales funnel">Renn-Software für Leute, die Rennen ausrichten — nicht für einen Sales-Funnel</h2>
+<p data-en="Alleycat Dispatch is an organizer tool built for one race format: the alleycat. Checkpoint types map to what actually happens out there — QR scan, photo proof, item drop-off, riddle, marshal-scored challenge. You place checkpoints on the map, print what needs printing, check riders in at the finish and watch the leaderboard fill up." style="margin-top:18px">Alleycat Dispatch ist ein Organizer-Tool für genau ein Rennformat: das Alleycat. Die Checkpoint-Typen entsprechen dem, was draußen wirklich passiert — QR-Scan, Foto-Beweis, Item-Abgabe, Rätselfrage, gepunktete Checkpoint-Wertung. Du setzt Checkpoints auf die Karte, druckst, was gedruckt werden muss, checkst Fahrer im Ziel ein und schaust dem Leaderboard beim Vollaufen zu.</p>
+<p data-en="And the important part: there is no service of ours in between. No account with us, no subscription, no cloud you have to trust. Your event data sits in your browser or on your server — you can export it, back it up and take it with you at any time.">Und der Punkt, auf den es ankommt: Zwischen dir und deinen Daten steht kein Dienst von uns. Kein Account bei uns, kein Abo, keine Cloud, der du vertrauen müsstest. Deine Event-Daten liegen in deinem Browser oder auf deinem Server — jederzeit exportierbar, sicherbar, mitnehmbar.</p>
+<div style="margin-top:22px"><span class="stamp" data-en="Full data ownership">Volle Datenhoheit</span></div>
+</div>
+<aside>
+<h3 data-en="Built for raceday reality">Gebaut für die Realität am Renntag</h3>
+<ul>
+<li data-en="Phones in bright sunlight — high-contrast outdoor theme">Handys im Sonnenlicht — Hochkontrast-Theme „Sonnenlicht“</li>
+<li data-en="Patchy mobile coverage — offline map tiles cached per event">Löchriges Mobilfunknetz — Kartenkacheln pro Event offline gecacht</li>
+<li data-en="Checkpoint marshals who are not the organizer — their own briefing PDF">Checkpoint-Personal, das nicht der Organizer ist — eigenes Briefing-PDF</li>
+<li data-en="Rider-facing prints never leak staff contacts or internal notes">Fahrer-Drucke enthalten nie Personal-Kontakte oder interne Notizen</li>
+<li data-en="Auto-backup and a close-tab warning while a race is running">Auto-Backup und Warnung vor versehentlichem Tab-Schließen im laufenden Rennen</li>
+</ul>
+</aside>
+</div>
+</section>
+
+<section>
+<div class="eyebrow" data-en="Four apps, one event">Vier Apps, ein Event</div>
+<h2 data-en="Everyone gets the screen they need — nothing more">Jede Rolle bekommt die Ansicht, die sie braucht — nicht mehr</h2>
+<div class="apps">
+
+<article class="app">
+<div class="app-hd"><span class="app-no">01</span><div><h3 data-en="Organizer">Organizer</h3><div class="app-role" data-en="Planning · dispatch · results">Planung · Dispatch · Auswertung</div></div></div>
+<p data-en="The command post: events, checkpoints on the map, riders and teams, race status machine, PDF builder, finish-line check-in, leaderboard, exports.">Die Zentrale: Events, Checkpoints auf der Karte, Fahrer und Teams, Renn-Zustandsmaschine, PDF-Baukasten, Ziel-Check-in, Leaderboard, Exporte.</p>
+<figure><img src="screenshots/03-event-overview.png" alt="Event-Übersicht mit Status-Kacheln"><figcaption data-en="Event overview — configurable widgets: status tiles, checkpoint load, countdown, mini leaderboard">Event-Übersicht — konfigurierbare Widgets: Status-Kacheln, Checkpoint-Auslastung, Countdown, Mini-Leaderboard</figcaption></figure>
+</article>
+
+<article class="app">
+<div class="app-hd"><span class="app-no">02</span><div><h3 data-en="Rider">Rider</h3><div class="app-role" data-en="Check-in via QR / GPS">Check-in per QR / GPS</div></div></div>
+<p data-en="The rider's own view: bib number, checkpoint list, check-in by QR scan or position. Works on any phone browser, no app store.">Die Fahrer-Ansicht: Startnummer, Checkpoint-Liste, Check-in per QR-Scan oder Position. Läuft in jedem Handy-Browser, kein App-Store.</p>
+<figure><img src="screenshots/04-riders.png" alt="Fahrerliste mit druckfertigen Startnummern-Karten"><figcaption data-en="Rider list in the organizer app — print-ready bib cards and spokecards carry the QR the rider scans with">Fahrerliste in der Organizer-App — die druckfertigen Startnummern- und Spokecards tragen den QR-Code, mit dem der Fahrer arbeitet</figcaption></figure>
+</article>
+
+<article class="app">
+<div class="app-hd"><span class="app-no">03</span><div><h3 data-en="Checkpoint staff">Checkpoint-Staff</h3><div class="app-role" data-en="Scan on site">Scannen vor Ort</div></div></div>
+<p data-en="For the marshal standing at the checkpoint: scan riders in, log photo proof, item drop-off or riddle answer — plus a printed briefing with shift, contacts and the checkpoint's rules.">Für das Personal am Checkpoint: Fahrer einscannen, Foto-Beweis, Item-Abgabe oder Rätselantwort protokollieren — dazu ein gedrucktes Briefing mit Schicht, Kontakten und den Regeln des Checkpoints.</p>
+<figure><div class="slot"><span data-en="Screenshot slot<br>Checkpoint app — to be supplied">Screenshot-Platzhalter<br>Checkpoint-App — wird nachgereicht</span></div><figcaption data-en="Drop the current checkpoint-app capture here">Hier die aktuelle Aufnahme der Checkpoint-App einsetzen</figcaption></figure>
+</article>
+
+<article class="app">
+<div class="app-hd"><span class="app-no">04</span><div><h3 data-en="Beamer">Beamer</h3><div class="app-role" data-en="Live display at HQ / finish">Live-Anzeige im Ziel / HQ</div></div></div>
+<p data-en="Its own route for a second screen: countdown to start, full-screen GO overlay with sound, then the live leaderboard — synced across devices via BroadcastChannel and storage polling.">Eigene Route für den zweiten Bildschirm: Countdown bis zum Start, Vollbild-GO-Overlay mit Sound, danach das Live-Leaderboard — geräteübergreifend synchron per BroadcastChannel und Storage-Polling.</p>
+<figure><img src="screenshots/07-beamer.png" alt="Beamer-Live-Ansicht mit Karte und Checkpoint-Fortschritt"><figcaption data-en="Beamer view — map, checkpoint progress; with game modes active it adds a points board and a live ticker">Beamer-Ansicht — Karte und Checkpoint-Fortschritt; bei aktiven Spielmodi zusätzlich Punkte-Board und Live-Ticker</figcaption></figure>
+</article>
+
+</div>
+</section>
+
+<section>
+<div class="eyebrow" data-en="Feature depth">Feature-Tiefe</div>
+<h2 data-en="What it actually does">Was tatsächlich drin ist</h2>
+<p class="lede" style="margin-top:16px" data-en="Not a feature-flavoured pitch — this is the shipped scope of the current build.">Keine Wunschliste, sondern der Umfang des aktuellen Builds.</p>
+<div class="feat">
+
+<div>
+<span class="mono" data-en="01 · Map">01 · Karte</span>
+<h3 data-en="Checkpoints &amp; zones">Checkpoints &amp; Zonen</h3>
+<ul>
+<li data-en="Any number of checkpoints, placed on a Leaflet map or by coordinates">Beliebig viele Checkpoints, per Leaflet-Karte oder Koordinaten gesetzt</li>
+<li data-en="5 checkpoint types (QR, photo, item, riddle, scored challenge) plus your own">5 Checkpoint-Typen (QR, Foto, Item, Rätsel, Wertung) plus eigene definierbar</li>
+<li data-en="Free or fixed order — fixed order flags out-of-order check-ins with an audited override">Freie oder feste Reihenfolge — feste Reihenfolge warnt bei Out-of-Order-Check-ins, Override wird protokolliert</li>
+<li data-en="Zones (circle/polygon, continuous or staged shrink), HQ and afterparty locations">Zonen (Kreis/Polygon, kontinuierlich oder stufenweise schrumpfend), HQ- und Afterparty-Orte</li>
+<li data-en="Shift-click multi-select with bulk actions: assign type, mark mandatory, lock, delete">Shift-Klick-Mehrfachauswahl mit Sammelaktionen: Typ zuweisen, Pflicht setzen, sperren, löschen</li>
+</ul>
+</div>
+
+<div>
+<span class="mono" data-en="02 · Race">02 · Rennen</span>
+<h3 data-en="Game modes">Game-Modes</h3>
+<ul>
+<li data-en="7 predefined modes, freely combinable">7 vordefinierte, frei kombinierbare Modi</li>
+<li data-en="Timed-window CPs, bonus CPs with rank points, secret CPs with unlock conditions">Zeitfenster-CPs, Bonus-CPs mit Rang-Punkten, geheime CPs mit Freischalt-Bedingung</li>
+<li data-en="Battle Royale with a shrinking zone, wildcard checkpoint per rider">Battle Royale mit schrumpfender Zone, Wildcard-Checkpoint pro Fahrer</li>
+<li data-en="Chain-reaction bonus for a perfect order, sudden death on inactivity">Kettenreaktion-Bonus bei perfekter Reihenfolge, Sudden Death bei Inaktivität</li>
+<li data-en="Activating a scoring mode switches the leaderboard to points — time stays visible, points are traceable per rider">Ein punktevergebender Modus schaltet das Leaderboard auf Punkte — Zeit bleibt sichtbar, Punkte-Herkunft pro Fahrer einsehbar</li>
+</ul>
+</div>
+
+<div>
+<span class="mono" data-en="03 · Print">03 · Druck</span>
+<h3 data-en="PDF builder &amp; bibs">PDF-Baukasten &amp; Bib-Druck</h3>
+<ul>
+<li data-en="Bib numbers and spokecards with QR code, print-ready as PDF">Startnummern und Spokecards mit QR-Code, druckfertig als PDF</li>
+<li data-en="Manifest as PDF with in-app preview instead of a blind download">Manifest als PDF mit In-App-Vorschau statt Blind-Download</li>
+<li data-en="Block-based extra pages: waiver with signature line, rules, sponsors, checkpoint list, notes, emergency info">Baustein-Zusatzseiten: Haftungsausschluss mit Unterschriftszeile, Regeln, Sponsoren, Checkpoint-Liste, Notizen, Notfall-Infos</li>
+<li data-en="Attach blocks per target document, reorder freely, export the set as a template">Bausteine pro Zieldokument wählbar, frei sortierbar, als Vorlage exportier- und importierbar</li>
+<li data-en="Route export as GPX, results as CSV (semicolon, Excel-DE compatible)">Routen-Export als GPX, Ergebnisse als CSV (semikolongetrennt, Excel-DE-kompatibel)</li>
+</ul>
+</div>
+
+<div>
+<span class="mono" data-en="04 · Field">04 · Feld</span>
+<h3 data-en="Offline capability">Offline-Fähigkeit</h3>
+<ul>
+<li data-en="Map tiles cached per event (bounding box around your checkpoints), with a stale-cache warning">Kartenkacheln pro Event gecacht (Bounding Box um die Checkpoints), Warnung bei veraltetem Cache</li>
+<li data-en="The local build needs no network at all after loading — the HTML file is the app">Der lokale Build braucht nach dem Laden gar kein Netz — die HTML-Datei ist die App</li>
+<li data-en="Automatic backup downloads at an interval while a race is running">Automatische Backup-Downloads im Intervall während des laufenden Rennens</li>
+<li data-en="Wake Lock keeps the screen on during finish check-in and on the beamer">Wake Lock hält den Bildschirm an im Ziel-Check-in und am Beamer</li>
+<li data-en="Storage estimate plus a request for persistent storage, so the browser won't evict your event">Speicherschätzung und Anfrage auf persistenten Speicher, damit der Browser dein Event nicht verwirft</li>
+</ul>
+</div>
+
+<div>
+<span class="mono" data-en="05 · People">05 · Rollen</span>
+<h3 data-en="Roles &amp; separation">Rollensystem &amp; Trennung</h3>
+<ul>
+<li data-en="Four separate apps: organizer, rider, checkpoint staff, beamer — each its own entry point">Vier getrennte Apps: Organizer, Rider, Checkpoint-Staff, Beamer — je eigener Einstiegspunkt</li>
+<li data-en="Checkpoint staff with name, phone, role and shift, and their own internal briefing PDF">Checkpoint-Personal mit Name, Telefon, Rolle und Schicht plus eigenem, internem Briefing-PDF</li>
+<li data-en="Hard rule: staff contacts, briefings and internal notes never appear on rider-facing exports">Harte Regel: Personal-Kontakte, Briefings und interne Notizen erscheinen nie auf fahrerseitigen Exporten</li>
+<li data-en="Emergency contact per rider, kept off printed bibs and spokecards">Notfallkontakt pro Fahrer — nicht auf gedruckten Startnummern und Spokecards</li>
+<li data-en="Multiple organizers on the same event via the self-hosted build">Mehrere Organizer auf demselben Event über den self-hosted Build</li>
+</ul>
+</div>
+
+<div>
+<span class="mono" data-en="06 · Field of riders">06 · Fahrerfeld</span>
+<h3 data-en="Riders, teams, categories">Fahrer, Teams, Kategorien</h3>
+<ul>
+<li data-en="Teams with a selectable scoring mode: best individual time, or everyone has to finish">Teams mit wählbarem Wertungsmodus: beste Einzelzeit oder alle müssen finishen</li>
+<li data-en="Freely defined category groups (drivetrain, gender presets or your own) per rider">Frei definierbare Kategorie-Gruppen (Presets Antrieb/Gender oder eigene) pro Fahrer</li>
+<li data-en="CSV bulk import with column mapping and validation before import — an error list, not a silent failure">CSV-Bulk-Import mit Spalten-Zuordnung und Validierung vor dem Import — Fehlerliste statt stillem Scheitern</li>
+<li data-en="Leaderboard with combinable filters (status, team, categories), DNF/DNS marking, undo on check-in">Leaderboard mit kombinierbaren Filtern (Status, Team, Kategorien), DNF-/DNS-Markierung, Undo im Check-in</li>
+<li data-en="Auto-generated result share card (top 3) after the race, for download or Web Share">Automatisch erzeugte Ergebnis-Karte (Top 3) nach dem Rennen, zum Download oder Teilen</li>
+</ul>
+</div>
+
+</div>
+<div class="gallery">
+<figure class="shot"><img src="screenshots/05-leaderboard.png" alt="Live-Leaderboard mit Podium"><figcaption data-en="Leaderboard — live progress per checkpoint, status, points when a game mode is active">Leaderboard — Live-Fortschritt pro Checkpoint, Status, Punkte bei aktivem Spielmodus</figcaption></figure>
+<figure class="shot"><img src="screenshots/06-manifest.png" alt="PDF-Manifest-Vorschau in Papier-Optik"><figcaption data-en="Manifest preview — the PDF the riders get, assembled from blocks">Manifest-Vorschau — das PDF für die Fahrer, aus Bausteinen zusammengestellt</figcaption></figure>
+<figure class="shot"><img src="screenshots/01-dashboard.png" alt="Dashboard mit allen Events"><figcaption data-en="HQ board — all events, import/export as SQLite or JSON">HQ-Board — alle Events, Import/Export als SQLite oder JSON</figcaption></figure>
+</div>
+</section>
+
+<section>
+<div class="eyebrow" data-en="How a race runs">So läuft ein Rennen</div>
+<h2 data-en="Three moves from empty map to results">Drei Schritte von der leeren Karte zum Ergebnis</h2>
+<div class="steps">
+<div class="step">
+<div class="n">1</div>
+<h3 data-en="Plan checkpoints">Checkpoints planen</h3>
+<p data-en="Create the event, click checkpoints onto the map, assign types and order, mark mandatory ones. Then print: bibs, spokecards, manifest, staff briefings — and cache the map tiles for the area while you still have wifi.">Event anlegen, Checkpoints auf die Karte klicken, Typen und Reihenfolge zuweisen, Pflicht-CPs markieren. Dann drucken: Startnummern, Spokecards, Manifest, Personal-Briefings — und die Kartenkacheln fürs Gebiet cachen, solange noch WLAN da ist.</p>
+<span class="stamp" data-en="Planning">Planung</span>
+</div>
+<div class="step">
+<div class="n">2</div>
+<h3 data-en="Dispatch the crew on site">Team vor Ort dispatchen</h3>
+<p data-en="Staff take their briefing to the checkpoint and scan riders in with the checkpoint app. Riders check in by QR or position from their own phones. The race state machine locks the checkpoint structure the moment the race starts.">Das Personal nimmt sein Briefing zum Checkpoint und scannt die Fahrer mit der Checkpoint-App ein. Fahrer checken per QR oder Position vom eigenen Handy ein. Die Zustandsmaschine sperrt die CP-Struktur, sobald das Rennen läuft.</p>
+<span class="stamp" data-en="Running">Läuft</span>
+</div>
+<div class="step">
+<div class="n">3</div>
+<h3 data-en="Watch it live, then export">Live verfolgen, dann exportieren</h3>
+<p data-en="The beamer runs the countdown, the GO overlay and the live leaderboard at the finish. You confirm arrivals, mark DNF/DNS, undo mistakes — and afterwards export results as CSV and a share card.">Der Beamer fährt Countdown, GO-Overlay und Live-Leaderboard im Ziel. Du bestätigst Ankünfte, markierst DNF/DNS, nimmst Fehler zurück — und exportierst danach Ergebnisse als CSV plus Share-Karte.</p>
+<span class="stamp" data-en="Completed">Abgeschlossen</span>
+</div>
+</div>
+</section>
+
+<section>
+<div class="eyebrow" data-en="Architecture, in the open">Architektur, offengelegt</div>
+<h2 data-en="Two variants, same feature set">Zwei Varianten, identischer Funktionsumfang</h2>
+<p class="lede" style="margin-top:16px" data-en="They differ in exactly one thing: where the data is stored.">Sie unterscheiden sich in genau einem Punkt: wo die Daten liegen.</p>
+<div class="arch">
+<div>
+<span class="badge" data-en="Variant A · single organizer, single device">Variante A · ein Organizer, ein Gerät</span>
+<h3 data-en="Completely local, in the browser">Komplett lokal im Browser</h3>
+<p data-en="Open one HTML file. A SQLite database runs inside the browser (sql.js/WASM, persisted in IndexedDB). No server, no install, no account — and a .sqlite export any time as a backup or to move to another machine.">Eine HTML-Datei öffnen. Eine SQLite-Datenbank läuft im Browser (sql.js/WASM, persistiert in IndexedDB). Kein Server, keine Installation, kein Account — und jederzeit ein <code>.sqlite</code>-Export als Backup oder zum Umzug auf ein anderes Gerät.</p>
+<dl>
+<dt data-en="Storage">Speicher</dt><dd>SQLite (sql.js/WASM) → IndexedDB</dd>
+<dt data-en="Requirements">Voraussetzung</dt><dd data-en="A current browser. That's it.">Ein aktueller Browser. Mehr nicht.</dd>
+<dt data-en="Setup time">Setup-Aufwand</dt><dd data-en="Open the file">Datei öffnen</dd>
+</dl>
+</div>
+<div>
+<span class="badge" data-en="Variant B · several organizers, several devices">Variante B · mehrere Organizer, mehrere Geräte</span>
+<h3 data-en="Self-hosted on PHP + MySQL">Self-hosted auf PHP + MySQL</h3>
+<p data-en="Upload the backend folder to your own PHP/MySQL webspace, call install.php once, copy the API endpoint and key into the setup screen, delete install.php. From then on every organizer device sees the same events — on your server, under your domain.">Backend-Ordner auf den eigenen PHP/MySQL-Webspace laden, <code>install.php</code> einmal aufrufen, API-Endpunkt und Key im Setup-Screen eintragen, <code>install.php</code> löschen. Danach sehen alle Organizer-Geräte dieselben Events — auf deinem Server, unter deiner Domain.</p>
+<dl>
+<dt data-en="Storage">Speicher</dt><dd data-en="Your own MySQL database">Eigene MySQL-Datenbank</dd>
+<dt data-en="Requirements">Voraussetzung</dt><dd data-en="Shared hosting with PHP + MySQL">Shared Hosting mit PHP + MySQL</dd>
+<dt data-en="Setup time">Setup-Aufwand</dt><dd data-en="Upload, install.php, done — illustrated guide included">Hochladen, install.php, fertig — bebilderte Anleitung dabei</dd>
+</dl>
+</div>
+</div>
+<div class="offline">
+<div><h4 data-en="Check-ins without a network">Check-ins ohne Netz</h4><p data-en="Map tiles for the event area are cached beforehand, and the local build needs no connection at all once loaded — dead spots don't stop the race.">Die Kartenkacheln fürs Event-Gebiet werden vorab gecacht, und der lokale Build braucht nach dem Laden keine Verbindung — Funklöcher halten das Rennen nicht auf.</p></div>
+<div><h4 data-en="Dependency-arm on purpose">Bewusst dependency-arm</h4><p data-en="Only Leaflet, jsPDF and sql.js as runtime dependencies. Zero third-party dependencies in the build step: one small Node script assembles the modular source into a single HTML file.">Nur Leaflet, jsPDF und sql.js als Laufzeit-Abhängigkeiten. Null Fremd-Dependencies im Build: ein kleines Node-Skript fügt den modularen Quellcode zu einer HTML-Datei zusammen.</p></div>
+<div><h4 data-en="No black box">Keine Blackbox</h4><p data-en="Source code is readable and modular, the data model is documented, and the export formats (SQLite, JSON, CSV, GPX) are plain and portable. Nothing about your event is locked in.">Der Quellcode ist einsehbar und modular, das Datenmodell dokumentiert, und die Exportformate (SQLite, JSON, CSV, GPX) sind offen und portabel. Nichts an deinem Event ist eingeschlossen.</p></div>
+</div>
+</section>
+
+<section>
+<div class="eyebrow">FAQ</div>
+<h2 data-en="The four questions everyone asks">Die vier Fragen, die immer kommen</h2>
+<div class="faq">
+<details open>
+<summary data-en="How much work is the setup?">Wie viel Aufwand ist das Setup?</summary>
+<p data-en="For the local variant: none. You open one HTML file in the browser and a demo event (“Kölner Kurierrennen”) is already there, using all five checkpoint types, so you can poke around before entering a single real rider. For the self-hosted variant: upload the backend folder, call install.php once, paste endpoint and key — an illustrated guide walks through it. Both variants are the same app; you can start local and move to a server later.">Bei der lokalen Variante: keiner. Du öffnest eine HTML-Datei im Browser, und ein Demo-Event („Kölner Kurierrennen“) ist bereits angelegt — mit allen fünf Checkpoint-Typen, damit du herumklicken kannst, bevor du einen einzigen echten Fahrer eingibst. Bei der self-hosted Variante: Backend-Ordner hochladen, <code>install.php</code> einmal aufrufen, Endpunkt und Key eintragen — eine bebilderte Anleitung führt durch. Beides ist dieselbe App; du kannst lokal anfangen und später auf einen Server umziehen.</p>
+</details>
+<details>
+<summary data-en="What does it cost?">Was kostet es?</summary>
+<p data-en="Nothing. There is no licence, no subscription, no per-event fee and no paid tier that unlocks the useful half. If you self-host, you pay your hosting provider — nobody else.">Nichts. Es gibt keine Lizenz, kein Abo, keine Gebühr pro Event und keine Bezahlstufe, die die nützliche Hälfte freischaltet. Wenn du self-hostest, zahlst du deinen Hoster — sonst niemanden.</p>
+</details>
+<details>
+<summary data-en="What happens to the data?">Was passiert mit den Daten?</summary>
+<p data-en="They stay where you put them: in your browser's local database, or in your own MySQL database on your own server. No data reaches us, because there is no “us” in the data path — no telemetry, no analytics, no crash reporting home. Export as SQLite, JSON or CSV whenever you want.">Sie bleiben, wo du sie hinlegst: in der lokalen Datenbank deines Browsers oder in deiner eigenen MySQL-Datenbank auf deinem eigenen Server. Zu uns gelangen keine Daten, weil es im Datenweg kein „uns“ gibt — keine Telemetrie, kein Analytics, kein Crash-Reporting nach Hause. Export als SQLite, JSON oder CSV, wann du willst.</p>
+<p data-en="Personal data you enter (emergency contacts, staff phone numbers) is deliberately kept off rider-facing prints — that separation is enforced in the app, not left to your discipline.">Personenbezogene Angaben, die du einträgst (Notfallkontakte, Telefonnummern des Personals), landen bewusst nicht auf fahrerseitigen Drucken — diese Trennung erzwingt die App, sie hängt nicht an deiner Disziplin.</p>
+</details>
+<details>
+<summary data-en="Does it work without internet on site?">Funktioniert es ohne Internet vor Ort?</summary>
+<p data-en="Yes, with one preparation step: cache the map tiles for your event area beforehand (bounding box around your checkpoints, one click in the settings). After that the local build runs fully offline — check-ins, leaderboard, prints. Wake Lock keeps the screen alive at the finish, auto-backups run in the background. On the self-hosted variant, devices need to reach your server to share state; the local build has no such requirement at all.">Ja, mit einem Vorbereitungsschritt: die Kartenkacheln fürs Event-Gebiet vorher cachen (Bounding Box um die Checkpoints, ein Klick in den Einstellungen). Danach läuft der lokale Build vollständig offline — Check-ins, Leaderboard, Drucke. Wake Lock hält den Bildschirm im Ziel an, Auto-Backups laufen im Hintergrund. Bei der self-hosted Variante brauchen die Geräte Zugang zu deinem Server, um denselben Stand zu sehen; der lokale Build braucht das gar nicht.</p>
+</details>
+</div>
+</section>
+
+<section style="padding-bottom:var(--space-5)">
+<div class="paper" style="display:grid;grid-template-columns:1.5fr auto;gap:28px;align-items:center">
+<div>
+<h2 data-en="Try it before you commit to anything">Probier es aus, bevor du dich zu irgendwas verpflichtest</h2>
+<p style="margin-top:12px;max-width:56ch" data-en="The demo is the real app with a seeded event. Nothing to install, nothing to sign up for, nothing to cancel later.">Die Demo ist die echte App mit einem vorbereiteten Event. Nichts zu installieren, nichts anzumelden, nichts später zu kündigen.</p>
+</div>
+<div class="cta-row" style="margin:0">
+<a class="btn btn-primary" href="#demo" data-en="Start live demo">Live-Demo starten</a>
+<a class="btn" style="border-color:var(--ink);color:var(--ink)" href="https://github.com/thilokayser/Alleycat-Planner" data-en="Self-host →">Selbst hosten →</a>
+</div>
+</div>
+</section>
+
+</div>
+
+<footer>
+<div class="wrap">
+<div class="foot">
+<div>
+<div style="display:flex;align-items:center;gap:14px"><div class="mark">AC</div><div class="brand">Alleycat Dispatch<small data-en="Checkpoint races, organized">Checkpoint-Rennen, organisiert</small></div></div>
+<p style="margin-top:18px;color:#a9a7a0;font-size:15px;max-width:42ch" data-en="A community project by a single developer — no company behind it, no investors, no roadmap dictated by a sales team.">Ein Community-Projekt einer einzelnen Person — keine Firma dahinter, keine Investoren, keine von Vertrieb diktierte Roadmap.</p>
+</div>
+<div>
+<h4 data-en="Legal">Rechtliches</h4>
+<ul>
+<li><a href="#impressum" data-en="Imprint">Impressum</a></li>
+<li><a href="#datenschutz" data-en="Privacy policy">Datenschutzerklärung</a></li>
+</ul>
+</div>
+<div>
+<h4 data-en="Contact &amp; code">Kontakt &amp; Code</h4>
+<ul>
+<li><a href="#kontakt" data-en="Contact">Kontakt</a></li>
+<li><a href="https://github.com/thilokayser/Alleycat-Planner">GitHub</a></li>
+<li><a href="https://github.com/thilokayser/Alleycat-Planner/blob/main/php-backend/INSTALL.md" data-en="Setup guide">Setup-Anleitung</a></li>
+</ul>
+</div>
+</div>
+<div class="privacy">
+<span data-en="This page sets no cookies.">Diese Seite setzt keine Cookies.</span>
+<span data-en="No tracking, no analytics, no third-party embeds.">Kein Tracking, kein Analytics, keine Drittanbieter-Einbettungen.</span>
+<span data-en="Map data © OpenStreetMap contributors (screenshots).">Kartendaten © OpenStreetMap-Mitwirkende (Screenshots).</span>
+</div>
+</div>
+</footer>
+
+<script>
+(function(){
+var nodes=document.querySelectorAll('[data-en]');
+var titles={de:document.title,en:'Alleycat Dispatch — organizer tool for alleycat races'};
+function setLang(l){
+document.documentElement.lang=l;document.title=titles[l]||titles.de;
+nodes.forEach(function(el){if(!el.dataset.de)el.dataset.de=el.innerHTML;el.innerHTML=(l==='en')?el.dataset.en:el.dataset.de;});
+document.querySelectorAll('[data-lang-btn]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.langBtn===l));});
+try{localStorage.setItem('ad-page-lang',l);}catch(e){}
+}
+document.querySelectorAll('[data-lang-btn]').forEach(function(b){b.addEventListener('click',function(){setLang(b.dataset.langBtn);});});
+var saved=null;try{saved=localStorage.getItem('ad-page-lang');}catch(e){}
+nodes.forEach(function(el){if(!el.dataset.de)el.dataset.de=el.innerHTML;});
+if(saved==='en')setLang('en');
+})();
+</script>
+</body>
+</html>
