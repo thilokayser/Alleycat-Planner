@@ -1470,8 +1470,8 @@ function ensureInstancePanelContainer(){
     el = document.createElement('div');
     el.id = 'view-instance';
     el.className = 'view';
-    const app = document.getElementById('app');
-    if(app) app.appendChild(el);
+    const main = document.getElementById('main');
+    if(main) main.appendChild(el);
   }
   return el;
 }
