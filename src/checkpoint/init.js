@@ -84,7 +84,16 @@ function cpSetLoginMode(mode){
 }
 
 async function cpSubmitLogin(){
+  /* ALLE Felder vor dem ersten renderCp() einlesen — sonst leert der
+     Neuaufbau des Formulars die restlichen Felder, bevor sie gelesen
+     werden (gleicher Fehler wie riderSubmitRegistration() in
+     src/rider/init.js, siehe dortiger Kommentar). */
   const publicId = ((document.getElementById('cp-login-publicid') || {}).value || '').trim();
+  const username = ((document.getElementById('cp-login-username') || {}).value || '').trim();
+  const password = (document.getElementById('cp-login-password') || {}).value || '';
+  const cpId = ((document.getElementById('cp-login-cpid') || {}).value || '').trim();
+  const code = ((document.getElementById('cp-login-code') || {}).value || '').trim().toUpperCase();
+
   if(!publicId){ cpState.error = t('checkpointScan.errGeneric'); renderCp(); return; }
 
   cpState.busy = true;
@@ -93,13 +102,9 @@ async function cpSubmitLogin(){
 
   let res, session;
   if(cpState.loginMode === 'account'){
-    const username = ((document.getElementById('cp-login-username') || {}).value || '').trim();
-    const password = (document.getElementById('cp-login-password') || {}).value || '';
     res = await cpApiAuthByAccount(publicId, username, password);
     session = res.ok ? {publicId, token: res.data.token, headerName: 'X-Admin-Token'} : null;
   } else {
-    const cpId = ((document.getElementById('cp-login-cpid') || {}).value || '').trim();
-    const code = ((document.getElementById('cp-login-code') || {}).value || '').trim().toUpperCase();
     res = await cpApiAuthByCode(publicId, cpId, code);
     session = res.ok ? {publicId, token: res.data.token, headerName: 'X-Checkpoint-Token'} : null;
   }
