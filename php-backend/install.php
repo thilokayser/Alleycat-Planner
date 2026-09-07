@@ -87,8 +87,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyInstalled){
         $existingUsers = (int)$pdo->query("SELECT COUNT(*) FROM `{$userTable}`")->fetchColumn();
         $adminCreated = false;
         if($existingUsers === 0){
-          $pdo->prepare("INSERT INTO `{$userTable}` (`username`,`password_hash`,`role`,`display_name`)
-                         VALUES (?,?,'admin',?)")
+          $pdo->prepare("INSERT INTO `{$userTable}` (`username`,`password_hash`,`role`,`display_name`,`is_sysadmin`)
+                         VALUES (?,?,'captain',?,1)")
               ->execute([$adminUser, password_hash($adminPass, PASSWORD_DEFAULT), $adminDisplay !== '' ? $adminDisplay : $adminUser]);
           $adminCreated = true;
         }
@@ -198,6 +198,7 @@ $showPreflightWarn = !$showPreflightError && (($localOverall === 'warn') || ($db
       <div class="kv"><b>API-Endpunkt</b><?= htmlspecialchars($success['apiUrl']) ?></div>
       <div class="kv"><b>API-Key — nur aufbewahren, nicht in die App eintragen (jetzt kopieren, wird nicht erneut angezeigt, nur ein Hash bleibt gespeichert)</b><?= htmlspecialchars($success['apiKey']) ?></div>
       <div class="hint">Der API-Key ist der Notfall-/Wartungszugang (<code>backup.php</code>, <code>migrate.php</code>) und gibt Vollzugriff. Für den Alltag reicht das Admin-Konto oben.</div>
+      <div class="hint">Nach der Anmeldung wird die App auf das Instance-Panel (<code>#/instance</code>) weiterleiten — dort muss die erste Organisation angelegt werden, bevor Veranstaltungen erstellt werden können.</div>
       <?php if($selfDeleteFailed): ?>
         <div class="warn">
           Wichtig: <code>install.php</code> konnte sich nicht selbst löschen (fehlende Schreibrechte) — bitte jetzt manuell per FTP/Dateimanager vom Server entfernen. Danach die App aufrufen und mit dem Admin-Konto anmelden.
