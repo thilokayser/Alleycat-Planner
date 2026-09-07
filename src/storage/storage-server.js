@@ -82,9 +82,14 @@ async function authRequest(method, query, body){
 async function adminBootstrap(apiKey, username, password, displayName){
   return authRequest('POST', 'a=bootstrap', {apiKey, username, password, displayName});
 }
+/* Die Session speichert NUR isSysAdmin, keine Rolle: seit Multi-Tenancy
+   gibt es keine instanzweite Rolle mehr (?a=login liefert auch keine),
+   die wirksame Rolle hängt an der aktiven Org und wird in auth.js aus
+   state.myOrgs aufgelöst. Ein hier eingefrorenes `role` wäre beim
+   Workspace-Wechsel sofort falsch. */
 async function adminLogin(username, password){
   const res = await authRequest('POST', 'a=login', {username, password});
-  if(res.ok) saveAdminSession({token: res.token, role: res.role, username: res.username, displayName: res.displayName});
+  if(res.ok) saveAdminSession({token: res.token, isSysAdmin: !!res.isSysAdmin, username: res.username, displayName: res.displayName});
   return res;
 }
 async function adminLogout(){
@@ -123,6 +128,10 @@ async function listEventsForActiveOrg(){
   const url = new URL(cfg.apiUrl);
   url.searchParams.set('a', 'events');
   const res = await fetch(url.toString(), { headers: currentAuthHeaders() });
+  /* Gleiches Muster wie phpRequest()/authRequest(): ohne diesen Aufruf
+     endete eine abgelaufene Session hier in einer stumm leeren
+     Event-Liste statt in der Session-Wiederherstellung. */
+  handleAuthResponseStatus(res.status);
   if(!res.ok) return [];
   let data = null;
   try{ data = await res.json(); }catch(e){ return []; }
@@ -148,7 +157,7 @@ async function revokeInviteCode(id){
 async function registerWithInviteCode(code, username, password){
   if(!hasAdminRoles()) return null;
   const res = await authRequest('POST', 'a=register', {code, username, password});
-  if(res.ok) saveAdminSession({token: res.token, role: res.role, username: res.username, displayName: res.displayName});
+  if(res.ok) saveAdminSession({token: res.token, isSysAdmin: !!res.isSysAdmin, username: res.username, displayName: res.displayName});
   return res;
 }
 /* ---------------- Passwort-Reset / Überall abmelden / Audit-Log ----------------

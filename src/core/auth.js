@@ -11,7 +11,10 @@
    aktuelles Event ohnehin zusammen gerendert werden. */
 
 const ADMIN_SESSION_LS_KEY = 'alleycat:admin-session';
-const ADMIN_ROLE_RANK_CLIENT = {viewer: 1, checkpoint_staff: 1, editor: 2, admin: 3};
+/* 'captain' statt 'admin' als höchster Rang: seit Multi-Tenancy heißt die
+   Org-Spitzenrolle so (ADMIN_ROLE_RANK in bootstrap.php spiegelt exakt
+   diese Tabelle). 'admin' existiert serverseitig gar nicht mehr. */
+const ADMIN_ROLE_RANK_CLIENT = {viewer: 1, checkpoint_staff: 1, editor: 2, captain: 3};
 
 function loadAdminSession(){
   try{ return JSON.parse(localStorage.getItem(ADMIN_SESSION_LS_KEY) || 'null'); }
@@ -25,16 +28,47 @@ function clearAdminSession(){
   try{ localStorage.removeItem(ADMIN_SESSION_LS_KEY); }catch(e){}
 }
 
+/* Instanzweiter Sonderstatus. Kommt aus ?a=login (siehe adminLogin() in
+   storage-server.js) und ist das EINZIGE, was die Session dauerhaft über
+   Berechtigungen weiß — alles andere hängt an der aktiven Org.
+   Ohne Rollensystem (lokale Variante, geteiltes window.storage) und beim
+   Master-Key-Zugang (keine Session, serverseitig immer SysAdmin) gilt
+   jeder als SysAdmin, wie bisher. */
+function currentUserIsSysAdmin(){
+  if(!hasAdminRoles()) return true;
+  const session = state.adminSession;
+  if(!session) return true;
+  return !!session.isSysAdmin;
+}
+
+/* Rolle INNERHALB des gerade gewählten Workspaces. Die Quelle ist
+   state.myOrgs (?a=my-orgs liefert {id,slug,name,role} je Org) und nicht
+   die Session: dieselbe Person kann in Org A Captain und in Org B
+   Betrachter sein, eine beim Login eingefrorene Rolle wäre nach dem
+   ersten Workspace-Wechsel falsch. */
+function activeOrgRole(){
+  const org = (state.myOrgs || []).find(o => o.slug === state.activeOrgSlug);
+  return org && org.role ? org.role : null;
+}
+
 /* Aktuelle Rolle, unabhängig davon, ob per personalisierter Session oder
    per Master-API-Key angemeldet — Aufrufer sollen diese eine Funktion
    fragen, nie direkt in state.adminSession greifen. hasAdminRoles() ist
    ein Seam (siehe src/storage/*): unter dem lokalen Backend und unter
    geteiltem window.storage gibt es keine Rollen, dort darf alles alles,
-   wie bisher. */
+   wie bisher.
+
+   SysAdmin zählt überall als 'captain' — genau wie serverseitig in
+   apiVerifyAccess(), wo is_sysadmin ohne org_member-Zeile durchgreift.
+   null heißt "noch keine Rolle bekannt" (Anmeldung läuft, oder das Konto
+   ist in gar keiner Org) und wird von currentUserCan() bewusst nicht als
+   Sperre behandelt — die echte Durchsetzung sitzt im Backend. */
 function currentUserRole(){
-  if(!hasAdminRoles()) return 'admin';
+  if(!hasAdminRoles()) return 'captain';
   const session = state.adminSession;
-  return session ? session.role : null;
+  if(!session) return null;
+  if(session.isSysAdmin) return 'captain';
+  return activeOrgRole();
 }
 function currentUserDisplayName(){
   const session = state.adminSession;
@@ -44,12 +78,19 @@ function currentUserDisplayName(){
 /* Grobe, aber ehrliche Gate-Funktion: 'view' ist immer erlaubt (auch ohne
    Session, solange keine Rolle geladen ist — verhindert, dass eine noch
    nicht abgeschlossene Anmeldung die ganze Oberfläche sperrt), 'edit'
-   braucht mindestens Editor, 'manageUsers' nur Admin. */
+   braucht mindestens Editor, 'manageUsers' nur SysAdmin.
+
+   'manageUsers' hängt bewusst an currentUserIsSysAdmin() und nicht mehr
+   an der Rolle: Benutzer-, Einladungs- und Audit-Verwaltung sind
+   instanzweit, ein Captain ist nur innerhalb seiner Org mächtig. auth.php
+   verlangt seit dem Governance-Pass dort ebenfalls SysAdmin — die
+   Oberfläche würde sonst Formulare zeigen, die jedes Absenden mit 403
+   quittiert. */
 function currentUserCan(action){
+  if(action === 'manageUsers') return currentUserIsSysAdmin();
   const role = currentUserRole();
   if(role === null) return true;
   if(action === 'view') return true;
-  if(action === 'manageUsers') return role === 'admin';
   if(action === 'edit') return ADMIN_ROLE_RANK_CLIENT[role] >= ADMIN_ROLE_RANK_CLIENT.editor;
   return false;
 }

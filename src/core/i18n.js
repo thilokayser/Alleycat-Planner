@@ -1313,6 +1313,7 @@ const translations = {
       roleViewer: 'Betrachter',
       roleCheckpointStaff: 'Checkpoint-Personal',
       roleCaptain: 'Captain',
+      roleUnknown: 'Keine Rolle',
       viewerBanner: 'Nur-Lese-Zugriff (Betrachter) — Änderungen werden nicht gespeichert.',
       navUsers: 'Benutzer',
       usersHeading: 'Benutzerverwaltung',

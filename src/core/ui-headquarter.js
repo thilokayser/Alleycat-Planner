@@ -634,8 +634,10 @@ function renderIconSidebar(navItems, evtId){
    Rolle anzuzeigen. */
 function renderAuthBadge(){
   if(!hasAdminRoles() || !state.adminSession) return '';
+  /* Seit Multi-Tenancy kann die Rolle null sein: ein Konto, das (noch) in
+     keiner Org ist, hat schlicht keine. adminRoleLabel() fängt das ab. */
   const role = currentUserRole();
-  const roleLabel = t('auth.role' + role.charAt(0).toUpperCase() + role.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase()));
+  const roleLabel = adminRoleLabel(role);
   return `
     <span class="auth-badge ${role === 'viewer' ? 'auth-badge-viewer' : ''}" title="${escapeHtml(currentUserDisplayName())}">
       ${role === 'viewer' ? '👁 ' : ''}${escapeHtml(currentUserDisplayName())} · ${escapeHtml(roleLabel)}
@@ -1249,8 +1251,15 @@ async function saveAssignForUser(id){
   state.adminAssignEditingId = null;
   renderSettings();
 }
-const ADMIN_ROLE_OPTIONS = ['admin', 'editor', 'viewer', 'checkpoint_staff'];
+/* 'captain' statt 'admin': authValidRole() in auth.php akzeptiert seit
+   Multi-Tenancy nur noch die vier Org-Rollennamen — ein Formular, das
+   'admin' schickt, bekäme ein 400 invalid_role zurück. Damit ist dieses
+   Set identisch zu ORG_ROLE_OPTIONS weiter unten; beide bleiben trotzdem
+   getrennt, weil sie verschiedene Endpunkte bedienen (Konten- vs.
+   Org-Mitgliederverwaltung) und getrennt driften dürfen. */
+const ADMIN_ROLE_OPTIONS = ['captain', 'editor', 'viewer', 'checkpoint_staff'];
 function adminRoleLabel(role){
+  if(!role) return t('auth.roleUnknown');
   return t('auth.role' + role.charAt(0).toUpperCase() + role.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase()));
 }
 /* Fahrer-App-Adresse: steht bisher nur auf dem Einrichtungsbildschirm,
@@ -1406,7 +1415,36 @@ function orgRoleLabel(role){
   if(role === 'captain') return t('auth.roleCaptain');
   return adminRoleLabel(role);
 }
+/* Ein einziger delegierter Listener statt inline-onclick für die beiden
+   Org-Listen (Mitglieder in den Einstellungen, Orgs im SysAdmin-Panel).
+   Grund ist keine Stilfrage, sondern Sicherheit: beide Listen zeigen frei
+   gewählte Namen, und ein Name in einem inline-onclick-Stringliteral ist
+   nicht sicher escapebar (escapeHtml macht ' zu &#39;, was der HTML-Parser
+   vor dem JS-Parser wieder auflöst). Über data-Attribute + dataset gibt es
+   diesen Übergang gar nicht erst.
+
+   Delegation auf document, weil beide Container bei jedem render() neu
+   per innerHTML entstehen — ein direkt am Button hängender Listener wäre
+   sofort wieder weg. Idempotent, damit mehrfaches Rendern nicht mehrfach
+   feuert. */
+let orgActionDelegationBound = false;
+function ensureOrgActionDelegation(){
+  if(orgActionDelegationBound) return;
+  orgActionDelegationBound = true;
+  document.addEventListener('click', (ev) => {
+    const removeBtn = ev.target.closest && ev.target.closest('[data-org-member-remove]');
+    if(removeBtn){
+      removeOrgMember(parseInt(removeBtn.dataset.orgMemberRemove, 10), removeBtn.dataset.username || '');
+      return;
+    }
+    const deactivateBtn = ev.target.closest && ev.target.closest('[data-org-deactivate]');
+    if(deactivateBtn){
+      deactivateOrgRow(parseInt(deactivateBtn.dataset.orgDeactivate, 10), deactivateBtn.dataset.orgName || '');
+    }
+  });
+}
 async function loadOrgMembersIfNeeded(force){
+  ensureOrgActionDelegation();
   if(state.orgMembersList && !force) return;
   const res = await authRequest('GET', 'a=org/members');
   state.orgMembersError = res.ok ? '' : (res.error || 'error');
@@ -1418,6 +1456,11 @@ function renderOrgMembersList(){
   const members = state.orgMembersList;
   if(members === null) return t('settings.org.loadingMembers');
   if(!members.length) return `<div class="settings-section-desc">${t('settings.org.membersEmpty')}</div>`;
+  /* Name NICHT in einen inline-onclick interpolieren: escapeHtml() macht
+     aus ' ein &#39;, das der Parser VOR dem Auswerten des JS-Strings
+     wieder zu ' auflöst — ein Benutzername mit Apostroph bräche damit aus
+     dem Stringliteral aus. Übergabe deshalb per data-Attribut, gelesen in
+     einem delegierten Listener (bindOrgMemberActions()). */
   return members.map(m => `
     <div class="admin-user-row" style="border:1px solid var(--asphalt-3); border-radius:4px; padding:12px 14px; margin-bottom:10px;">
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -1426,7 +1469,7 @@ function renderOrgMembersList(){
         <select onchange="updateOrgMemberRole(${m.user_id}, this.value)" style="margin-left:auto;">
           ${ORG_ROLE_OPTIONS.map(r => `<option value="${r}" ${r === m.role ? 'selected' : ''}>${escapeHtml(orgRoleLabel(r))}</option>`).join('')}
         </select>
-        <button class="btn btn-ghost" onclick="removeOrgMember(${m.user_id}, '${escapeHtml(m.username)}')">${t('settings.org.removeMemberButton')}</button>
+        <button class="btn btn-ghost" data-org-member-remove="${m.user_id}" data-username="${escapeHtml(m.username)}">${t('settings.org.removeMemberButton')}</button>
       </div>
     </div>
   `).join('');
@@ -1465,6 +1508,7 @@ function renderOrganizationSettingsSection(){
    ändern darf. Das Container-Div wird deshalb hier per JS angelegt statt
    in templates/server.template.html, siehe ensureInstancePanelContainer(). */
 function ensureInstancePanelContainer(){
+  ensureOrgActionDelegation();
   let el = document.getElementById('view-instance');
   if(!el){
     el = document.createElement('div');
@@ -1520,7 +1564,7 @@ function renderInstancePanel(){
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <strong>${escapeHtml(o.name)}</strong>
         <span style="color:var(--steel); font-size:12px;">${escapeHtml(o.slug)}</span>
-        <button class="btn btn-ghost" style="margin-left:auto;" onclick="deactivateOrgRow(${o.id}, '${escapeHtml(o.name)}')">${t('instance.deactivateButton')}</button>
+        <button class="btn btn-ghost" style="margin-left:auto;" data-org-deactivate="${o.id}" data-org-name="${escapeHtml(o.name)}">${t('instance.deactivateButton')}</button>
       </div>
     </div>
   `).join('');
