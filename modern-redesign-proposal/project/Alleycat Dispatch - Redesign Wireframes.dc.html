@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+body{margin:0;background:#f0eee9;font-family:'Architects Daughter',system-ui,sans-serif}
+a{color:#d2521c;text-decoration:none}a:hover{color:#a03c12}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:700 10px 'JetBrains Mono',monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:400 15px/1.2 'Architects Daughter',sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:700 10.5px 'JetBrains Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 13px/1.3 'Architects Daughter',sans-serif;color:rgba(0,0,0,.6)}
+.dv-card{max-width:100%;background:#fff;border:1.5px solid #2b2b2b;border-radius:8px;box-shadow:0 2px 0 rgba(0,0,0,.14);overflow:hidden}
+.dv-opt:target .dv-oid{background:#d2521c;color:#fff}
+.dv-next{margin:22px 0 0;font:400 14px/1.5 'Architects Daughter',sans-serif;color:rgba(0,0,0,.55)}
+.wf-grp{font:700 9.5px 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,0,0,.4)}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Wireframes — 4 Screens × 3 Richtungen · linke Rail, Raceday-Vollbild, QR-first Check-in, 3-Pane-Karte</span></div>
+
+<div class="dv-opts">
+
+<!-- ───── ÜBERSICHT ───── -->
+<div class="dv-opt" id="1a">
+  <div class="wf-grp">Übersicht</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Dispatch-Board — Rail + Statusleiste + dichte Widget-Spalten</div>
+  <div class="dv-card" style="width:520px">
+    <div style="display:flex;height:340px">
+      <div style="width:58px;border-right:1.5px solid #2b2b2b;background:#f6f5f2;display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0">
+        <div style="width:30px;height:30px;border-radius:50%;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font-size:11px">AC</div>
+        <div style="width:38px;height:30px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:4px"></div>
+        <div style="width:38px;height:30px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+        <div style="width:38px;height:30px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+        <div style="width:38px;height:30px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+        <div style="width:38px;height:30px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+        <div style="flex:1"></div>
+        <div style="width:38px;height:30px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1.5px solid #2b2b2b">
+          <div style="font-size:15px">Kölner Kurierrennen</div>
+          <div style="border:1.5px solid #d2521c;color:#d2521c;border-radius:20px;padding:1px 9px;font:700 9px 'JetBrains Mono',monospace">LÄUFT</div>
+          <div style="flex:1"></div>
+          <div style="font:700 11px 'JetBrains Mono',monospace">01:24:09</div>
+        </div>
+        <div style="display:flex;gap:6px;padding:10px 12px;border-bottom:1px dashed #bbb">
+          <div style="flex:1;border:1.5px solid #2b2b2b;border-radius:4px;padding:6px;text-align:center"><div style="font:700 17px 'JetBrains Mono',monospace">12</div><div style="font-size:10px;color:#666">unterwegs</div></div>
+          <div style="flex:1;border:1.5px solid #2b2b2b;border-radius:4px;padding:6px;text-align:center"><div style="font:700 17px 'JetBrains Mono',monospace">4</div><div style="font-size:10px;color:#666">im Ziel</div></div>
+          <div style="flex:1;border:1.5px solid #2b2b2b;border-radius:4px;padding:6px;text-align:center"><div style="font:700 17px 'JetBrains Mono',monospace">1</div><div style="font-size:10px;color:#666">DNF</div></div>
+          <div style="flex:1;border:1.5px solid #2b2b2b;border-radius:4px;padding:6px;text-align:center"><div style="font:700 17px 'JetBrains Mono',monospace">6</div><div style="font-size:10px;color:#666">CPs</div></div>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px">
+          <div style="border:1.5px solid #2b2b2b;border-radius:4px;padding:7px">
+            <div style="font-size:11px;color:#666;margin-bottom:5px">CP-Auslastung</div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;align-items:center;gap:5px"><div style="flex:1;height:7px;background:#eee"><div style="width:70%;height:100%;background:#2b2b2b"></div></div><span style="font:700 9px 'JetBrains Mono',monospace">6</span></div>
+              <div style="display:flex;align-items:center;gap:5px"><div style="flex:1;height:7px;background:#eee"><div style="width:50%;height:100%;background:#2b2b2b"></div></div><span style="font:700 9px 'JetBrains Mono',monospace">4</span></div>
+              <div style="display:flex;align-items:center;gap:5px"><div style="flex:1;height:7px;background:#eee"><div style="width:35%;height:100%;background:#2b2b2b"></div></div><span style="font:700 9px 'JetBrains Mono',monospace">3</span></div>
+              <div style="display:flex;align-items:center;gap:5px"><div style="flex:1;height:7px;background:#eee"><div style="width:85%;height:100%;background:#d2521c"></div></div><span style="font:700 9px 'JetBrains Mono',monospace">7</span></div>
+            </div>
+          </div>
+          <div style="border:1.5px solid #2b2b2b;border-radius:4px;padding:7px">
+            <div style="font-size:11px;color:#666;margin-bottom:5px">Mini-Leaderboard</div>
+            <div style="display:flex;flex-direction:column;gap:4px;font:400 10px 'JetBrains Mono',monospace">
+              <div style="display:flex;gap:6px"><span style="color:#d2521c">1</span><span style="flex:1;border-bottom:1px dashed #ccc"></span><span>1:12</span></div>
+              <div style="display:flex;gap:6px"><span>2</span><span style="flex:1;border-bottom:1px dashed #ccc"></span><span>1:15</span></div>
+              <div style="display:flex;gap:6px"><span>3</span><span style="flex:1;border-bottom:1px dashed #ccc"></span><span>1:19</span></div>
+              <div style="display:flex;gap:6px"><span>4</span><span style="flex:1;border-bottom:1px dashed #ccc"></span><span>1:24</span></div>
+            </div>
+          </div>
+          <div style="border:1.5px solid #2b2b2b;border-radius:4px;padding:7px">
+            <div style="font-size:11px;color:#666;margin-bottom:5px">Letzte Aktivität</div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="height:6px;background:#eee"></div><div style="height:6px;background:#eee;width:80%"></div><div style="height:6px;background:#eee;width:60%"></div><div style="height:6px;background:#eee;width:70%"></div>
+            </div>
+          </div>
+          <div style="border:1.5px dashed #9a9a9a;border-radius:4px;padding:7px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#888">+ Widget</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1b">
+  <div class="wf-grp">Übersicht</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Kommandozeile — eine Kennzahlen-Zeile, alles darunter aufklappbar</div>
+  <div class="dv-card" style="width:520px">
+    <div style="display:flex;height:352px">
+      <div style="width:58px;border-right:1.5px solid #2b2b2b;background:#f6f5f2;display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0">
+        <div style="width:30px;height:30px;border-radius:50%;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font-size:11px">AC</div>
+        <div style="width:38px;height:30px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:4px"></div>
+        <div style="width:38px;height:30px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+        <div style="width:38px;height:30px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+        <div style="width:38px;height:30px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1.5px solid #2b2b2b">
+          <div style="font-size:15px">Kölner Kurierrennen</div>
+          <div style="border:1.5px solid #d2521c;color:#d2521c;border-radius:20px;padding:1px 9px;font:700 9px 'JetBrains Mono',monospace">LÄUFT</div>
+          <div style="flex:1"></div>
+          <div style="border:1.5px solid #2b2b2b;border-radius:4px;padding:3px 9px;font-size:11px">⌘K</div>
+        </div>
+        <div style="padding:14px 12px;border-bottom:1.5px solid #2b2b2b;display:flex;align-items:flex-end;gap:0">
+          <div style="flex:1;text-align:center;border-right:1px dashed #ccc"><div style="font:700 26px 'JetBrains Mono',monospace">01:24</div><div style="font-size:10px;color:#666">seit Start</div></div>
+          <div style="flex:1;text-align:center;border-right:1px dashed #ccc"><div style="font:700 26px 'JetBrains Mono',monospace">12</div><div style="font-size:10px;color:#666">unterwegs</div></div>
+          <div style="flex:1;text-align:center;border-right:1px dashed #ccc"><div style="font:700 26px 'JetBrains Mono',monospace">4/17</div><div style="font-size:10px;color:#666">im Ziel</div></div>
+          <div style="flex:1;text-align:center"><div style="font:700 26px 'JetBrains Mono',monospace">86%</div><div style="font-size:10px;color:#666">CP-Quote</div></div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px dashed #bbb"><span style="font-size:12px">▾ Checkpoints</span><span style="flex:1"></span><span style="font:700 9px 'JetBrains Mono',monospace;color:#888">6</span></div>
+          <div style="padding:6px 12px 10px;border-bottom:1px dashed #bbb;display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;gap:8px;align-items:center;font:400 10px 'JetBrains Mono',monospace"><span style="width:14px;height:14px;border-radius:50%;border:1.5px solid #2b2b2b;font-size:8px;display:flex;align-items:center;justify-content:center">1</span><span style="flex:1;border-bottom:1px dashed #ccc"></span><span>6/17</span></div>
+            <div style="display:flex;gap:8px;align-items:center;font:400 10px 'JetBrains Mono',monospace"><span style="width:14px;height:14px;border-radius:50%;border:1.5px solid #2b2b2b;font-size:8px;display:flex;align-items:center;justify-content:center">2</span><span style="flex:1;border-bottom:1px dashed #ccc"></span><span>4/17</span></div>
+            <div style="display:flex;gap:8px;align-items:center;font:400 10px 'JetBrains Mono',monospace"><span style="width:14px;height:14px;border-radius:50%;border:1.5px solid #2b2b2b;font-size:8px;display:flex;align-items:center;justify-content:center">3</span><span style="flex:1;border-bottom:1px dashed #ccc"></span><span>3/17</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px dashed #bbb"><span style="font-size:12px">▸ Fahrer &amp; Teams</span><span style="flex:1"></span><span style="font:700 9px 'JetBrains Mono',monospace;color:#888">17</span></div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px dashed #bbb"><span style="font-size:12px">▸ Letzte Aktivität</span></div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px"><span style="font-size:12px">▸ Spielmodi</span><span style="flex:1"></span><span style="border:1.5px solid #d2521c;color:#d2521c;border-radius:20px;padding:1px 7px;font:700 8px 'JetBrains Mono',monospace">2 AKTIV</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1c">
+  <div class="wf-grp">Übersicht</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Karte als Übersicht — Zahlen als Overlay auf dem Renngebiet</div>
+  <div class="dv-card" style="width:520px">
+    <div style="display:flex;height:340px">
+      <div style="width:58px;border-right:1.5px solid #2b2b2b;background:#f6f5f2;display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0">
+        <div style="width:30px;height:30px;border-radius:50%;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font-size:11px">AC</div>
+        <div style="width:38px;height:30px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:4px"></div>
+        <div style="width:38px;height:30px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+        <div style="width:38px;height:30px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+      </div>
+      <div style="flex:1;position:relative;background:repeating-linear-gradient(45deg,#f4f3f0 0 8px,#eceae5 8px 16px)">
+        <div style="position:absolute;inset:0;padding:10px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid #2b2b2b;border-radius:4px;padding:6px 9px">
+            <span style="font-size:14px">Kölner Kurierrennen</span>
+            <span style="border:1.5px solid #d2521c;color:#d2521c;border-radius:20px;padding:1px 8px;font:700 9px 'JetBrains Mono',monospace">LÄUFT</span>
+            <span style="flex:1"></span><span style="font:700 11px 'JetBrains Mono',monospace">01:24:09</span>
+          </div>
+          <div style="flex:1;position:relative">
+            <div style="position:absolute;left:30%;top:22%;width:26px;height:26px;border-radius:50%;background:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 10px 'JetBrains Mono',monospace">6</div>
+            <div style="position:absolute;left:58%;top:35%;width:26px;height:26px;border-radius:50%;background:#d2521c;color:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 10px 'JetBrains Mono',monospace">7</div>
+            <div style="position:absolute;left:20%;top:62%;width:26px;height:26px;border-radius:50%;background:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 10px 'JetBrains Mono',monospace">3</div>
+            <div style="position:absolute;left:70%;top:70%;width:26px;height:26px;border-radius:50%;background:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 10px 'JetBrains Mono',monospace">4</div>
+            <div style="position:absolute;right:0;top:0;width:150px;background:#fff;border:1.5px solid #2b2b2b;border-radius:4px;padding:8px">
+              <div style="font-size:11px;color:#666;margin-bottom:6px">Renn-Status</div>
+              <div style="display:flex;flex-direction:column;gap:5px;font:400 10px 'JetBrains Mono',monospace">
+                <div style="display:flex;justify-content:space-between"><span>unterwegs</span><b>12</b></div>
+                <div style="display:flex;justify-content:space-between"><span>im Ziel</span><b>4</b></div>
+                <div style="display:flex;justify-content:space-between"><span>DNF / DNS</span><b>1 / 0</b></div>
+              </div>
+            </div>
+            <div style="position:absolute;left:0;bottom:0;right:0;background:#fff;border:1.5px solid #2b2b2b;border-radius:4px;padding:7px 9px;display:flex;align-items:center;gap:10px">
+              <span style="font-size:11px;color:#666">Top 3</span>
+              <span style="flex:1;font:400 10px 'JetBrains Mono',monospace;border-bottom:1px dashed #ccc"></span>
+              <span style="border:1.5px solid #2b2b2b;border-radius:4px;padding:3px 8px;font-size:11px">Beamer ↗</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── KARTEN-EDITOR ───── -->
+<div class="dv-opt" id="1d">
+  <div class="wf-grp">Karten-Editor</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Klassische 3 Panes — Liste · Karte · Inspector rechts</div>
+  <div class="dv-card" style="width:640px">
+    <div style="display:flex;height:340px">
+      <div style="width:52px;border-right:1.5px solid #2b2b2b;background:#f6f5f2;display:flex;flex-direction:column;align-items:center;gap:9px;padding:9px 0">
+        <div style="width:28px;height:28px;border-radius:50%;border:1.5px solid #2b2b2b;font-size:10px;display:flex;align-items:center;justify-content:center">AC</div>
+        <div style="width:34px;height:28px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+        <div style="width:34px;height:28px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:4px"></div>
+        <div style="width:34px;height:28px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+      </div>
+      <div style="width:170px;border-right:1.5px solid #2b2b2b;display:flex;flex-direction:column">
+        <div style="padding:8px 10px;border-bottom:1.5px solid #2b2b2b;display:flex;align-items:center;gap:6px"><span style="font-size:12px">Checkpoints</span><span style="flex:1"></span><span style="border:1.5px solid #d2521c;color:#d2521c;border-radius:4px;padding:2px 6px;font-size:10px">+ setzen</span></div>
+        <div style="flex:1;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px dashed #ccc;background:#fbe7dc"><span style="width:18px;height:18px;border-radius:50%;background:#2b2b2b;color:#fff;font:700 9px 'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center">1</span><span style="flex:1;height:7px;background:#e6e4df"></span><span style="font:700 8px 'JetBrains Mono',monospace;color:#888">QR</span></div>
+          <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px dashed #ccc"><span style="width:18px;height:18px;border-radius:50%;background:#2b2b2b;color:#fff;font:700 9px 'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center">2</span><span style="flex:1;height:7px;background:#e6e4df"></span><span style="font:700 8px 'JetBrains Mono',monospace;color:#888">FOTO</span></div>
+          <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px dashed #ccc"><span style="width:18px;height:18px;border-radius:50%;background:#2b2b2b;color:#fff;font:700 9px 'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center">3</span><span style="flex:1;height:7px;background:#e6e4df"></span><span style="font:700 8px 'JetBrains Mono',monospace;color:#888">ITEM</span></div>
+          <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px dashed #ccc"><span style="width:18px;height:18px;border-radius:50%;border:1.5px dashed #2b2b2b;font:700 9px 'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center">4</span><span style="flex:1;height:7px;background:#e6e4df"></span><span style="font:700 8px 'JetBrains Mono',monospace;color:#888">RÄTS</span></div>
+          <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px dashed #ccc"><span style="width:18px;height:18px;border-radius:50%;background:#2b2b2b;color:#fff;font:700 9px 'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center">5</span><span style="flex:1;height:7px;background:#e6e4df"></span></div>
+        </div>
+        <div style="padding:8px 10px;border-top:1.5px solid #2b2b2b;font:400 10px 'JetBrains Mono',monospace;color:#666">Σ 18,4 km</div>
+      </div>
+      <div style="flex:1;position:relative;background:repeating-linear-gradient(45deg,#f4f3f0 0 8px,#eceae5 8px 16px)">
+        <div style="position:absolute;left:24%;top:26%;width:24px;height:24px;border-radius:50%;background:#d2521c;color:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 10px 'JetBrains Mono',monospace">1</div>
+        <div style="position:absolute;left:56%;top:20%;width:24px;height:24px;border-radius:50%;background:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 10px 'JetBrains Mono',monospace">2</div>
+        <div style="position:absolute;left:38%;top:62%;width:24px;height:24px;border-radius:50%;background:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 10px 'JetBrains Mono',monospace">3</div>
+        <div style="position:absolute;left:72%;top:56%;width:24px;height:24px;border-radius:50%;background:#fff;border:1.5px dashed #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 10px 'JetBrains Mono',monospace">4</div>
+        <div style="position:absolute;bottom:8px;left:8px;background:#fff;border:1.5px solid #2b2b2b;border-radius:4px;padding:5px 8px;font:400 9px 'JetBrains Mono',monospace;color:#666">Pflicht · Bonus · Route</div>
+      </div>
+      <div style="width:150px;border-left:1.5px solid #2b2b2b;display:flex;flex-direction:column;padding:9px 10px;gap:8px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:50%;background:#d2521c;color:#fff;font:700 10px 'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center">1</span><span style="font-size:12px">CP-Details</span></div>
+        <div><div style="font:400 9px 'JetBrains Mono',monospace;color:#888">NAME</div><div style="height:20px;border:1.5px solid #2b2b2b;border-radius:3px"></div></div>
+        <div style="display:flex;gap:6px"><div style="flex:1"><div style="font:400 9px 'JetBrains Mono',monospace;color:#888">TYP</div><div style="height:20px;border:1.5px solid #2b2b2b;border-radius:3px"></div></div><div style="flex:1"><div style="font:400 9px 'JetBrains Mono',monospace;color:#888">PUNKTE</div><div style="height:20px;border:1.5px solid #2b2b2b;border-radius:3px"></div></div></div>
+        <div><div style="font:400 9px 'JetBrains Mono',monospace;color:#888">ZEITFENSTER</div><div style="height:20px;border:1.5px solid #2b2b2b;border-radius:3px"></div></div>
+        <div><div style="font:400 9px 'JetBrains Mono',monospace;color:#888">PERSONAL</div><div style="height:34px;border:1.5px dashed #9a9a9a;border-radius:3px"></div></div>
+        <div style="flex:1"></div>
+        <div style="height:24px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px">Speichern</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1e">
+  <div class="wf-grp">Karten-Editor</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Karte zuerst — Liste als Filmstreifen unten, Inspector als Sheet</div>
+  <div class="dv-card" style="width:640px">
+    <div style="display:flex;height:340px">
+      <div style="width:52px;border-right:1.5px solid #2b2b2b;background:#f6f5f2;display:flex;flex-direction:column;align-items:center;gap:9px;padding:9px 0">
+        <div style="width:28px;height:28px;border-radius:50%;border:1.5px solid #2b2b2b;font-size:10px;display:flex;align-items:center;justify-content:center">AC</div>
+        <div style="width:34px;height:28px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+        <div style="width:34px;height:28px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:4px"></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column">
+        <div style="flex:1;position:relative;background:repeating-linear-gradient(45deg,#f4f3f0 0 8px,#eceae5 8px 16px)">
+          <div style="position:absolute;top:8px;left:8px;display:flex;gap:6px">
+            <div style="background:#fff;border:1.5px solid #2b2b2b;border-radius:4px;padding:4px 9px;font-size:11px">＋ CP setzen</div>
+            <div style="background:#fff;border:1.5px solid #2b2b2b;border-radius:4px;padding:4px 9px;font-size:11px">⌕ Suche</div>
+            <div style="background:#fff;border:1.5px solid #2b2b2b;border-radius:4px;padding:4px 9px;font-size:11px">Zonen</div>
+          </div>
+          <div style="position:absolute;left:22%;top:34%;width:24px;height:24px;border-radius:50%;background:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 10px 'JetBrains Mono',monospace">1</div>
+          <div style="position:absolute;left:52%;top:24%;width:24px;height:24px;border-radius:50%;background:#d2521c;color:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 10px 'JetBrains Mono',monospace">2</div>
+          <div style="position:absolute;left:68%;top:58%;width:24px;height:24px;border-radius:50%;background:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 10px 'JetBrains Mono',monospace">3</div>
+          <div style="position:absolute;right:8px;top:44px;width:158px;background:#fff;border:1.5px solid #2b2b2b;border-radius:6px;padding:9px;box-shadow:0 3px 0 rgba(0,0,0,.12)">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px"><span style="width:20px;height:20px;border-radius:50%;background:#d2521c;color:#fff;font:700 10px 'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center">2</span><span style="font-size:12px">Domplatte</span><span style="flex:1"></span><span style="font-size:12px;color:#888">×</span></div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="height:18px;border:1.5px solid #2b2b2b;border-radius:3px"></div>
+              <div style="display:flex;gap:5px"><div style="flex:1;height:18px;border:1.5px solid #2b2b2b;border-radius:3px"></div><div style="flex:1;height:18px;border:1.5px solid #2b2b2b;border-radius:3px"></div></div>
+              <div style="height:30px;border:1.5px dashed #9a9a9a;border-radius:3px"></div>
+            </div>
+          </div>
+        </div>
+        <div style="border-top:1.5px solid #2b2b2b;padding:8px 10px;display:flex;gap:8px;align-items:center;overflow:hidden">
+          <div style="width:86px;flex-shrink:0;border:1.5px solid #2b2b2b;border-radius:4px;padding:6px"><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:16px;border-radius:50%;background:#2b2b2b;color:#fff;font:700 8px 'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center">1</span><span style="flex:1;height:6px;background:#e6e4df"></span></div><div style="font:400 9px 'JetBrains Mono',monospace;color:#888;margin-top:4px">QR · 3,1 km</div></div>
+          <div style="width:86px;flex-shrink:0;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:4px;padding:6px"><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:16px;border-radius:50%;background:#d2521c;color:#fff;font:700 8px 'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center">2</span><span style="flex:1;height:6px;background:#f0d8c8"></span></div><div style="font:400 9px 'JetBrains Mono',monospace;color:#a8663f;margin-top:4px">FOTO · 2,4 km</div></div>
+          <div style="width:86px;flex-shrink:0;border:1.5px solid #2b2b2b;border-radius:4px;padding:6px"><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:16px;border-radius:50%;background:#2b2b2b;color:#fff;font:700 8px 'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center">3</span><span style="flex:1;height:6px;background:#e6e4df"></span></div><div style="font:400 9px 'JetBrains Mono',monospace;color:#888;margin-top:4px">ITEM · 4,0 km</div></div>
+          <div style="width:86px;flex-shrink:0;border:1.5px solid #2b2b2b;border-radius:4px;padding:6px"><div style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:16px;border-radius:50%;border:1.5px dashed #2b2b2b;font:700 8px 'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center">4</span><span style="flex:1;height:6px;background:#e6e4df"></span></div><div style="font:400 9px 'JetBrains Mono',monospace;color:#888;margin-top:4px">BONUS</div></div>
+          <div style="width:60px;flex-shrink:0;height:44px;border:1.5px dashed #9a9a9a;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#888">＋</div>
+          <div style="flex:1"></div>
+          <div style="font:400 10px 'JetBrains Mono',monospace;color:#666;white-space:nowrap">Σ 18,4 km</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1f">
+  <div class="wf-grp">Karten-Editor</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Tabelle + Karte 50/50 — Massenbearbeitung wie im Spreadsheet</div>
+  <div class="dv-card" style="width:640px">
+    <div style="display:flex;height:340px">
+      <div style="width:52px;border-right:1.5px solid #2b2b2b;background:#f6f5f2;display:flex;flex-direction:column;align-items:center;gap:9px;padding:9px 0">
+        <div style="width:28px;height:28px;border-radius:50%;border:1.5px solid #2b2b2b;font-size:10px;display:flex;align-items:center;justify-content:center">AC</div>
+        <div style="width:34px;height:28px;border:1.5px dashed #9a9a9a;border-radius:4px"></div>
+        <div style="width:34px;height:28px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:4px"></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1.5px solid #2b2b2b">
+          <span style="font-size:12px">6 Checkpoints</span>
+          <span style="border:1.5px solid #2b2b2b;border-radius:4px;padding:2px 7px;font-size:10px">3 ausgewählt</span>
+          <span style="border:1.5px solid #2b2b2b;border-radius:4px;padding:2px 7px;font-size:10px">Typ zuweisen ⌄</span>
+          <span style="border:1.5px solid #2b2b2b;border-radius:4px;padding:2px 7px;font-size:10px">Sperren</span>
+          <span style="flex:1"></span>
+          <span style="border:1.5px solid #d2521c;color:#d2521c;border-radius:4px;padding:2px 7px;font-size:10px">＋ CP</span>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="flex:1;border-right:1.5px solid #2b2b2b;display:flex;flex-direction:column;font:400 10px 'JetBrains Mono',monospace">
+            <div style="display:grid;grid-template-columns:16px 20px 1fr 40px 34px 30px;gap:6px;padding:6px 8px;border-bottom:1.5px solid #2b2b2b;color:#888">
+              <span></span><span>#</span><span>NAME</span><span>TYP</span><span>PFL</span><span>KM</span>
+            </div>
+            <div style="display:grid;grid-template-columns:16px 20px 1fr 40px 34px 30px;gap:6px;padding:7px 8px;border-bottom:1px dashed #ccc;background:#fbe7dc"><span style="width:11px;height:11px;border:1.5px solid #d2521c;background:#d2521c"></span><span>1</span><span style="height:7px;background:#e6d3c6;align-self:center"></span><span>QR</span><span>✓</span><span>3,1</span></div>
+            <div style="display:grid;grid-template-columns:16px 20px 1fr 40px 34px 30px;gap:6px;padding:7px 8px;border-bottom:1px dashed #ccc;background:#fbe7dc"><span style="width:11px;height:11px;border:1.5px solid #d2521c;background:#d2521c"></span><span>2</span><span style="height:7px;background:#e6d3c6;align-self:center"></span><span>FOTO</span><span>✓</span><span>2,4</span></div>
+            <div style="display:grid;grid-template-columns:16px 20px 1fr 40px 34px 30px;gap:6px;padding:7px 8px;border-bottom:1px dashed #ccc;background:#fbe7dc"><span style="width:11px;height:11px;border:1.5px solid #d2521c;background:#d2521c"></span><span>3</span><span style="height:7px;background:#e6d3c6;align-self:center"></span><span>ITEM</span><span>✓</span><span>4,0</span></div>
+            <div style="display:grid;grid-template-columns:16px 20px 1fr 40px 34px 30px;gap:6px;padding:7px 8px;border-bottom:1px dashed #ccc"><span style="width:11px;height:11px;border:1.5px solid #2b2b2b"></span><span>4</span><span style="height:7px;background:#e6e4df;align-self:center"></span><span>RÄTS</span><span>–</span><span>2,9</span></div>
+            <div style="display:grid;grid-template-columns:16px 20px 1fr 40px 34px 30px;gap:6px;padding:7px 8px;border-bottom:1px dashed #ccc"><span style="width:11px;height:11px;border:1.5px solid #2b2b2b"></span><span>5</span><span style="height:7px;background:#e6e4df;align-self:center"></span><span>CHAL</span><span>✓</span><span>3,3</span></div>
+            <div style="display:grid;grid-template-columns:16px 20px 1fr 40px 34px 30px;gap:6px;padding:7px 8px;border-bottom:1px dashed #ccc"><span style="width:11px;height:11px;border:1.5px solid #2b2b2b"></span><span>6</span><span style="height:7px;background:#e6e4df;align-self:center"></span><span>QR</span><span>✓</span><span>2,7</span></div>
+            <div style="flex:1"></div>
+            <div style="padding:6px 8px;border-top:1.5px solid #2b2b2b;color:#666">Σ 18,4 km · 5 Pflicht</div>
+          </div>
+          <div style="flex:1;position:relative;background:repeating-linear-gradient(45deg,#f4f3f0 0 8px,#eceae5 8px 16px)">
+            <div style="position:absolute;left:26%;top:28%;width:22px;height:22px;border-radius:50%;background:#d2521c;color:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 9px 'JetBrains Mono',monospace">1</div>
+            <div style="position:absolute;left:58%;top:22%;width:22px;height:22px;border-radius:50%;background:#d2521c;color:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 9px 'JetBrains Mono',monospace">2</div>
+            <div style="position:absolute;left:40%;top:58%;width:22px;height:22px;border-radius:50%;background:#d2521c;color:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 9px 'JetBrains Mono',monospace">3</div>
+            <div style="position:absolute;left:72%;top:66%;width:22px;height:22px;border-radius:50%;background:#fff;border:1.5px solid #2b2b2b;display:flex;align-items:center;justify-content:center;font:700 9px 'JetBrains Mono',monospace">4</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── ZIEL-CHECK-IN ───── -->
+<div class="dv-opt" id="1g">
+  <div class="wf-grp">Ziel-Check-in</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Scanner-Vollbild — Treffer fährt als Karte von unten ein</div>
+  <div class="dv-card" style="width:400px">
+    <div style="height:340px;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1.5px solid #2b2b2b">
+        <span style="font-size:13px">Ziel-Check-in</span>
+        <span style="border:1.5px solid #d2521c;color:#d2521c;border-radius:20px;padding:1px 8px;font:700 9px 'JetBrains Mono',monospace">LÄUFT</span>
+        <span style="flex:1"></span><span style="font:700 11px 'JetBrains Mono',monospace">01:24</span>
+      </div>
+      <div style="flex:1;position:relative;background:#2b2b2b;display:flex;align-items:center;justify-content:center">
+        <div style="width:150px;height:150px;border:2px dashed #f0f0f0;border-radius:10px;position:relative">
+          <div style="position:absolute;left:0;right:0;top:50%;height:2px;background:#d2521c"></div>
+        </div>
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;color:#f0f0f0;font-size:13px">QR-Spokecard scannen</div>
+        <div style="position:absolute;bottom:96px;left:0;right:0;text-align:center"><span style="background:#fff;border:1.5px solid #2b2b2b;border-radius:20px;padding:5px 14px;font-size:12px">Nummer eintippen</span></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1.5px solid #2b2b2b;border-radius:10px 10px 0 0;padding:10px 12px">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
+            <span style="font:700 20px 'JetBrains Mono',monospace;border:1.5px solid #2b2b2b;border-radius:4px;padding:3px 9px">#4</span>
+            <div style="flex:1"><div style="height:9px;background:#e6e4df;margin-bottom:4px"></div><div style="height:7px;background:#f0efeb;width:60%"></div></div>
+            <span style="font:400 10px 'JetBrains Mono',monospace;color:#666">4/4 CP</span>
+          </div>
+          <div style="height:34px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:14px">Ziel bestätigen · 01:24:12</div>
+          <div style="display:flex;gap:6px;margin-top:7px"><span style="flex:1;text-align:center;border:1.5px solid #2b2b2b;border-radius:4px;padding:3px;font-size:11px">DNF</span><span style="flex:1;text-align:center;border:1.5px solid #2b2b2b;border-radius:4px;padding:3px;font-size:11px">DNS</span><span style="flex:1;text-align:center;border:1.5px solid #2b2b2b;border-radius:4px;padding:3px;font-size:11px">Details</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1h">
+  <div class="wf-grp">Ziel-Check-in</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1h">1h</a>Scanner + Warteschlange — offene Fahrer immer sichtbar</div>
+  <div class="dv-card" style="width:560px">
+    <div style="height:340px;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1.5px solid #2b2b2b">
+        <span style="font-size:13px">Ziel-Check-in</span>
+        <span style="border:1.5px solid #d2521c;color:#d2521c;border-radius:20px;padding:1px 8px;font:700 9px 'JetBrains Mono',monospace">LÄUFT</span>
+        <span style="flex:1"></span><span style="font:700 11px 'JetBrains Mono',monospace">01:24 · 12 offen</span>
+      </div>
+      <div style="flex:1;display:flex;min-height:0">
+        <div style="flex:1;padding:10px;display:flex;flex-direction:column;gap:9px;border-right:1.5px solid #2b2b2b">
+          <div style="height:120px;background:#2b2b2b;border-radius:6px;display:flex;align-items:center;justify-content:center"><div style="width:74px;height:74px;border:2px dashed #f0f0f0;border-radius:8px"></div></div>
+          <div style="display:flex;gap:6px">
+            <div style="flex:1;height:30px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;padding:0 8px;font:700 14px 'JetBrains Mono',monospace">04</div>
+            <div style="width:70px;height:30px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px">Suche</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
+            <div style="height:26px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font:700 12px 'JetBrains Mono',monospace">1</div>
+            <div style="height:26px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font:700 12px 'JetBrains Mono',monospace">2</div>
+            <div style="height:26px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font:700 12px 'JetBrains Mono',monospace">3</div>
+            <div style="height:26px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font:700 12px 'JetBrains Mono',monospace">4</div>
+            <div style="height:26px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font:700 12px 'JetBrains Mono',monospace">5</div>
+            <div style="height:26px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font:700 12px 'JetBrains Mono',monospace">6</div>
+          </div>
+          <div style="height:32px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px">Ziel bestätigen</div>
+        </div>
+        <div style="width:210px;display:flex;flex-direction:column">
+          <div style="padding:7px 10px;border-bottom:1.5px solid #2b2b2b;font:400 10px 'JetBrains Mono',monospace;color:#666">OFFEN · nach CP-Fortschritt</div>
+          <div style="flex:1;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px dashed #ccc;background:#fbe7dc"><span style="font:700 11px 'JetBrains Mono',monospace">#4</span><span style="flex:1;height:7px;background:#e6d3c6"></span><span style="font:400 9px 'JetBrains Mono',monospace">4/4</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px dashed #ccc"><span style="font:700 11px 'JetBrains Mono',monospace">#7</span><span style="flex:1;height:7px;background:#e6e4df"></span><span style="font:400 9px 'JetBrains Mono',monospace">4/4</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px dashed #ccc"><span style="font:700 11px 'JetBrains Mono',monospace">#2</span><span style="flex:1;height:7px;background:#e6e4df"></span><span style="font:400 9px 'JetBrains Mono',monospace">3/4</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px dashed #ccc"><span style="font:700 11px 'JetBrains Mono',monospace">#9</span><span style="flex:1;height:7px;background:#e6e4df"></span><span style="font:400 9px 'JetBrains Mono',monospace">3/4</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px dashed #ccc"><span style="font:700 11px 'JetBrains Mono',monospace">#11</span><span style="flex:1;height:7px;background:#e6e4df"></span><span style="font:400 9px 'JetBrains Mono',monospace">2/4</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px dashed #ccc"><span style="font:700 11px 'JetBrains Mono',monospace">#14</span><span style="flex:1;height:7px;background:#e6e4df"></span><span style="font:400 9px 'JetBrains Mono',monospace">1/4</span></div>
+          </div>
+          <div style="padding:7px 10px;border-top:1.5px solid #2b2b2b;font-size:11px;color:#666">↩ Letztes rückgängig</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1i">
+  <div class="wf-grp">Ziel-Check-in</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1i">1i</a>Eine Spalte, eine Handlung — Rest erst auf Tippen</div>
+  <div class="dv-card" style="width:330px">
+    <div style="height:460px;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1.5px solid #2b2b2b">
+        <span style="font-size:13px">Ziel</span><span style="flex:1"></span>
+        <span style="font:700 11px 'JetBrains Mono',monospace">12 offen</span>
+      </div>
+      <div style="flex:1;padding:12px;display:flex;flex-direction:column;gap:11px">
+        <div style="height:76px;background:#2b2b2b;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#f0f0f0;font-size:12px">QR scannen</div>
+        <div style="text-align:center;font-size:12px;color:#888">oder</div>
+        <div style="height:44px;border:1.5px solid #2b2b2b;border-radius:5px;display:flex;align-items:center;justify-content:center;font:700 20px 'JetBrains Mono',monospace;letter-spacing:.2em">04</div>
+        <div style="border:1.5px solid #2b2b2b;border-radius:6px;padding:10px">
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px"><span style="font:700 24px 'JetBrains Mono',monospace">#4</span><div style="flex:1;height:10px;background:#e6e4df"></div></div>
+          <div style="display:flex;gap:4px;margin-bottom:9px">
+            <span style="width:20px;height:20px;border-radius:50%;background:#2b2b2b"></span>
+            <span style="width:20px;height:20px;border-radius:50%;background:#2b2b2b"></span>
+            <span style="width:20px;height:20px;border-radius:50%;background:#2b2b2b"></span>
+            <span style="width:20px;height:20px;border-radius:50%;background:#2b2b2b"></span>
+            <span style="width:20px;height:20px;border-radius:50%;border:1.5px dashed #999"></span>
+            <span style="width:20px;height:20px;border-radius:50%;border:1.5px dashed #999"></span>
+          </div>
+          <div style="height:44px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:15px">Ziel bestätigen</div>
+          <div style="text-align:center;margin-top:7px;font-size:11px;color:#888">DNF · DNS · Details</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="border-top:1px dashed #bbb;padding-top:8px;display:flex;align-items:center;gap:8px;font-size:11px;color:#666"><span>Zuletzt: #12, #3, #8</span><span style="flex:1"></span><span style="border:1.5px solid #2b2b2b;border-radius:4px;padding:2px 7px">↩</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── RACEDAY-VOLLBILD ───── -->
+<div class="dv-opt" id="1j">
+  <div class="wf-grp">Raceday-Vollbild</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1j">1j</a>Quadranten — Uhr, Check-in, Leaderboard, Ticker gleichrangig</div>
+  <div class="dv-card" style="width:620px">
+    <div style="height:340px;display:flex;flex-direction:column;background:#2b2b2b">
+      <div style="display:flex;align-items:center;gap:9px;padding:8px 11px;border-bottom:1.5px solid #f0f0f0;color:#f0f0f0">
+        <span style="font-size:13px">RACEDAY · Kölner Kurierrennen</span>
+        <span style="flex:1"></span>
+        <span style="font:700 15px 'JetBrains Mono',monospace;color:#f2a06e">01:24:09</span>
+        <span style="border:1.5px solid #f0f0f0;border-radius:4px;padding:2px 8px;font-size:11px">Verlassen</span>
+      </div>
+      <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;padding:9px">
+        <div style="background:#fff;border-radius:6px;padding:9px;display:flex;flex-direction:column;gap:7px">
+          <div style="font:400 10px 'JetBrains Mono',monospace;color:#888">CHECK-IN</div>
+          <div style="flex:1;background:#2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center"><div style="width:52px;height:52px;border:2px dashed #f0f0f0;border-radius:6px"></div></div>
+          <div style="height:26px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">#04 bestätigen</div>
+        </div>
+        <div style="background:#fff;border-radius:6px;padding:9px;display:flex;flex-direction:column;gap:6px">
+          <div style="font:400 10px 'JetBrains Mono',monospace;color:#888">LEADERBOARD</div>
+          <div style="display:flex;flex-direction:column;gap:5px;font:400 11px 'JetBrains Mono',monospace">
+            <div style="display:flex;gap:7px;align-items:center"><span style="color:#d2521c;font-weight:700">1</span><span style="flex:1;height:8px;background:#e6e4df"></span><span>1:12</span></div>
+            <div style="display:flex;gap:7px;align-items:center"><span>2</span><span style="flex:1;height:8px;background:#e6e4df"></span><span>1:15</span></div>
+            <div style="display:flex;gap:7px;align-items:center"><span>3</span><span style="flex:1;height:8px;background:#e6e4df"></span><span>1:19</span></div>
+            <div style="display:flex;gap:7px;align-items:center"><span>4</span><span style="flex:1;height:8px;background:#e6e4df"></span><span>1:24</span></div>
+            <div style="display:flex;gap:7px;align-items:center"><span>5</span><span style="flex:1;height:8px;background:#e6e4df"></span><span>—</span></div>
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:6px;padding:9px;display:flex;flex-direction:column;gap:6px">
+          <div style="font:400 10px 'JetBrains Mono',monospace;color:#888">CP-TICKER</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;gap:7px;align-items:center;font:400 10px 'JetBrains Mono',monospace"><span style="color:#888">14:21</span><span style="flex:1;height:7px;background:#e6e4df"></span></div>
+            <div style="display:flex;gap:7px;align-items:center;font:400 10px 'JetBrains Mono',monospace"><span style="color:#888">14:19</span><span style="flex:1;height:7px;background:#e6e4df"></span></div>
+            <div style="display:flex;gap:7px;align-items:center;font:400 10px 'JetBrains Mono',monospace"><span style="color:#888">14:18</span><span style="flex:1;height:7px;background:#e6e4df"></span></div>
+            <div style="display:flex;gap:7px;align-items:center;font:400 10px 'JetBrains Mono',monospace"><span style="color:#888">14:15</span><span style="flex:1;height:7px;background:#e6e4df"></span></div>
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:6px;padding:9px;display:flex;flex-direction:column;gap:8px">
+          <div style="font:400 10px 'JetBrains Mono',monospace;color:#888">SCHNELLAKTIONEN</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div style="height:30px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px">DNF</div>
+            <div style="height:30px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px">DNS</div>
+            <div style="height:30px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px">↩ Undo</div>
+            <div style="height:30px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px">Beamer</div>
+          </div>
+          <div style="flex:1;display:flex;align-items:flex-end;font:400 10px 'JetBrains Mono',monospace;color:#888">12 unterwegs · 4 im Ziel · 1 DNF</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1k">
+  <div class="wf-grp">Raceday-Vollbild</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1k">1k</a>Check-in dominiert — Live-Info als schmale Seitenspalte</div>
+  <div class="dv-card" style="width:620px">
+    <div style="height:340px;display:flex;flex-direction:column;background:#2b2b2b">
+      <div style="display:flex;align-items:center;gap:9px;padding:8px 11px;border-bottom:1.5px solid #f0f0f0;color:#f0f0f0">
+        <span style="font-size:13px">RACEDAY</span><span style="flex:1"></span>
+        <span style="font:700 15px 'JetBrains Mono',monospace;color:#f2a06e">01:24:09</span>
+        <span style="border:1.5px solid #f0f0f0;border-radius:4px;padding:2px 8px;font-size:11px">Verlassen</span>
+      </div>
+      <div style="flex:1;display:flex;gap:9px;padding:9px">
+        <div style="flex:1;background:#fff;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:11px">
+          <div style="flex:1;background:#2b2b2b;border-radius:5px;display:flex;align-items:center;justify-content:center;position:relative">
+            <div style="width:104px;height:104px;border:2px dashed #f0f0f0;border-radius:8px"></div>
+            <div style="position:absolute;bottom:8px;color:#f0f0f0;font-size:12px">Spokecard scannen · oder tippen</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:11px">
+            <span style="font:700 30px 'JetBrains Mono',monospace">#4</span>
+            <div style="flex:1"><div style="height:11px;background:#e6e4df;margin-bottom:5px"></div><div style="display:flex;gap:4px"><span style="width:16px;height:16px;border-radius:50%;background:#2b2b2b"></span><span style="width:16px;height:16px;border-radius:50%;background:#2b2b2b"></span><span style="width:16px;height:16px;border-radius:50%;background:#2b2b2b"></span><span style="width:16px;height:16px;border-radius:50%;background:#2b2b2b"></span><span style="width:16px;height:16px;border-radius:50%;border:1.5px dashed #999"></span></div></div>
+            <div style="width:170px;height:46px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:15px">Ziel bestätigen</div>
+          </div>
+        </div>
+        <div style="width:172px;background:#fff;border-radius:6px;padding:9px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;gap:5px">
+            <div style="flex:1;border:1.5px solid #2b2b2b;border-radius:4px;padding:5px;text-align:center"><div style="font:700 14px 'JetBrains Mono',monospace">12</div><div style="font-size:9px;color:#666">offen</div></div>
+            <div style="flex:1;border:1.5px solid #2b2b2b;border-radius:4px;padding:5px;text-align:center"><div style="font:700 14px 'JetBrains Mono',monospace">4</div><div style="font-size:9px;color:#666">Ziel</div></div>
+          </div>
+          <div style="font:400 10px 'JetBrains Mono',monospace;color:#888">TOP 5</div>
+          <div style="display:flex;flex-direction:column;gap:5px;font:400 10px 'JetBrains Mono',monospace">
+            <div style="display:flex;gap:6px"><span style="color:#d2521c;font-weight:700">1</span><span style="flex:1;border-bottom:1px dashed #ccc"></span><span>1:12</span></div>
+            <div style="display:flex;gap:6px"><span>2</span><span style="flex:1;border-bottom:1px dashed #ccc"></span><span>1:15</span></div>
+            <div style="display:flex;gap:6px"><span>3</span><span style="flex:1;border-bottom:1px dashed #ccc"></span><span>1:19</span></div>
+            <div style="display:flex;gap:6px"><span>4</span><span style="flex:1;border-bottom:1px dashed #ccc"></span><span>1:24</span></div>
+          </div>
+          <div style="font:400 10px 'JetBrains Mono',monospace;color:#888;margin-top:2px">TICKER</div>
+          <div style="display:flex;flex-direction:column;gap:5px"><div style="height:7px;background:#eee"></div><div style="height:7px;background:#eee;width:80%"></div><div style="height:7px;background:#eee;width:65%"></div></div>
+          <div style="flex:1"></div>
+          <div style="display:flex;gap:5px"><span style="flex:1;border:1.5px solid #2b2b2b;border-radius:4px;padding:3px;text-align:center;font-size:10px">DNF</span><span style="flex:1;border:1.5px solid #2b2b2b;border-radius:4px;padding:3px;text-align:center;font-size:10px">↩</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dv-opt" id="1l">
+  <div class="wf-grp">Raceday-Vollbild</div>
+  <div class="dv-olabel"><a class="dv-oid" href="#1l">1l</a>Leaderboard-Wand — Check-in als angedockte Leiste unten</div>
+  <div class="dv-card" style="width:620px">
+    <div style="height:340px;display:flex;flex-direction:column;background:#2b2b2b">
+      <div style="display:flex;align-items:center;gap:9px;padding:8px 11px;color:#f0f0f0;border-bottom:1.5px solid #f0f0f0">
+        <span style="font-size:13px">RACEDAY · LIVE</span><span style="flex:1"></span>
+        <span style="font:700 15px 'JetBrains Mono',monospace;color:#f2a06e">01:24:09</span>
+        <span style="border:1.5px solid #f0f0f0;border-radius:4px;padding:2px 8px;font-size:11px">Verlassen</span>
+      </div>
+      <div style="flex:1;padding:10px 11px;display:flex;flex-direction:column;gap:7px;color:#f0f0f0;min-height:0">
+        <div style="display:grid;grid-template-columns:26px 1fr repeat(6,16px) 54px;gap:8px;font:400 9px 'JetBrains Mono',monospace;color:#9a9a9a;padding-bottom:4px;border-bottom:1px solid #555">
+          <span>#</span><span>FAHRER</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span style="text-align:right">ZEIT</span>
+        </div>
+        <div style="display:grid;grid-template-columns:26px 1fr repeat(6,16px) 54px;gap:8px;align-items:center;font:400 11px 'JetBrains Mono',monospace;padding:4px 0"><span style="color:#f2a06e;font-weight:700">1</span><span style="height:9px;background:#4a4a4a"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="text-align:right">1:12</span></div>
+        <div style="display:grid;grid-template-columns:26px 1fr repeat(6,16px) 54px;gap:8px;align-items:center;font:400 11px 'JetBrains Mono',monospace;padding:4px 0"><span>2</span><span style="height:9px;background:#4a4a4a"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;border:1.5px solid #777"></span><span style="text-align:right">1:15</span></div>
+        <div style="display:grid;grid-template-columns:26px 1fr repeat(6,16px) 54px;gap:8px;align-items:center;font:400 11px 'JetBrains Mono',monospace;padding:4px 0"><span>3</span><span style="height:9px;background:#4a4a4a"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;border:1.5px solid #777"></span><span style="width:11px;height:11px;border-radius:50%;border:1.5px solid #777"></span><span style="text-align:right">1:19</span></div>
+        <div style="display:grid;grid-template-columns:26px 1fr repeat(6,16px) 54px;gap:8px;align-items:center;font:400 11px 'JetBrains Mono',monospace;padding:4px 0"><span>4</span><span style="height:9px;background:#4a4a4a"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;border:1.5px solid #777"></span><span style="width:11px;height:11px;border-radius:50%;border:1.5px solid #777"></span><span style="width:11px;height:11px;border-radius:50%;border:1.5px solid #777"></span><span style="text-align:right">1:24</span></div>
+        <div style="display:grid;grid-template-columns:26px 1fr repeat(6,16px) 54px;gap:8px;align-items:center;font:400 11px 'JetBrains Mono',monospace;padding:4px 0;opacity:.55"><span>5</span><span style="height:9px;background:#4a4a4a"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;background:#f0f0f0"></span><span style="width:11px;height:11px;border-radius:50%;border:1.5px solid #777"></span><span style="width:11px;height:11px;border-radius:50%;border:1.5px solid #777"></span><span style="width:11px;height:11px;border-radius:50%;border:1.5px solid #777"></span><span style="width:11px;height:11px;border-radius:50%;border:1.5px solid #777"></span><span style="text-align:right">—</span></div>
+      </div>
+      <div style="border-top:1.5px solid #f0f0f0;background:#fff;padding:9px 11px;display:flex;align-items:center;gap:10px">
+        <div style="width:52px;height:40px;background:#2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center"><div style="width:22px;height:22px;border:1.5px dashed #f0f0f0;border-radius:3px"></div></div>
+        <div style="width:64px;height:40px;border:1.5px solid #2b2b2b;border-radius:4px;display:flex;align-items:center;justify-content:center;font:700 17px 'JetBrains Mono',monospace">04</div>
+        <div style="flex:1"><div style="height:9px;background:#e6e4df;margin-bottom:5px;width:70%"></div><div style="font:400 10px 'JetBrains Mono',monospace;color:#666">4/4 Pflicht · 6/6 gesamt</div></div>
+        <div style="width:150px;height:40px;border:1.5px solid #d2521c;background:#fbe7dc;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:14px">Ziel bestätigen</div>
+        <div style="display:flex;flex-direction:column;gap:4px"><span style="border:1.5px solid #2b2b2b;border-radius:4px;padding:1px 7px;font-size:10px">DNF</span><span style="border:1.5px solid #2b2b2b;border-radius:4px;padding:1px 7px;font-size:10px">↩</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+<p class="dv-next">Weiter z. B.: „<a class="dv-oid" href="#1a">1a</a> + Karten-Overlay aus <a class="dv-oid" href="#1c">1c</a>" · „<a class="dv-oid" href="#1h">1h</a> und <a class="dv-oid" href="#1l">1l</a> als Hi-Fi ausbauen" · „mobile Varianten von <a class="dv-oid" href="#1i">1i</a>"</p>
+</section>
+</x-dc>
+</body>
+</html>

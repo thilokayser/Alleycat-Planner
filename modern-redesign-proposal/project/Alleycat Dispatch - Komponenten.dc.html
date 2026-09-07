@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+body{margin:0;background:#08090a;font-family:'Barlow',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#f4762a;text-decoration:none}a:hover{color:#ff9152}
+@keyframes scanline{0%{transform:translateY(-40px)}100%{transform:translateY(40px)}}
+</style>
+</helmet>
+
+<div style="padding:46px 44px 110px;display:flex;flex-direction:column;gap:46px;max-width:1240px">
+
+  <div style="display:flex;flex-direction:column;gap:9px">
+    <div style="font:500 11px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#8b9499">Redesign · Komponenten-Bibliothek · Basis <a href="Alleycat Dispatch - Redesign Hi-Fi.dc.html">Hi-Fi</a></div>
+    <h1 style="margin:0;font:700 36px/1.05 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">Bausteine &amp; Tokens</h1>
+    <p style="margin:0;font:400 13.5px/1.6 'Barlow',sans-serif;color:#8b9499;max-width:660px">Alles, was in den vier Screens vorkommt — als benannte Bausteine mit festen Werten. Grundlage für die Produktions-HTML/CSS. Klick auf eine Farbfläche kopiert den Hex-Wert.</p>
+  </div>
+
+  <div data-screen-label="Farben" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid #2c3237;padding-bottom:9px">
+      <span style="font:600 13px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#f4762a">01</span>
+      <h2 style="margin:0;font:600 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#eef0ef">Farben</h2>
+      <span style="flex:1"></span>
+      <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">{{ copyHint }}</span>
+    </div>
+
+    <div onClick="{{ onTokenClick }}" style="display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">Flächen · Graphit</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+          <div data-hex="#08090A" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#08090a;border:1px solid #2c3237"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#08090A</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">bg-abyss · Raceday, Canvas</div></div>
+          <div data-hex="#0E1113" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#0e1113;border:1px solid #2c3237"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#0E1113</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">bg-app · Arbeitsfläche</div></div>
+          <div data-hex="#171A1D" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#171a1d;border:1px solid #2c3237"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#171A1D</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">bg-panel · Cards, Rail</div></div>
+          <div data-hex="#1F2327" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#1f2327;border:1px solid #2c3237"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#1F2327</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">bg-inset · Zeilen, Chips, Rinnen</div></div>
+          <div data-hex="#2C3237" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#2c3237;border:1px solid #2c3237"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#2C3237</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">line · alle Trennlinien &amp; Rahmen</div></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">Text &amp; Signal</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+          <div data-hex="#EEF0EF" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#eef0ef;border:1px solid #2c3237"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#EEF0EF</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">fg · Primärtext</div></div>
+          <div data-hex="#8B9499" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#8b9499;border:1px solid #2c3237"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#8B9499</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">fg-muted · Labels, Meta</div></div>
+          <div data-hex="#F4762A" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#f4762a"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#F4762A</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">signal · Aktion, aktiv, live</div></div>
+          <div data-hex="#2FA46A" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#2fa46a"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#2FA46A</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">ok · im Ziel, gespeichert</div></div>
+          <div data-hex="#E05540" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#e05540"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#E05540</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">alert · DNF, Fehler</div></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">Akzent-Nebenrollen</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+          <div data-hex="#6C8CF5" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#6c8cf5"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#6C8CF5</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">team · Kategorien, Teams</div></div>
+          <div data-hex="#F5F2EC" style="cursor:pointer"><div style="height:74px;border-radius:9px;background:#f5f2ec"></div><div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;margin-top:8px">#F5F2EC</div><div style="font:400 10.5px 'Barlow',sans-serif;color:#8b9499">papier · Druck, Unterschrift</div></div>
+          <div style="grid-column:span 3;border:1px dashed #2c3237;border-radius:9px;padding:13px 15px;display:flex;flex-direction:column;gap:5px;justify-content:center">
+            <div style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef">rgba(244,118,42,.14)</div>
+            <div style="font:400 11px/1.5 'Barlow',sans-serif;color:#8b9499">signal-wash — der einzige erlaubte transparente Ton: aktiver Rail-Eintrag, Zähler-Pills, markierte Zeilen. Nie als Fläche über Text.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div data-screen-label="Typografie" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid #2c3237;padding-bottom:9px">
+      <span style="font:600 13px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#f4762a">02</span>
+      <h2 style="margin:0;font:600 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#eef0ef">Typografie</h2>
+      <span style="flex:1"></span>
+      <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">Barlow Condensed · Barlow · IBM Plex Mono</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1px;background:#2c3237;border:1px solid #2c3237;border-radius:11px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:1fr 250px;gap:20px;align-items:baseline;background:#171a1d;padding:15px 18px">
+        <div style="font:700 34px/1.05 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">Kölner Kurierrennen</div>
+        <div style="font:400 10.5px/1.55 'IBM Plex Mono',monospace;color:#8b9499">display · Cond 700 · 34/1.05 · ls .02em · uppercase<br>nur Seitentitel</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 250px;gap:20px;align-items:baseline;background:#171a1d;padding:15px 18px">
+        <div style="font:600 25px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">Kölner Kurierrennen</div>
+        <div style="font:400 10.5px/1.55 'IBM Plex Mono',monospace;color:#8b9499">screen-title · Cond 600 · 25 · uppercase<br>Eventname in der Kopfzeile</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 250px;gap:20px;align-items:baseline;background:#171a1d;padding:15px 18px">
+        <div style="font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Checkpoint-Auslastung</div>
+        <div style="font:400 10.5px/1.55 'IBM Plex Mono',monospace;color:#8b9499">card-title · Cond 600 · 14 · ls .08em · uppercase<br>jede Card, jedes Panel</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 250px;gap:20px;align-items:baseline;background:#171a1d;padding:15px 18px">
+        <div style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Hohenzollernbrücke · Fahrername, Zeileninhalt</div>
+        <div style="font:400 10.5px/1.55 'IBM Plex Mono',monospace;color:#8b9499">body · Barlow 400 · 13 (mobil 14)<br>Listen, Zeilen, Namen</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 250px;gap:20px;align-items:baseline;background:#171a1d;padding:15px 18px">
+        <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">unterwegs · im ziel · cp-quote</div>
+        <div style="font:400 10.5px/1.55 'IBM Plex Mono',monospace;color:#8b9499">label · Mono 400 · 10 · ls .1em · uppercase<br>jedes Feld- und Kennzahl-Label</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 250px;gap:20px;align-items:baseline;background:#171a1d;padding:15px 18px">
+        <div style="font:600 34px/1 'IBM Plex Mono',monospace;color:#eef0ef">01:24:09</div>
+        <div style="font:400 10.5px/1.55 'IBM Plex Mono',monospace;color:#8b9499">numeric · Mono 600 · 26–34 (Raceday 64)<br>Zeiten, Zähler, Startnummern — immer Mono</div>
+      </div>
+    </div>
+    <div style="font:400 11.5px/1.6 'Barlow',sans-serif;color:#8b9499">Regel: alles Zählbare in IBM Plex Mono, alles Lesbare in Barlow, alles Überschriftliche in Barlow Condensed uppercase. Keine vierte Schriftrolle.</div>
+  </div>
+
+  <div data-screen-label="Raster" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid #2c3237;padding-bottom:9px">
+      <span style="font:600 13px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#f4762a">03</span>
+      <h2 style="margin:0;font:600 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#eef0ef">Raster, Abstände, Radien</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+        <h3 style="margin:0 0 13px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Abstandsstufen</h3>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:11px"><span style="height:9px;width:6px;background:#f4762a;border-radius:2px"></span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:32px">6</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Icon zu Label</span></div>
+          <div style="display:flex;align-items:center;gap:11px"><span style="height:9px;width:9px;background:#f4762a;border-radius:2px"></span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:32px">9</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Zeilen in einer Liste</span></div>
+          <div style="display:flex;align-items:center;gap:11px"><span style="height:9px;width:14px;background:#f4762a;border-radius:2px"></span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:32px">14</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Titel zu Inhalt</span></div>
+          <div style="display:flex;align-items:center;gap:11px"><span style="height:9px;width:18px;background:#f4762a;border-radius:2px"></span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:32px">18</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Card zu Card</span></div>
+          <div style="display:flex;align-items:center;gap:11px"><span style="height:9px;width:26px;background:#f4762a;border-radius:2px"></span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:32px">26</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Inhalt zum Fensterrand</span></div>
+        </div>
+      </div>
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+        <h3 style="margin:0 0 13px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Radien</h3>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:11px"><span style="width:34px;height:24px;background:#1f2327;border:1px solid #2c3237;border-radius:4px"></span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:30px">4</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Mini-Tags (bonus)</span></div>
+          <div style="display:flex;align-items:center;gap:11px"><span style="width:34px;height:24px;background:#1f2327;border:1px solid #2c3237;border-radius:8px"></span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:30px">8</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Buttons, Zeilen, Felder</span></div>
+          <div style="display:flex;align-items:center;gap:11px"><span style="width:34px;height:24px;background:#1f2327;border:1px solid #2c3237;border-radius:12px"></span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:30px">12</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Cards, Panels, Sheets</span></div>
+          <div style="display:flex;align-items:center;gap:11px"><span style="width:34px;height:24px;background:#1f2327;border:1px solid #2c3237;border-radius:999px"></span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:30px">999</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Badges, Chips, Toggles</span></div>
+        </div>
+      </div>
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+        <h3 style="margin:0 0 13px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Struktur</h3>
+        <div style="display:flex;flex-direction:column;gap:9px;font:400 11.5px/1.55 'Barlow',sans-serif;color:#8b9499">
+          <div><span style="color:#eef0ef">Rail 84 px</span> fix, nie einklappbar, im Raceday ausgeblendet.</div>
+          <div><span style="color:#eef0ef">Kopfzeile 58 px</span> Eventname + Badge + Uhr + zwei Aktionen.</div>
+          <div><span style="color:#eef0ef">KPI-Band</span> 5 gleiche Spalten, 1 px Trenner, kein Radius.</div>
+          <div><span style="color:#eef0ef">Board</span> 3 Spalten 1.15 / 1 / 1, Gap 18.</div>
+          <div><span style="color:#eef0ef">Editor</span> Liste 300 · Karte flex · Inspector 330.</div>
+          <div><span style="color:#eef0ef">Mobil</span> eine Spalte, Rail wird Bottom-Bar, Ziele ≥ 44 px.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div data-screen-label="Buttons" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid #2c3237;padding-bottom:9px">
+      <span style="font:600 13px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#f4762a">04</span>
+      <h2 style="margin:0;font:600 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#eef0ef">Aktionen</h2>
+    </div>
+    <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end">
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">primär</span><span style="font:600 12px 'Barlow',sans-serif;padding:9px 16px;border-radius:8px;background:#f4762a;color:#0e1113;cursor:pointer" style-hover="background:#ff8a41">Raceday starten</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">sekundär</span><span style="font:500 12px 'Barlow',sans-serif;padding:9px 14px;border-radius:8px;border:1px solid #2c3237;color:#eef0ef;cursor:pointer" style-hover="border-color:#4a5257;background:#1f2327">Beamer ↗</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">gefahr</span><span style="font:600 12px 'Barlow',sans-serif;padding:9px 15px;border-radius:8px;background:#e05540;color:#0e1113;cursor:pointer" style-hover="background:#ef6a55">DNF setzen</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">bestätigen</span><span style="font:600 12px 'Barlow',sans-serif;padding:9px 15px;border-radius:8px;background:#2fa46a;color:#08090a;cursor:pointer" style-hover="background:#38bd7b">Check-in bestätigen</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">still</span><span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#f4762a;cursor:pointer" style-hover="color:#ff9152">zuweisen</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">inaktiv</span><span style="font:600 12px 'Barlow',sans-serif;padding:9px 16px;border-radius:8px;background:#1f2327;color:#5a6266;border:1px solid #2c3237">Raceday starten</span></div>
+      </div>
+      <div style="height:1px;background:#2c3237"></div>
+      <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end">
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">raceday · groß (mobil ≥ 56 px)</span><span style="font:600 15px 'Barlow',sans-serif;padding:17px 26px;border-radius:10px;background:#2fa46a;color:#08090a;text-align:center;cursor:pointer">Im Ziel · 1:24:12</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">geteilt</span><div style="display:flex;gap:8px"><span style="font:600 13px 'Barlow',sans-serif;padding:14px 20px;border-radius:10px;border:1px solid #e05540;color:#e05540;cursor:pointer">DNF</span><span style="font:600 13px 'Barlow',sans-serif;padding:14px 20px;border-radius:10px;border:1px solid #2c3237;color:#8b9499;cursor:pointer">DNS</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">rail-eintrag · aktiv / ruhend</span><div style="display:flex;gap:8px;background:#171a1d"><span style="width:64px;padding:9px 0;border-radius:9px;background:rgba(244,118,42,.14);box-shadow:inset 2px 0 0 #f4762a;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#f4762a">ÜB</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#f4762a">Übersicht</span></span><span style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer" style-hover="background:#1f2327"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">KA</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Karte</span></span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div data-screen-label="Status" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid #2c3237;padding-bottom:9px">
+      <span style="font:600 13px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#f4762a">05</span>
+      <h2 style="margin:0;font:600 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#eef0ef">Status-Badges &amp; Chips</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:14px">
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+        <h3 style="margin:0 0 6px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Rennstatus am Eventnamen</h3>
+        <p style="margin:0 0 14px;font:400 11.5px/1.55 'Barlow',sans-serif;color:#8b9499">Ein Badge, vier Zustände — die einzige Stelle, an der der Rennstatus steht.</p>
+        <div style="display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;align-items:center;gap:11px"><span style="display:inline-flex;align-items:center;gap:6px;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:#1f2327;color:#8b9499;border-radius:999px;padding:4px 10px">geplant</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Setup, Karte und Fahrer editierbar</span></div>
+          <div style="display:flex;align-items:center;gap:11px"><span style="display:inline-flex;align-items:center;gap:6px;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:rgba(244,118,42,.14);color:#f4762a;border-radius:999px;padding:4px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#f4762a"></span>läuft</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Punkt pulsiert · Raceday verfügbar</span></div>
+          <div style="display:flex;align-items:center;gap:11px"><span style="display:inline-flex;align-items:center;gap:6px;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:#1f2327;color:#eef0ef;border-radius:999px;padding:4px 10px">pausiert</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Uhr steht, Check-in bleibt offen</span></div>
+          <div style="display:flex;align-items:center;gap:11px"><span style="display:inline-flex;align-items:center;gap:6px;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:rgba(47,164,106,.16);color:#2fa46a;border-radius:999px;padding:4px 10px">beendet</span><span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499">Ergebnis fixiert, Druck freigeschaltet</span></div>
+        </div>
+      </div>
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+        <h3 style="margin:0 0 14px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Fahrer- &amp; CP-Marker</h3>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">
+          <span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:rgba(47,164,106,.16);color:#2fa46a;border-radius:999px;padding:4px 10px">im ziel</span>
+          <span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:rgba(244,118,42,.14);color:#f4762a;border-radius:999px;padding:4px 10px">unterwegs</span>
+          <span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:rgba(224,85,64,.16);color:#e05540;border-radius:999px;padding:4px 10px">dnf</span>
+          <span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:#1f2327;color:#8b9499;border-radius:999px;padding:4px 10px">dns</span>
+          <span style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499;border:1px solid #2c3237;border-radius:4px;padding:2px 6px">bonus</span>
+          <span style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499;border:1px solid #2c3237;border-radius:4px;padding:2px 6px">geheim</span>
+        </div>
+        <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-bottom:9px">Zähl-Chips &amp; Kategorien</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#f4762a;background:rgba(244,118,42,.14);border-radius:999px;padding:3px 8px">2 aktiv</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font:400 11.5px 'Barlow',sans-serif;color:#eef0ef;background:#1f2327;border-radius:999px;padding:4px 10px"><span style="width:8px;height:8px;border-radius:50%;background:#6c8cf5"></span>Dom-Sprint · 6</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font:400 11.5px 'Barlow',sans-serif;color:#eef0ef;background:#1f2327;border-radius:999px;padding:4px 10px"><span style="width:8px;height:8px;border-radius:50%;background:#2fa46a"></span>Kranhaus · 5</span>
+          <span style="font:400 11.5px 'Barlow',sans-serif;color:#8b9499;background:#1f2327;border-radius:999px;padding:4px 10px">Solo · 6</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div data-screen-label="Felder" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid #2c3237;padding-bottom:9px">
+      <span style="font:600 13px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#f4762a">06</span>
+      <h2 style="margin:0;font:600 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#eef0ef">Eingabe</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px;display:flex;flex-direction:column;gap:13px">
+        <h3 style="margin:0;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Textfeld</h3>
+        <div><div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-bottom:6px">Checkpoint-Name</div><div style="background:#1f2327;border:1px solid #2c3237;border-radius:8px;padding:10px 12px;font:400 13px 'Barlow',sans-serif;color:#eef0ef">Hohenzollernbrücke</div></div>
+        <div><div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-bottom:6px">fokus</div><div style="background:#1f2327;border:1px solid #f4762a;border-radius:8px;padding:10px 12px;font:400 13px 'Barlow',sans-serif;color:#eef0ef">Rheinauhafen<span style="color:#f4762a">|</span></div></div>
+        <div><div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-bottom:6px">leer / fehler</div><div style="background:#1f2327;border:1px solid #e05540;border-radius:8px;padding:10px 12px;font:400 13px 'Barlow',sans-serif;color:#8b9499">Pflichtfeld</div><div style="font:400 10.5px 'IBM Plex Mono',monospace;color:#e05540;margin-top:5px">Name fehlt</div></div>
+      </div>
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px;display:flex;flex-direction:column;gap:13px">
+        <h3 style="margin:0;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Schalter &amp; Auswahl</h3>
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:26px;height:15px;border-radius:999px;background:#f4762a;position:relative;flex-shrink:0"><span style="position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:50%;background:#0e1113"></span></span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Bonus-CPs mit Rang-Punkten</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:26px;height:15px;border-radius:999px;background:#1f2327;border:1px solid #2c3237;position:relative;flex-shrink:0"><span style="position:absolute;top:1px;left:2px;width:11px;height:11px;border-radius:50%;background:#8b9499"></span></span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#8b9499">Geheime CPs</span></div>
+        <div style="display:flex;gap:0;border:1px solid #2c3237;border-radius:8px;overflow:hidden"><span style="flex:1;text-align:center;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;padding:8px 0;background:rgba(244,118,42,.14);color:#f4762a">Pflicht</span><span style="flex:1;text-align:center;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;padding:8px 0;color:#8b9499;border-left:1px solid #2c3237">Bonus</span><span style="flex:1;text-align:center;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;padding:8px 0;color:#8b9499;border-left:1px solid #2c3237">Geheim</span></div>
+        <div><div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-bottom:6px">Radius · 120 m</div><div style="height:4px;border-radius:2px;background:#1f2327;position:relative"><span style="position:absolute;left:0;top:0;height:4px;width:46%;background:#f4762a;border-radius:2px"></span><span style="position:absolute;left:46%;top:-5px;width:14px;height:14px;border-radius:50%;background:#f4762a;border:2px solid #171a1d"></span></div></div>
+      </div>
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px;display:flex;flex-direction:column;gap:13px">
+        <h3 style="margin:0;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Startnummer-Keypad</h3>
+        <div style="background:#1f2327;border:1px solid #2c3237;border-radius:8px;padding:11px 13px;font:600 22px 'IBM Plex Mono',monospace;color:#eef0ef;text-align:center;letter-spacing:.08em">04<span style="color:#f4762a">_</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+          <span style="padding:11px 0;text-align:center;border-radius:8px;background:#1f2327;border:1px solid #2c3237;font:500 16px 'IBM Plex Mono',monospace;color:#eef0ef;cursor:pointer" style-hover="background:#2c3237">1</span>
+          <span style="padding:11px 0;text-align:center;border-radius:8px;background:#1f2327;border:1px solid #2c3237;font:500 16px 'IBM Plex Mono',monospace;color:#eef0ef;cursor:pointer" style-hover="background:#2c3237">2</span>
+          <span style="padding:11px 0;text-align:center;border-radius:8px;background:#1f2327;border:1px solid #2c3237;font:500 16px 'IBM Plex Mono',monospace;color:#eef0ef;cursor:pointer" style-hover="background:#2c3237">3</span>
+          <span style="padding:11px 0;text-align:center;border-radius:8px;background:#1f2327;border:1px solid #2c3237;font:500 16px 'IBM Plex Mono',monospace;color:#eef0ef;cursor:pointer" style-hover="background:#2c3237">4</span>
+          <span style="padding:11px 0;text-align:center;border-radius:8px;background:#1f2327;border:1px solid #2c3237;font:500 16px 'IBM Plex Mono',monospace;color:#eef0ef;cursor:pointer" style-hover="background:#2c3237">5</span>
+          <span style="padding:11px 0;text-align:center;border-radius:8px;background:#1f2327;border:1px solid #2c3237;font:500 16px 'IBM Plex Mono',monospace;color:#eef0ef;cursor:pointer" style-hover="background:#2c3237">6</span>
+          <span style="padding:11px 0;text-align:center;border-radius:8px;background:#1f2327;border:1px solid #2c3237;font:500 16px 'IBM Plex Mono',monospace;color:#8b9499;cursor:pointer" style-hover="background:#2c3237">⌫</span>
+          <span style="padding:11px 0;text-align:center;border-radius:8px;background:#1f2327;border:1px solid #2c3237;font:500 16px 'IBM Plex Mono',monospace;color:#eef0ef;cursor:pointer" style-hover="background:#2c3237">0</span>
+          <span style="padding:11px 0;text-align:center;border-radius:8px;background:#f4762a;font:600 14px 'IBM Plex Mono',monospace;color:#0e1113;cursor:pointer">OK</span>
+        </div>
+        <div style="font:400 10.5px/1.5 'Barlow',sans-serif;color:#8b9499">Tasten ≥ 44 px auf Mobil · Ziffernblock ist Fallback, wenn QR nicht liest.</div>
+      </div>
+    </div>
+  </div>
+
+  <div data-screen-label="Datenbausteine" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid #2c3237;padding-bottom:9px">
+      <span style="font:600 13px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#f4762a">07</span>
+      <h2 style="margin:0;font:600 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#eef0ef">Daten-Bausteine</h2>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">KPI-Band · 5 Spalten, 1 px Trenner, kein Radius</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid #2c3237;border-bottom:1px solid #2c3237;background:#0e1113">
+        <div style="padding:18px 22px;border-right:1px solid #2c3237"><div style="font:600 34px/1 'IBM Plex Mono',monospace;color:#eef0ef">12</div><div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-top:6px">unterwegs</div></div>
+        <div style="padding:18px 22px;border-right:1px solid #2c3237"><div style="font:600 34px/1 'IBM Plex Mono',monospace;color:#2fa46a">4</div><div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-top:6px">im ziel</div></div>
+        <div style="padding:18px 22px;border-right:1px solid #2c3237"><div style="font:600 34px/1 'IBM Plex Mono',monospace;color:#e05540">1</div><div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-top:6px">dnf · 0 dns</div></div>
+        <div style="padding:18px 22px;border-right:1px solid #2c3237"><div style="font:600 34px/1 'IBM Plex Mono',monospace;color:#eef0ef">6</div><div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-top:6px">checkpoints · 18,4 km</div></div>
+        <div style="padding:18px 22px"><div style="font:600 34px/1 'IBM Plex Mono',monospace;color:#eef0ef">86<span style="font-size:19px;color:#8b9499">%</span></div><div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-top:6px">cp-quote</div></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+        <h3 style="margin:0 0 14px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Balken-Zeile</h3>
+        <div style="display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;align-items:center;gap:11px">
+            <span style="width:20px;height:20px;border-radius:6px;background:#1f2327;border:1px solid #2c3237;font:500 10px 'IBM Plex Mono',monospace;color:#8b9499;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
+            <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef;min-width:0">Kölner Dom – Domplatte</span>
+            <span style="width:130px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden;flex-shrink:0"><span style="display:block;height:100%;width:82%;background:#f4762a"></span></span>
+            <span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:32px;text-align:right;flex-shrink:0">14</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:11px">
+            <span style="width:20px;height:20px;border-radius:6px;background:#1f2327;border:1px dashed #2c3237;font:500 10px 'IBM Plex Mono',monospace;color:#8b9499;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</span>
+            <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#8b9499;min-width:0">Rheinauhafen <span style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;border:1px solid #2c3237;border-radius:4px;padding:1px 5px;margin-left:5px">bonus</span></span>
+            <span style="width:130px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden;flex-shrink:0"><span style="display:block;height:100%;width:41%;background:#8b9499"></span></span>
+            <span style="font:500 11px 'IBM Plex Mono',monospace;color:#8b9499;width:32px;text-align:right;flex-shrink:0">7</span>
+          </div>
+        </div>
+        <div style="font:400 10.5px/1.5 'Barlow',sans-serif;color:#8b9499;margin-top:12px">Gestrichelter Index + grauer Balken = optional oder unbesetzt. Balkenbreite 130–150 px fix, Zahl rechtsbündig 32–38 px.</div>
+      </div>
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+        <h3 style="margin:0 0 14px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Rang-Zeile &amp; Aktivität</h3>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1f2327"><span style="width:20px;height:20px;border-radius:50%;background:#f4762a;color:#0e1113;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">1</span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#8b9499;width:22px">#1</span><span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef">Jonas Bergmann</span><span style="font:500 12px 'IBM Plex Mono',monospace;color:#eef0ef">1:12:04</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1f2327"><span style="width:20px;height:20px;border-radius:50%;background:#1f2327;color:#eef0ef;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">2</span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#8b9499;width:22px">#2</span><span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef">Lea Winter</span><span style="font:500 12px 'IBM Plex Mono',monospace;color:#eef0ef">1:15:38</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;margin-bottom:12px"><span style="width:20px;height:20px;border-radius:50%;border:1px dashed #2c3237;color:#8b9499;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">5</span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#8b9499;width:22px">#7</span><span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#8b9499">Ben Kessler</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499">4/4 CP</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid #2c3237;padding-top:12px">
+          <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:21</span><span style="font:400 12.5px/1.4 'Barlow',sans-serif;color:#eef0ef">#4 Mona Specht im Ziel · 1:24:12</span></div>
+          <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:18</span><span style="font:400 12.5px/1.4 'Barlow',sans-serif;color:#e05540">#5 Tom Gerlach als DNF markiert</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">Tabelle · Leaderboard-Matrix</div>
+      <div style="border:1px solid #2c3237;border-radius:12px;overflow:hidden;background:#171a1d">
+        <div style="display:grid;grid-template-columns:44px 1fr 60px 60px 60px 60px 90px;background:#1f2327;border-bottom:1px solid #2c3237">
+          <div style="padding:9px 12px;font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">rg</div>
+          <div style="padding:9px 12px;font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">fahrer</div>
+          <div style="padding:9px 12px;font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:center">cp1</div>
+          <div style="padding:9px 12px;font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:center">cp2</div>
+          <div style="padding:9px 12px;font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:center">cp3</div>
+          <div style="padding:9px 12px;font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:center">cp4</div>
+          <div style="padding:9px 12px;font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:right">zeit</div>
+        </div>
+        <div style="display:grid;grid-template-columns:44px 1fr 60px 60px 60px 60px 90px;border-bottom:1px solid #1f2327">
+          <div style="padding:10px 12px;font:600 12px 'IBM Plex Mono',monospace;color:#f4762a">1</div>
+          <div style="padding:10px 12px;font:400 13px 'Barlow',sans-serif;color:#eef0ef">Jonas Bergmann</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</div>
+          <div style="padding:10px 12px;text-align:right;font:600 12px 'IBM Plex Mono',monospace;color:#eef0ef">1:12:04</div>
+        </div>
+        <div style="display:grid;grid-template-columns:44px 1fr 60px 60px 60px 60px 90px;border-bottom:1px solid #1f2327;background:rgba(244,118,42,.06)">
+          <div style="padding:10px 12px;font:600 12px 'IBM Plex Mono',monospace;color:#eef0ef">7</div>
+          <div style="padding:10px 12px;font:400 13px 'Barlow',sans-serif;color:#eef0ef">Ben Kessler</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</div>
+          <div style="padding:10px 12px;text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</div>
+        </div>
+        <div style="display:grid;grid-template-columns:44px 1fr 60px 60px 60px 60px 90px">
+          <div style="padding:10px 12px;font:600 12px 'IBM Plex Mono',monospace;color:#8b9499">–</div>
+          <div style="padding:10px 12px;font:400 13px 'Barlow',sans-serif;color:#8b9499">Tom Gerlach</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</div>
+          <div style="padding:10px 12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</div>
+          <div style="padding:10px 12px;text-align:right;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#e05540">dnf</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div data-screen-label="Raceday-Teile" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid #2c3237;padding-bottom:9px">
+      <span style="font:600 13px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#f4762a">08</span>
+      <h2 style="margin:0;font:600 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#eef0ef">Raceday-Teile</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;align-items:start">
+      <div style="background:#08090a;border:1px solid #2c3237;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;align-items:center">
+        <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499;align-self:flex-start">Scanner-Fenster</div>
+        <div style="width:172px;height:172px;border-radius:14px;background:#0e1113;border:1px solid #2c3237;position:relative;overflow:hidden">
+          <span style="position:absolute;left:14px;top:14px;width:30px;height:30px;border-left:2px solid #f4762a;border-top:2px solid #f4762a;border-radius:5px 0 0 0"></span>
+          <span style="position:absolute;right:14px;top:14px;width:30px;height:30px;border-right:2px solid #f4762a;border-top:2px solid #f4762a;border-radius:0 5px 0 0"></span>
+          <span style="position:absolute;left:14px;bottom:14px;width:30px;height:30px;border-left:2px solid #f4762a;border-bottom:2px solid #f4762a;border-radius:0 0 0 5px"></span>
+          <span style="position:absolute;right:14px;bottom:14px;width:30px;height:30px;border-right:2px solid #f4762a;border-bottom:2px solid #f4762a;border-radius:0 0 5px 0"></span>
+          <span style="position:absolute;left:14px;right:14px;top:50%;height:2px;background:#f4762a;box-shadow:0 0 14px 2px rgba(244,118,42,.55);animation:scanline 1.9s ease-in-out infinite alternate"></span>
+        </div>
+        <div style="font:400 11.5px/1.5 'Barlow',sans-serif;color:#8b9499;text-align:center">Ecken + laufende Linie in Signal-Orange. Kein Kamerabild-Rahmen, keine Anleitung im Bild.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="background:#0e1113;border:1px solid #2c3237;border-radius:12px;padding:16px 18px">
+          <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499;margin-bottom:12px">Treffer-Sheet</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:13px">
+            <span style="width:44px;height:44px;border-radius:11px;background:rgba(244,118,42,.14);color:#f4762a;font:600 18px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">04</span>
+            <div style="min-width:0"><div style="font:600 18px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">Mona Specht</div><div style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499">Fixed · Kranhaus · 4/4 CP</div></div>
+            <span style="flex:1"></span>
+            <div style="text-align:right"><div style="font:600 20px 'IBM Plex Mono',monospace;color:#eef0ef">1:24:12</div><div style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">zielzeit</div></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <span style="flex:1;font:600 13px 'Barlow',sans-serif;padding:13px 0;border-radius:9px;background:#2fa46a;color:#08090a;text-align:center;cursor:pointer">Bestätigen</span>
+            <span style="font:600 13px 'Barlow',sans-serif;padding:13px 18px;border-radius:9px;border:1px solid #e05540;color:#e05540;cursor:pointer">DNF</span>
+            <span style="font:600 13px 'Barlow',sans-serif;padding:13px 18px;border-radius:9px;border:1px solid #2c3237;color:#8b9499;cursor:pointer">DNS</span>
+          </div>
+        </div>
+        <div style="background:#0e1113;border:1px solid #2c3237;border-radius:12px;padding:16px 18px">
+          <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499;margin-bottom:10px">Rückmeldung · 2,5 s, dann automatisch weg</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;background:rgba(47,164,106,.16);box-shadow:inset 2px 0 0 #2fa46a"><span style="font:600 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">#04 Mona Specht im Ziel · Platz 4</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;background:rgba(224,85,64,.16);box-shadow:inset 2px 0 0 #e05540"><span style="font:600 12px 'IBM Plex Mono',monospace;color:#e05540">!</span><span style="font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Code unbekannt — Nummer per Tastenfeld</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;background:#1f2327;box-shadow:inset 2px 0 0 #8b9499"><span style="font:600 12px 'IBM Plex Mono',monospace;color:#8b9499">↺</span><span style="font:400 12.5px 'Barlow',sans-serif;color:#8b9499">Offline gespeichert · Sync bei Verbindung</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="background:#08090a;border:1px solid #2c3237;border-radius:12px;padding:18px">
+          <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499;margin-bottom:10px">Renn-Uhr · Beamer-Größe</div>
+          <div style="font:600 clamp(38px,5vw,64px)/1 'IBM Plex Mono',monospace;color:#eef0ef;letter-spacing:-.02em">01:24:09</div>
+          <div style="display:flex;align-items:center;gap:9px;margin-top:9px"><span style="width:7px;height:7px;border-radius:50%;background:#f4762a"></span><span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#f4762a">läuft · start 13:00</span></div>
+        </div>
+        <div style="background:#f5f2ec;border-radius:12px;padding:18px 20px;color:#1a1a17">
+          <div style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#6b6559;margin-bottom:9px">Papier-Fläche · Druck &amp; Unterschrift</div>
+          <div style="font:700 21px/1.1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;margin-bottom:5px">Startliste · Kölner Kurierrennen</div>
+          <div style="font:400 11.5px 'IBM Plex Mono',monospace;color:#6b6559;margin-bottom:13px">25.08.2026 · 17 Fahrer · 6 Checkpoints</div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;gap:10px;align-items:center;border-bottom:1px solid #d8d2c6;padding-bottom:6px"><span style="font:600 12px 'IBM Plex Mono',monospace;width:24px">04</span><span style="flex:1;font:400 13px 'Barlow',sans-serif">Mona Specht</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#6b6559">Unterschrift</span></div>
+            <div style="display:flex;gap:10px;align-items:center"><span style="font:600 12px 'IBM Plex Mono',monospace;width:24px">05</span><span style="flex:1;font:400 13px 'Barlow',sans-serif">Tom Gerlach</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#6b6559">Unterschrift</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Regeln" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid #2c3237;padding-bottom:9px">
+      <span style="font:600 13px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#f4762a">09</span>
+      <h2 style="margin:0;font:600 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#eef0ef">Anwendungsregeln</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+        <h3 style="margin:0 0 12px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#2fa46a">So ja</h3>
+        <div style="display:flex;flex-direction:column;gap:9px;font:400 12px/1.55 'Barlow',sans-serif;color:#8b9499">
+          <div><span style="color:#eef0ef">Ein Signal pro Bildschirm.</span> Orange markiert die eine Sache, die als nächstes zu tun ist.</div>
+          <div><span style="color:#eef0ef">Status nur am Eventnamen.</span> Kein zweites Status-Element irgendwo sonst.</div>
+          <div><span style="color:#eef0ef">Zahlen in Mono, rechtsbündig.</span> Zeiten immer h:mm:ss, Uhrzeiten hh:mm.</div>
+          <div><span style="color:#eef0ef">Flächen statt Schatten.</span> Tiefe entsteht durch #171A1D auf #0E1113, nie durch box-shadow — außer 2 px Inset-Marker.</div>
+          <div><span style="color:#eef0ef">Raceday ohne Rail.</span> Nur zurück, Uhr, Check-in.</div>
+        </div>
+      </div>
+      <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+        <h3 style="margin:0 0 12px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#e05540">So nicht</h3>
+        <div style="display:flex;flex-direction:column;gap:9px;font:400 12px/1.55 'Barlow',sans-serif;color:#8b9499">
+          <div><span style="color:#eef0ef">Kein Orange als Fläche</span> hinter Fließtext oder für ganze Cards.</div>
+          <div><span style="color:#eef0ef">Keine Gradients, keine Glows</span> — Ausnahme: Scanner-Linie.</div>
+          <div><span style="color:#eef0ef">Keine Emoji, keine Icon-Bibliothek.</span> Zwei-Buchstaben-Kürzel in Mono statt Piktogramm.</div>
+          <div><span style="color:#eef0ef">Grün nie für „aktiv“</span> — Grün heißt abgeschlossen, Orange heißt läuft.</div>
+          <div><span style="color:#eef0ef">Keine Zeit unter 24 px</span> im Beamer- und Raceday-Kontext.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showNotes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Inhalt&quot;}}">
+class Component extends DCLogic {
+  state = { copied: null };
+  renderVals() {
+    return {
+      showNotes: this.props.showNotes ?? true,
+      copyHint: this.state.copied ? this.state.copied + " kopiert" : "Klick kopiert den Hex-Wert",
+      onTokenClick: (e) => {
+        const el = e.target.closest("[data-hex]");
+        if (!el) return;
+        const hex = el.dataset.hex;
+        if (navigator.clipboard) navigator.clipboard.writeText(hex).catch(() => {});
+        this.setState({ copied: hex });
+        clearTimeout(this._t);
+        this._t = setTimeout(() => this.setState({ copied: null }), 1600);
+      }
+    };
+  }
+}
+
+</script>
+</body>
+</html>

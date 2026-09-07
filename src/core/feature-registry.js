@@ -18,15 +18,21 @@ const FEATURE_REGISTRY = [
      dieses Browsers, nicht des Events. Reine UI-Ausblendung — die
      Server-Endpunkte selbst existieren immer, ein deaktiviertes Feature
      versteckt nur den Knopf/die Sektion, wie bei jedem anderen Eintrag
-     hier auch. */
-  {id: 'invite_default_expiry', scope: 'device', icon: '🕐', name: () => t('featureRegistry.inviteDefaultExpiryName'), description: () => t('featureRegistry.inviteDefaultExpiryDesc'), defaultEnabled: false, configScreen: null},
-  {id: 'invite_registration_validity', scope: 'device', icon: '⏳', name: () => t('featureRegistry.inviteRegistrationValidityName'), description: () => t('featureRegistry.inviteRegistrationValidityDesc'), defaultEnabled: false, configScreen: null},
-  {id: 'user_password_reset', scope: 'device', icon: '🔑', name: () => t('featureRegistry.userPasswordResetName'), description: () => t('featureRegistry.userPasswordResetDesc'), defaultEnabled: false, configScreen: null},
-  {id: 'user_logout_all_sessions', scope: 'device', icon: '🚪', name: () => t('featureRegistry.userLogoutAllName'), description: () => t('featureRegistry.userLogoutAllDesc'), defaultEnabled: false, configScreen: null},
-  {id: 'user_list_tools', scope: 'device', icon: '🔍', name: () => t('featureRegistry.userListToolsName'), description: () => t('featureRegistry.userListToolsDesc'), defaultEnabled: false, configScreen: null},
-  {id: 'user_bulk_actions', scope: 'device', icon: '☑️', name: () => t('featureRegistry.userBulkActionsName'), description: () => t('featureRegistry.userBulkActionsDesc'), defaultEnabled: false, configScreen: null},
-  {id: 'user_csv_export', scope: 'device', icon: '📤', name: () => t('featureRegistry.userCsvExportName'), description: () => t('featureRegistry.userCsvExportDesc'), defaultEnabled: false, configScreen: null},
-  {id: 'user_audit_log', scope: 'device', icon: '📜', name: () => t('featureRegistry.userAuditLogName'), description: () => t('featureRegistry.userAuditLogDesc'), defaultEnabled: false, configScreen: null}
+     hier auch.
+
+     group: 'users' heißt nur "wird woanders angezeigt": diese Zeilen
+     stehen in Settings → Benutzerverwaltung, direkt bei den Funktionen,
+     die sie ein- und ausblenden, statt in der allgemeinen
+     Feature-Übersicht. Daten, Speicherung und isFeatureEnabled() bleiben
+     identisch zu jedem anderen Eintrag. */
+  {id: 'invite_default_expiry', scope: 'device', group: 'users', icon: '🕐', name: () => t('featureRegistry.inviteDefaultExpiryName'), description: () => t('featureRegistry.inviteDefaultExpiryDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'invite_registration_validity', scope: 'device', group: 'users', icon: '⏳', name: () => t('featureRegistry.inviteRegistrationValidityName'), description: () => t('featureRegistry.inviteRegistrationValidityDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_password_reset', scope: 'device', group: 'users', icon: '🔑', name: () => t('featureRegistry.userPasswordResetName'), description: () => t('featureRegistry.userPasswordResetDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_logout_all_sessions', scope: 'device', group: 'users', icon: '🚪', name: () => t('featureRegistry.userLogoutAllName'), description: () => t('featureRegistry.userLogoutAllDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_list_tools', scope: 'device', group: 'users', icon: '🔍', name: () => t('featureRegistry.userListToolsName'), description: () => t('featureRegistry.userListToolsDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_bulk_actions', scope: 'device', group: 'users', icon: '☑️', name: () => t('featureRegistry.userBulkActionsName'), description: () => t('featureRegistry.userBulkActionsDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_csv_export', scope: 'device', group: 'users', icon: '📤', name: () => t('featureRegistry.userCsvExportName'), description: () => t('featureRegistry.userCsvExportDesc'), defaultEnabled: false, configScreen: null},
+  {id: 'user_audit_log', scope: 'device', group: 'users', icon: '📜', name: () => t('featureRegistry.userAuditLogName'), description: () => t('featureRegistry.userAuditLogDesc'), defaultEnabled: false, configScreen: null}
 ];
 function featureRegistryEntry(id){
   return FEATURE_REGISTRY.find(f => f.id === id);
@@ -78,8 +84,8 @@ function featureRegistryGroups(evt){
   const q = (state.featureRegistrySearch || '').trim().toLowerCase();
   const matches = (entry) => !q || entry.name().toLowerCase().includes(q) || entry.description().toLowerCase().includes(q);
   return {
-    device: FEATURE_REGISTRY.filter(f => f.scope === 'device' && matches(f)),
-    event: FEATURE_REGISTRY.filter(f => f.scope === 'event' && matches(f))
+    device: FEATURE_REGISTRY.filter(f => f.scope === 'device' && !f.group && matches(f)),
+    event: FEATURE_REGISTRY.filter(f => f.scope === 'event' && !f.group && matches(f))
   };
 }
 function onFeatureRegistrySearchInput(value){
@@ -125,4 +131,12 @@ function renderFeatureRegistrySection(){
       ` : ''}
     </div>
   `;
+}
+/* Zeilen einer group-Kategorie für die Sektion, in der sie tatsächlich
+   angezeigt werden (aktuell nur 'users' → Benutzerverwaltung). Bewusst
+   dieselbe renderFeatureRegistryRow(), damit Aussehen und Verhalten der
+   Schalter überall identisch bleiben. */
+function renderFeatureRegistryGroupRows(group){
+  const evt = state.currentEvent;
+  return FEATURE_REGISTRY.filter(f => f.group === group).map(f => renderFeatureRegistryRow(f, evt)).join('');
 }

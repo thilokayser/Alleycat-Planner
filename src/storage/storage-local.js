@@ -149,6 +149,7 @@ async function confirmRiderSlot(){ return null; }
 /* Gehört zum selben Seam-Vertrag: der Kern erzeugt daraus die QR-Nutzlast.
    Leer heißt "keine Adresse, auf die ein QR-Code zeigen könnte". */
 function riderAppBaseUrl(){ return ''; }
+async function setRiderAppBaseUrl(){ return false; } // keine Fahrer-App ohne Server-Backend
 /* Admin-Rollen-Seam: diese Variante läuft in genau einem Browser ohne
    geteiltes Backend — es gibt niemanden, dem gegenüber eine Rolle
    überhaupt etwas bedeuten würde. currentUserRole() in auth.js liest das

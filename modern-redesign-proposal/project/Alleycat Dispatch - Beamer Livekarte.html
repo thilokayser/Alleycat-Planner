@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alleycat Dispatch — Beamer Livekarte</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<style>
+  body{margin:0;background:#08090a;font-family:'Barlow',system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:44px}
+  a{color:#f4762a;text-decoration:none}
+  a:hover{color:#ff9152}
+  .leaflet-tile-pane{filter:invert(1) hue-rotate(185deg) brightness(.78) contrast(1.06) saturate(.5)}
+  .leaflet-container{background:#0e1113;font-family:'IBM Plex Mono',monospace}
+  .leaflet-control-attribution{background:rgba(8,9,10,.82)!important;color:#8b9499!important;font:400 13px 'IBM Plex Mono',monospace!important;padding:4px 8px!important}
+  .leaflet-control-attribution a{color:#8b9499!important}
+
+  .cp-pin{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;border:3px solid #08090a;box-sizing:border-box;box-shadow:0 0 0 2px rgba(255,255,255,.14)}
+  .cp-pin span{font:600 24px/1 'IBM Plex Mono',monospace;color:#08090a}
+
+  .rd-pin{position:relative;width:38px;height:38px}
+  .rd-ping{position:absolute;left:-6px;top:-6px;width:50px;height:50px;border-radius:50%;border:2px solid rgba(244,118,42,.5);animation:ping 2.4s ease-out infinite}
+  .rd-dot{position:absolute;left:0;top:0;right:0;bottom:0;border-radius:50%;background:#f4762a;border:3px solid #08090a;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font:600 19px/1 'IBM Plex Mono',monospace;color:#08090a;transition:all .18s}
+  .no-nr .rd-dot{left:9px;top:9px;right:9px;bottom:9px;font-size:0}
+  @keyframes ping{0%{transform:scale(.45);opacity:.9}100%{transform:scale(1.35);opacity:0}}
+
+  .sw{width:34px;height:19px;border-radius:999px;background:#1f2327;border:1px solid #2c3237;position:relative;flex-shrink:0;transition:background .16s}
+  .sw i{position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#8b9499;transition:left .16s,background .16s}
+  .on .sw{background:rgba(244,118,42,.28);border-color:#f4762a}
+  .on .sw i{left:18px;background:#f4762a}
+  .tg{display:flex;align-items:center;gap:11px;cursor:pointer;font:400 15px/1 'Barlow',sans-serif;color:#8b9499;padding:2px 0}
+  .tg.on{color:#eef0ef}
+  .tg:hover{color:#eef0ef}
+</style>
+</head>
+<body>
+
+<div style="width:1920px;height:1080px;background:#08090a;color:#eef0ef;display:flex;flex-direction:column;overflow:hidden;border:1px solid #2c3237;position:relative">
+
+  <div style="display:flex;align-items:flex-end;gap:36px;padding:32px 44px 24px;border-bottom:2px solid #2c3237;background:#0e1113">
+    <div style="width:12px;height:88px;background:#f4762a;flex-shrink:0"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+      <span style="font:700 78px/.9 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.01em;color:#eef0ef">Kölner Kurierrennen</span>
+    </div>
+    <div style="flex:1"></div>
+    <div id="clockBlock" style="display:flex;flex-direction:column;align-items:flex-end;gap:12px">
+      <span style="font:600 26px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#8b9499">Renndauer</span>
+      <span style="font:600 90px/.88 'IBM Plex Mono',monospace;letter-spacing:-.03em;color:#eef0ef;font-variant-numeric:tabular-nums">01:24:09</span>
+    </div>
+  </div>
+
+  <div style="flex:1;min-height:0;display:flex;gap:28px;padding:26px 44px 0">
+
+    <div style="flex:1;min-width:0;position:relative;border:1px solid #2c3237;border-radius:18px;overflow:hidden;background:#0e1113">
+      <div id="map" style="position:absolute;inset:0"></div>
+
+      <div id="legend" style="position:absolute;left:20px;bottom:20px;z-index:500;display:flex;align-items:center;gap:22px;background:rgba(8,9,10,.88);border:1px solid #2c3237;border-radius:11px;padding:10px 16px">
+        <span style="display:flex;align-items:center;gap:9px;font:500 15px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#eef0ef"><span style="width:13px;height:13px;border-radius:50%;background:#2fa46a"></span>Pflicht-CP</span>
+        <span style="display:flex;align-items:center;gap:9px;font:500 15px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#eef0ef"><span style="width:13px;height:13px;border-radius:50%;background:#6c8cf5"></span>Bonus-CP</span>
+        <span style="display:flex;align-items:center;gap:9px;font:500 15px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#eef0ef"><span style="width:13px;height:13px;border-radius:50%;background:#f4762a"></span>Fahrer</span>
+      </div>
+
+      <div style="position:absolute;right:20px;top:20px;z-index:600;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <button id="menuBtn" type="button" style="display:flex;align-items:center;gap:10px;font:500 15px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#eef0ef;background:rgba(8,9,10,.88);border:1px solid #2c3237;border-radius:9px;padding:11px 15px;cursor:pointer">Ansicht<span id="menuCaret" style="color:#8b9499">▾</span></button>
+        <div id="menuPanel" style="display:none;flex-direction:column;gap:14px;width:262px;background:rgba(8,9,10,.94);border:1px solid #2c3237;border-radius:13px;padding:16px 18px 18px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:500 12px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#8b9499">Karte</span>
+            <div class="tg on" data-k="cp"><span class="sw"><i></i></span>Checkpoints</div>
+            <div class="tg on" data-k="radius"><span class="sw"><i></i></span>Einzugsradien</div>
+            <div class="tg on" data-k="riders"><span class="sw"><i></i></span>Fahrer</div>
+            <div class="tg on" data-k="nr"><span class="sw"><i></i></span>Startnummern</div>
+            <div class="tg on" data-k="legend"><span class="sw"><i></i></span>Legende</div>
+          </div>
+          <div style="height:1px;background:#2c3237"></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:500 12px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#8b9499">Seitenleiste</span>
+            <div class="tg on" data-k="cpRail"><span class="sw"><i></i></span>Checkpoint-Auslastung</div>
+            <div class="tg on" data-k="rdRail"><span class="sw"><i></i></span>Fahrer unterwegs</div>
+            <div class="tg on" data-k="clock"><span class="sw"><i></i></span>Renndauer</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="rail" style="width:520px;flex-shrink:0;display:flex;flex-direction:column;gap:20px;min-height:0">
+
+      <div id="cpCard" style="border:1px solid #2c3237;border-radius:18px;background:#0e1113;padding:20px 26px 22px;display:flex;flex-direction:column;gap:16px">
+        <span style="font:500 24px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#8b9499">Checkpoints</span>
+        <div id="cpList" style="display:flex;flex-direction:column;gap:13px"></div>
+      </div>
+
+      <div id="rdCard" style="flex:1;min-height:0;border:1px solid #2c3237;border-radius:18px;background:#0e1113;padding:20px 26px 22px;display:flex;flex-direction:column;gap:16px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:14px">
+          <span style="width:16px;height:16px;border-radius:50%;background:#f4762a;flex-shrink:0"></span>
+          <span style="font:500 24px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#8b9499">Fahrer unterwegs</span>
+        </div>
+        <div id="rdList" style="display:flex;flex-direction:column;gap:14px"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:30px;padding:18px 44px;border-top:2px solid #2c3237;background:#0e1113">
+    <div style="flex:1"></div>
+    <span style="font:600 30px/1 'IBM Plex Mono',monospace;color:#eef0ef">alleycat.koeln/live</span>
+  </div>
+
+</div>
+
+<script>
+const CPS = [
+  { id: "1", name: "Heumarkt",        lat: 50.93585, lng: 6.96010, type: "pflicht", done: 17 },
+  { id: "2", name: "Rudolfplatz",     lat: 50.93470, lng: 6.93320, type: "pflicht", done: 15 },
+  { id: "3", name: "Kranhaus",        lat: 50.93080, lng: 6.96420, type: "pflicht", done: 12 },
+  { id: "4", name: "Aachener Weiher", lat: 50.93290, lng: 6.92460, type: "bonus",   done: 6 },
+  { id: "5", name: "Venloer Str.",    lat: 50.94790, lng: 6.91990, type: "pflicht", done: 9 },
+  { id: "6", name: "Ziel · Dom",      lat: 50.94130, lng: 6.95830, type: "pflicht", done: 4 }
+];
+
+const RIDERS = [
+  { nr: "07", name: "Ben Kessler",  lat: 50.93760, lng: 6.94950, letzter: "CP 3", seit: "4 min",  klasse: "Gears" },
+  { nr: "12", name: "Tarek Yildiz", lat: 50.92950, lng: 6.93600, letzter: "CP 4", seit: "2 min",  klasse: "Gears" },
+  { nr: "03", name: "Nina Falk",    lat: 50.94520, lng: 6.93650, letzter: "CP 2", seit: "9 min",  klasse: "Fixed" },
+  { nr: "15", name: "Svea Lorenz",  lat: 50.94560, lng: 6.97000, letzter: "CP 1", seit: "12 min", klasse: "Fixed" },
+  { nr: "09", name: "Milan Kraus",  lat: 50.95220, lng: 6.93520, letzter: "CP 5", seit: "1 min",  klasse: "Gears" },
+  { nr: "11", name: "Pia Hoffmann", lat: 50.93900, lng: 6.95580, letzter: "CP 3", seit: "6 min",  klasse: "Fixed" }
+];
+
+const FIELD = 17;
+const cpColor = t => t === "bonus" ? "#6c8cf5" : "#2fa46a";
+
+const map = L.map("map", { center: [50.9394, 6.9440], zoom: 14, zoomControl: false, attributionControl: true, dragging: true, scrollWheelZoom: false, doubleClickZoom: false, keyboard: false });
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
+
+const radiusLayer = L.layerGroup().addTo(map);
+const cpLayer = L.layerGroup().addTo(map);
+const riderLayer = L.layerGroup().addTo(map);
+
+CPS.forEach(cp => {
+  radiusLayer.addLayer(L.circle([cp.lat, cp.lng], { radius: 210, color: cpColor(cp.type), weight: 2, opacity: .55, fillColor: cpColor(cp.type), fillOpacity: .1 }));
+  cpLayer.addLayer(L.marker([cp.lat, cp.lng], {
+    icon: L.divIcon({ className: "", iconSize: null, iconAnchor: [24, 24],
+      html: '<div class="cp-pin" style="background:' + cpColor(cp.type) + '"><span>' + cp.id + '</span></div>' })
+  }));
+});
+
+RIDERS.forEach(r => {
+  riderLayer.addLayer(L.marker([r.lat, r.lng], {
+    icon: L.divIcon({ className: "", iconSize: null, iconAnchor: [19, 19],
+      html: '<div class="rd-pin"><span class="rd-ping"></span><span class="rd-dot">' + r.nr + '</span></div>' }),
+    zIndexOffset: 500
+  }));
+});
+
+const BOUNDS = L.latLngBounds(CPS.concat(RIDERS).map(c => [c.lat, c.lng]));
+const fit = () => { map.invalidateSize(); map.fitBounds(BOUNDS, { padding: [110, 150] }); };
+requestAnimationFrame(fit);
+window.addEventListener("load", fit);
+
+document.getElementById("cpList").innerHTML = CPS.map(cp => {
+  const pct = Math.round(cp.done / FIELD * 100), col = cpColor(cp.type);
+  return '<div style="display:flex;flex-direction:column;gap:7px">'
+    + '<div style="display:flex;align-items:center;gap:12px">'
+    + '<span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:' + col + ';font:600 17px/1 \'IBM Plex Mono\',monospace;color:#08090a;flex-shrink:0">' + cp.id + '</span>'
+    + '<span style="flex:1;font:600 28px/1.1 \'Barlow Condensed\',sans-serif;text-transform:uppercase;letter-spacing:.04em;color:#eef0ef">' + cp.name + '</span>'
+    + '<span style="font:500 26px/1 \'IBM Plex Mono\',monospace;color:#8b9499;font-variant-numeric:tabular-nums">' + cp.done + '/' + FIELD + '</span>'
+    + '</div>'
+    + '<span style="display:block;height:8px;border-radius:999px;background:#1f2327"><span style="display:block;width:' + pct + '%;height:8px;border-radius:999px;background:' + col + '"></span></span>'
+    + '</div>';
+}).join("");
+
+document.getElementById("rdList").innerHTML = RIDERS.map(r =>
+  '<div style="display:flex;align-items:center;gap:14px">'
+  + '<span style="width:44px;font:600 26px/1.1 \'IBM Plex Mono\',monospace;color:' + (r.klasse === "Gears" ? "#6c8cf5" : "#f4762a") + ';font-variant-numeric:tabular-nums">' + r.nr + '</span>'
+  + '<span style="flex:1;min-width:0;font:600 30px/1.1 \'Barlow Condensed\',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">' + r.name + '</span>'
+  + '<span style="font:500 24px/1.1 \'IBM Plex Mono\',monospace;color:#eef0ef">' + r.letzter + '</span>'
+  + '<span style="width:92px;text-align:right;font:400 24px/1.1 \'IBM Plex Mono\',monospace;color:#8b9499">' + r.seit + '</span>'
+  + '</div>'
+).join("");
+
+const el = id => document.getElementById(id);
+const btn = el("menuBtn"), panel = el("menuPanel"), caret = el("menuCaret");
+btn.addEventListener("click", () => {
+  const open = panel.style.display === "flex";
+  panel.style.display = open ? "none" : "flex";
+  caret.textContent = open ? "▾" : "▴";
+});
+
+const apply = {
+  cp:     v => v ? cpLayer.addTo(map) : cpLayer.remove(),
+  radius: v => v ? radiusLayer.addTo(map) : radiusLayer.remove(),
+  riders: v => v ? riderLayer.addTo(map) : riderLayer.remove(),
+  nr:     v => document.body.classList.toggle("no-nr", !v),
+  legend: v => el("legend").style.display = v ? "flex" : "none",
+  cpRail: v => { el("cpCard").style.display = v ? "flex" : "none"; syncRail(); },
+  rdRail: v => { el("rdCard").style.display = v ? "flex" : "none"; syncRail(); },
+  clock:  v => el("clockBlock").style.visibility = v ? "visible" : "hidden"
+};
+
+function syncRail() {
+  const any = el("cpCard").style.display !== "none" || el("rdCard").style.display !== "none";
+  el("rail").style.display = any ? "flex" : "none";
+  requestAnimationFrame(() => { map.invalidateSize(); map.fitBounds(BOUNDS, { padding: [110, 150] }); });
+}
+
+document.querySelectorAll(".tg").forEach(t => {
+  t.addEventListener("click", () => {
+    const on = !t.classList.contains("on");
+    t.classList.toggle("on", on);
+    apply[t.dataset.k](on);
+  });
+});
+</script>
+</body>
+</html>

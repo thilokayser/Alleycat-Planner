@@ -9,7 +9,13 @@ const hasSharedStorage = !!(window.storage && typeof window.storage.get === 'fun
 if(!hasSharedStorage){
   console.warn('window.storage nicht verfügbar — nutze PHP-Server-Backend.');
 }
-if(location.search.includes('reset-php-config')){
+/* ?reset-php-config muss die Auto-Erkennung mit aussetzen: sonst richtet
+   discoverPhpBackend() den Browser sofort wieder auf dieselbe
+   Installation ein, und der Einrichtungsbildschirm — der einzige Weg zu
+   einem anderen Endpunkt oder zum Master-Key — wäre nicht mehr
+   erreichbar. */
+const phpConfigResetRequested = location.search.includes('reset-php-config');
+if(phpConfigResetRequested){
   localStorage.removeItem('alleycat:php-config');
 }
 function getPhpConfig(){
@@ -250,6 +256,14 @@ async function submitPhpSetup(){
       return;
     }
   }
+  /* Adresse auch serverseitig hinterlegen, damit weitere Geräte sie über
+     ?a=discover bekommen. Nur mit Master-Key möglich — ohne Key hat
+     dieser Browser noch keine Session, der Schreibweg ist dann das Feld
+     in Settings → Konto. */
+  if(apiKey && riderAppUrl){
+    try{ await storageSet('config:riderAppUrl', riderAppUrl); }
+    catch(e){ console.error('riderAppUrl store failed', e); }
+  }
   location.reload();
 }
 
@@ -452,6 +466,17 @@ function riderAppBaseUrl(){
   const cfg = getPhpConfig();
   return (cfg && cfg.riderAppUrl) ? cfg.riderAppUrl : '';
 }
+/* Gegenstück zu riderAppBaseUrl(): schreibt die Adresse lokal (php-config,
+   für diesen Browser sofort wirksam) UND serverseitig in die KV-Tabelle,
+   von wo ?a=discover sie an jedes weitere Gerät ausliefert. */
+async function setRiderAppBaseUrl(url){
+  const cfg = getPhpConfig();
+  if(!cfg) return false;
+  const ok = await storageSet('config:riderAppUrl', url);
+  if(!ok) return false;
+  savePhpConfig(Object.assign({}, cfg, {riderAppUrl: url}));
+  return true;
+}
 function riderEndpointUrl(){
   const cfg = getPhpConfig();
   if(!cfg || !cfg.apiUrl) return '';
@@ -500,12 +525,60 @@ async function confirmRiderSlot(publicId, bib, status){
     return {ok: false, error: e.message};
   }
 }
+/* ---------------- Endpunkt-Erkennung ----------------
+   Ohne das hier ist die Installation nur in genau DEM Browser
+   eingerichtet, in dem der Endpunkt einmal eingetippt wurde — die
+   php-config liegt in localStorage, ein zweites Gerät sah bisher wieder
+   die Einrichtungsseite. Liegt die App auf derselben Domain wie das
+   Backend (der Normalfall: index.html im Wurzelverzeichnis, php-backend/
+   daneben), findet sie es selbst und der Nutzer landet direkt im Login.
+
+   Kandidatenpfade statt einer festen Konvention: das Layout ist nicht
+   vorgeschrieben (INSTALL.md empfiehlt /php-backend/, gebräuchlich sind
+   aber auch derselbe Ordner oder /api/). Basis ist das Verzeichnis der
+   aktuellen Seite, abgeleitet wie in src/rider/api.js. */
+const PHP_DISCOVERY_CANDIDATES = ['php-backend/auth.php', 'auth.php', 'api/auth.php'];
+async function discoverPhpBackend(){
+  if(phpConfigResetRequested) return null;
+  if(location.protocol !== 'http:' && location.protocol !== 'https:') return null;
+  const base = location.href.replace(/[^\/]*(\?.*)?(#.*)?$/, '');
+  for(const candidate of PHP_DISCOVERY_CANDIDATES){
+    /* Pro Kandidat ein eigener Timeout: ein Host, der auf einen falschen
+       Pfad gar nicht antwortet, darf den Start nicht anhalten. */
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 4000);
+    try{
+      const res = await fetch(base + candidate + '?a=discover', {signal: ctrl.signal});
+      if(!res.ok) continue;
+      const data = await res.json();
+      if(data && data.ok && data.product === 'alleycat-dispatch') return data;
+    }catch(e){
+      /* 404, HTML statt JSON, Timeout, CORS — alles nur "hier ist es
+         nicht", nächster Kandidat. */
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+  return null;
+}
 async function initStorageBackend(){
   if(hasSharedStorage) return true;
-  const cfg = getPhpConfig();
+  let cfg = getPhpConfig();
   if(!cfg){
-    renderPhpSetup();
-    return false;
+    const found = await discoverPhpBackend();
+    if(!found){
+      renderPhpSetup();
+      return false;
+    }
+    /* Bewusst ohne apiKey: der so eingerichtete Browser geht denselben
+       Weg wie ein per Setup-Screen ohne Key konfigurierter — über den
+       personalisierten Login, nicht über den Master-Key. */
+    savePhpConfig({apiUrl: found.apiUrl, apiKey: '', riderAppUrl: found.riderAppUrl || ''});
+    cfg = getPhpConfig();
+    if(!found.hasUsers){
+      renderAdminBootstrap();
+      return false;
+    }
   }
   /* Ohne gespeicherten Master-Key ist dieser Browser für den
      personalisierten Login eingerichtet (siehe submitPhpSetup()) — ohne

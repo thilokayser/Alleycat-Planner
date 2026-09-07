@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+body{margin:0;background:#08090a;font-family:'Barlow',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#f4762a;text-decoration:none}a:hover{color:#ff9152}
+@keyframes scanline{0%{transform:translateY(-46px)}100%{transform:translateY(46px)}}
+</style>
+</helmet>
+
+<div style="padding:48px 44px 90px;display:flex;flex-direction:column;gap:56px">
+
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:940px">
+    <div style="font:500 11px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#8b9499">Redesign · Hi-Fi · aus <a href="Alleycat Dispatch — Redesign Wireframes.dc.html">1a · 1d · 1g · 1k</a></div>
+    <h1 style="margin:0;font:700 34px/1.05 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">Alleycat Dispatch — Neu</h1>
+    <p style="margin:0;font:400 13.5px/1.6 'Barlow',sans-serif;color:#8b9499;max-width:640px">Linke Rail statt Tab-Zeile · Rennstatus als Badge am Eventnamen · Raceday als eigener Vollbild-Modus · Ziel-Check-in QR-first. Typo Barlow / Barlow Condensed / IBM Plex Mono, Signal-Orange auf Graphit, Papier-Flächen für alles, was gedruckt oder unterschrieben wird.</p>
+    <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+      <span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#eef0ef;background:#1f2327;border:1px solid #2c3237;border-radius:999px;padding:5px 11px">#F4762A signal</span>
+      <span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#eef0ef;background:#1f2327;border:1px solid #2c3237;border-radius:999px;padding:5px 11px">#2FA46A im ziel</span>
+      <span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#eef0ef;background:#1f2327;border:1px solid #2c3237;border-radius:999px;padding:5px 11px">#E05540 dnf</span>
+      <span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#eef0ef;background:#1f2327;border:1px solid #2c3237;border-radius:999px;padding:5px 11px">#F5F2EC papier</span>
+      <span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499;background:#171a1d;border:1px solid #2c3237;border-radius:999px;padding:5px 11px">Graphit #0E1113 / #171A1D / #1F2327</span>
+    </div>
+  </div>
+
+  <!-- ══════════════ A · ÜBERSICHT ══════════════ -->
+  <div data-screen-label="Neu · Übersicht" style="display:flex;flex-direction:column;gap:12px">
+    <div style="font:500 11px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">A · Übersicht — Dispatch-Board (aus 1a)</div>
+    <div style="width:1440px;height:900px;background:#0e1113;color:#eef0ef;display:flex;overflow:hidden;border:1px solid #2c3237">
+
+      <div style="width:84px;flex-shrink:0;background:#171a1d;border-right:1px solid #2c3237;display:flex;flex-direction:column;align-items:center;padding:16px 0 14px;gap:6px">
+        <div style="width:40px;height:40px;border-radius:11px;background:#f4762a;color:#0e1113;display:flex;align-items:center;justify-content:center;font:700 15px 'Barlow Condensed',sans-serif;letter-spacing:.04em;margin-bottom:12px">AC</div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;background:rgba(244,118,42,.14);box-shadow:inset 2px 0 0 #f4762a;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="font:600 11px 'IBM Plex Mono',monospace;color:#f4762a">ÜB</span>
+          <span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#f4762a">Übersicht</span>
+        </div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">KA</span>
+          <span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Karte</span>
+        </div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">FA</span>
+          <span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Fahrer</span>
+        </div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">ZI</span>
+          <span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Ziel</span>
+        </div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">LB</span>
+          <span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Board</span>
+        </div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">PDF</span>
+          <span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Druck</span>
+        </div>
+        <div style="flex:1"></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">⌘K</span>
+        </div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">EIN</span>
+          <span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Setup</span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 26px;border-bottom:1px solid #2c3237;background:#0e1113">
+          <div style="display:flex;align-items:center;gap:11px;min-width:0">
+            <h2 style="margin:0;font:600 25px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef;white-space:nowrap">Kölner Kurierrennen</h2>
+            <span style="display:inline-flex;align-items:center;gap:6px;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:{{stateBg}};color:{{stateFg}};border-radius:999px;padding:4px 10px">{{stateLabel}}</span>
+            <span style="font:400 12px 'IBM Plex Mono',monospace;color:#8b9499">25.08.2026 · 13:00 · Köln</span>
+          </div>
+          <div style="flex:1"></div>
+          <div style="text-align:right;line-height:1.05">
+            <div style="font:600 26px 'IBM Plex Mono',monospace;color:#eef0ef;letter-spacing:-.01em">01:24:09</div>
+            <div style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-top:3px">seit Start</div>
+          </div>
+          <div style="width:1px;height:34px;background:#2c3237"></div>
+          <div style="display:flex;gap:8px">
+            <div style="font:500 12px 'Barlow',sans-serif;padding:9px 14px;border-radius:8px;border:1px solid #2c3237;color:#eef0ef">Beamer ↗</div>
+            <div style="font:600 12px 'Barlow',sans-serif;padding:9px 16px;border-radius:8px;background:#f4762a;color:#0e1113">Raceday starten</div>
+          </div>
+          <span style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#2fa46a">gespeichert</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid #2c3237">
+          <div style="padding:18px 22px;border-right:1px solid #2c3237">
+            <div style="font:600 34px/1 'IBM Plex Mono',monospace;color:#eef0ef">12</div>
+            <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-top:6px">unterwegs</div>
+          </div>
+          <div style="padding:18px 22px;border-right:1px solid #2c3237">
+            <div style="font:600 34px/1 'IBM Plex Mono',monospace;color:#2fa46a">4</div>
+            <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-top:6px">im ziel</div>
+          </div>
+          <div style="padding:18px 22px;border-right:1px solid #2c3237">
+            <div style="font:600 34px/1 'IBM Plex Mono',monospace;color:#e05540">1</div>
+            <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-top:6px">dnf · 0 dns</div>
+          </div>
+          <div style="padding:18px 22px;border-right:1px solid #2c3237">
+            <div style="font:600 34px/1 'IBM Plex Mono',monospace;color:#eef0ef">6</div>
+            <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-top:6px">checkpoints · 18,4 km</div>
+          </div>
+          <div style="padding:18px 22px">
+            <div style="font:600 34px/1 'IBM Plex Mono',monospace;color:#eef0ef">86<span style="font-size:19px;color:#8b9499">%</span></div>
+            <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;margin-top:6px">cp-quote</div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow:auto;padding:22px 26px;display:grid;grid-template-columns:1.15fr 1fr 1fr;grid-auto-rows:min-content;gap:18px;align-content:stretch">
+
+          <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+            <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px">
+              <h3 style="margin:0;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Checkpoint-Auslastung</h3>
+              <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8b9499">bestätigt / 17 Fahrer</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="width:20px;height:20px;border-radius:6px;background:#1f2327;border:1px solid #2c3237;font:500 10px 'IBM Plex Mono',monospace;color:#8b9499;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
+                <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef;min-width:0">Zülpicher Platz</span>
+                <span style="width:150px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden;flex-shrink:0"><span style="display:block;height:100%;width:100%;background:#f4762a"></span></span>
+                <span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:38px;text-align:right;flex-shrink:0">17</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="width:20px;height:20px;border-radius:6px;background:#1f2327;border:1px solid #2c3237;font:500 10px 'IBM Plex Mono',monospace;color:#8b9499;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
+                <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef;min-width:0">Kölner Dom – Domplatte</span>
+                <span style="width:150px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden;flex-shrink:0"><span style="display:block;height:100%;width:82%;background:#f4762a"></span></span>
+                <span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:38px;text-align:right;flex-shrink:0">14</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="width:20px;height:20px;border-radius:6px;background:#1f2327;border:1px solid #2c3237;font:500 10px 'IBM Plex Mono',monospace;color:#8b9499;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</span>
+                <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef;min-width:0">Hohenzollernbrücke</span>
+                <span style="width:150px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden;flex-shrink:0"><span style="display:block;height:100%;width:65%;background:#f4762a"></span></span>
+                <span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:38px;text-align:right;flex-shrink:0">11</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="width:20px;height:20px;border-radius:6px;background:#1f2327;border:1px dashed #2c3237;font:500 10px 'IBM Plex Mono',monospace;color:#8b9499;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</span>
+                <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#8b9499;min-width:0">Rheinauhafen <span style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;border:1px solid #2c3237;border-radius:4px;padding:1px 5px;margin-left:5px">bonus</span></span>
+                <span style="width:150px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden;flex-shrink:0"><span style="display:block;height:100%;width:41%;background:#8b9499"></span></span>
+                <span style="font:500 11px 'IBM Plex Mono',monospace;color:#8b9499;width:38px;text-align:right;flex-shrink:0">7</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="width:20px;height:20px;border-radius:6px;background:#1f2327;border:1px solid #2c3237;font:500 10px 'IBM Plex Mono',monospace;color:#8b9499;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</span>
+                <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef;min-width:0">Ebertplatz</span>
+                <span style="width:150px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden;flex-shrink:0"><span style="display:block;height:100%;width:53%;background:#f4762a"></span></span>
+                <span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:38px;text-align:right;flex-shrink:0">9</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="width:20px;height:20px;border-radius:6px;background:#1f2327;border:1px solid #2c3237;font:500 10px 'IBM Plex Mono',monospace;color:#8b9499;display:flex;align-items:center;justify-content:center;flex-shrink:0">6</span>
+                <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef;min-width:0">Chlodwigplatz</span>
+                <span style="width:150px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden;flex-shrink:0"><span style="display:block;height:100%;width:29%;background:#f4762a"></span></span>
+                <span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:38px;text-align:right;flex-shrink:0">5</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px">
+              <h3 style="margin:0;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Mini-Leaderboard</h3>
+              <span style="font:400 10px 'IBM Plex Mono',monospace;color:#f4762a">alle ansehen</span>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1f2327">
+                <span style="width:20px;height:20px;border-radius:50%;background:#f4762a;color:#0e1113;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">1</span>
+                <span style="font:500 11px 'IBM Plex Mono',monospace;color:#8b9499;width:22px">#1</span>
+                <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef;min-width:0">Jonas Bergmann</span>
+                <span style="font:500 12px 'IBM Plex Mono',monospace;color:#eef0ef">1:12:04</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1f2327">
+                <span style="width:20px;height:20px;border-radius:50%;background:#1f2327;color:#eef0ef;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">2</span>
+                <span style="font:500 11px 'IBM Plex Mono',monospace;color:#8b9499;width:22px">#2</span>
+                <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef;min-width:0">Lea Winter</span>
+                <span style="font:500 12px 'IBM Plex Mono',monospace;color:#eef0ef">1:15:38</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1f2327">
+                <span style="width:20px;height:20px;border-radius:50%;background:#1f2327;color:#eef0ef;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">3</span>
+                <span style="font:500 11px 'IBM Plex Mono',monospace;color:#8b9499;width:22px">#3</span>
+                <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef;min-width:0">Kai Radtke</span>
+                <span style="font:500 12px 'IBM Plex Mono',monospace;color:#eef0ef">1:19:11</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1f2327">
+                <span style="width:20px;height:20px;border-radius:50%;background:#1f2327;color:#8b9499;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">4</span>
+                <span style="font:500 11px 'IBM Plex Mono',monospace;color:#8b9499;width:22px">#4</span>
+                <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#eef0ef;min-width:0">Mona Specht</span>
+                <span style="font:500 12px 'IBM Plex Mono',monospace;color:#eef0ef">1:24:12</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
+                <span style="width:20px;height:20px;border-radius:50%;border:1px dashed #2c3237;color:#8b9499;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">5</span>
+                <span style="font:500 11px 'IBM Plex Mono',monospace;color:#8b9499;width:22px">#7</span>
+                <span style="flex:1;font:400 13px 'Barlow',sans-serif;color:#8b9499;min-width:0">Ben Kessler</span>
+                <span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499">4/4 CP</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+            <h3 style="margin:0 0 14px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Letzte Aktivität</h3>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:21</span><span style="font:400 12.5px/1.4 'Barlow',sans-serif;color:#eef0ef">#4 Mona Specht im Ziel · 1:24:12</span></div>
+              <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:19</span><span style="font:400 12.5px/1.4 'Barlow',sans-serif;color:#eef0ef">#12 CP 3 bestätigt</span></div>
+              <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:18</span><span style="font:400 12.5px/1.4 'Barlow',sans-serif;color:#e05540">#5 Tom Gerlach als DNF markiert</span></div>
+              <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:15</span><span style="font:400 12.5px/1.4 'Barlow',sans-serif;color:#eef0ef">#3 Kai Radtke im Ziel · 1:19:11</span></div>
+              <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:11</span><span style="font:400 12.5px/1.4 'Barlow',sans-serif;color:#eef0ef">Zone „Innenstadt" auf 1,2 km geschrumpft</span></div>
+            </div>
+          </div>
+
+          <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+            <h3 style="margin:0 0 14px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Kategorien</h3>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div>
+                <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499;margin-bottom:7px">Antrieb</div>
+                <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px"><span style="width:74px;font:400 12px 'Barlow',sans-serif;color:#eef0ef">Fixed</span><span style="flex:1;height:8px;border-radius:4px;background:#1f2327;overflow:hidden"><span style="display:block;height:100%;width:58%;background:#f4762a"></span></span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:22px;text-align:right">10</span></div>
+                <div style="display:flex;align-items:center;gap:9px"><span style="width:74px;font:400 12px 'Barlow',sans-serif;color:#eef0ef">Gears</span><span style="flex:1;height:8px;border-radius:4px;background:#1f2327;overflow:hidden"><span style="display:block;height:100%;width:42%;background:#6c8cf5"></span></span><span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef;width:22px;text-align:right">7</span></div>
+              </div>
+              <div>
+                <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499;margin-bottom:7px">Teams</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <span style="display:inline-flex;align-items:center;gap:6px;font:400 11.5px 'Barlow',sans-serif;color:#eef0ef;background:#1f2327;border-radius:999px;padding:4px 10px"><span style="width:8px;height:8px;border-radius:50%;background:#6c8cf5"></span>Dom-Sprint · 6</span>
+                  <span style="display:inline-flex;align-items:center;gap:6px;font:400 11.5px 'Barlow',sans-serif;color:#eef0ef;background:#1f2327;border-radius:999px;padding:4px 10px"><span style="width:8px;height:8px;border-radius:50%;background:#2fa46a"></span>Kranhaus · 5</span>
+                  <span style="display:inline-flex;align-items:center;gap:6px;font:400 11.5px 'Barlow',sans-serif;color:#8b9499;background:#1f2327;border-radius:999px;padding:4px 10px">Solo · 6</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+            <h3 style="margin:0 0 14px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Nächste To-dos</h3>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;background:#1f2327;box-shadow:inset 2px 0 0 #f4762a"><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">CP 4 hat kein Personal</span><span style="font:500 10.5px 'IBM Plex Mono',monospace;color:#f4762a">zuweisen</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;background:#1f2327"><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">3 Fahrer ohne Notfallkontakt</span><span style="font:500 10.5px 'IBM Plex Mono',monospace;color:#8b9499">öffnen</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;background:#1f2327"><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Kartenkacheln-Cache 6 Tage alt</span><span style="font:500 10.5px 'IBM Plex Mono',monospace;color:#8b9499">erneuern</span></div>
+            </div>
+          </div>
+
+          <div style="background:#171a1d;border:1px solid #2c3237;border-radius:12px;padding:16px 18px 18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
+              <h3 style="margin:0;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Spielmodi</h3>
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#f4762a;background:rgba(244,118,42,.14);border-radius:999px;padding:3px 8px">2 aktiv</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;gap:10px"><span style="width:26px;height:15px;border-radius:999px;background:#f4762a;position:relative;flex-shrink:0"><span style="position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:50%;background:#0e1113"></span></span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Bonus-CPs mit Rang-Punkten</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="width:26px;height:15px;border-radius:999px;background:#f4762a;position:relative;flex-shrink:0"><span style="position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:50%;background:#0e1113"></span></span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Battle Royale · Zone schrumpft</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="width:26px;height:15px;border-radius:999px;background:#1f2327;border:1px solid #2c3237;position:relative;flex-shrink:0"><span style="position:absolute;top:1px;left:2px;width:11px;height:11px;border-radius:50%;background:#8b9499"></span></span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#8b9499">Geheime CPs</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="width:26px;height:15px;border-radius:999px;background:#1f2327;border:1px solid #2c3237;position:relative;flex-shrink:0"><span style="position:absolute;top:1px;left:2px;width:11px;height:11px;border-radius:50%;background:#8b9499"></span></span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#8b9499">Sudden Death</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ B · KARTEN-EDITOR ══════════════ -->
+  <div data-screen-label="Neu · Karten-Editor" style="display:flex;flex-direction:column;gap:12px">
+    <div style="font:500 11px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">B · Karten-Editor — Liste · Karte · Inspector (aus 1d)</div>
+    <div style="width:1440px;height:900px;background:#0e1113;color:#eef0ef;display:flex;overflow:hidden;border:1px solid #2c3237">
+
+      <div style="width:84px;flex-shrink:0;background:#171a1d;border-right:1px solid #2c3237;display:flex;flex-direction:column;align-items:center;padding:16px 0 14px;gap:6px">
+        <div style="width:40px;height:40px;border-radius:11px;background:#f4762a;color:#0e1113;display:flex;align-items:center;justify-content:center;font:700 15px 'Barlow Condensed',sans-serif;letter-spacing:.04em;margin-bottom:12px">AC</div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">ÜB</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Übersicht</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;background:rgba(244,118,42,.14);box-shadow:inset 2px 0 0 #f4762a;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#f4762a">KA</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#f4762a">Karte</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">FA</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Fahrer</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">ZI</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Ziel</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">LB</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Board</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">PDF</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Druck</span></div>
+        <div style="flex:1"></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">⌘K</span></div>
+      </div>
+
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 26px;border-bottom:1px solid #2c3237">
+          <h2 style="margin:0;font:600 25px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef;white-space:nowrap">Kölner Kurierrennen</h2>
+          <span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:{{stateBg}};color:{{stateFg}};border-radius:999px;padding:4px 10px">{{stateLabel}}</span>
+          <span style="font:400 12px 'IBM Plex Mono',monospace;color:#8b9499">6 CP · 18,4 km · Reihenfolge frei</span>
+          <div style="flex:1"></div>
+          <div style="display:flex;gap:8px">
+            <div style="font:500 12px 'Barlow',sans-serif;padding:9px 14px;border-radius:8px;border:1px solid #2c3237;color:#eef0ef">GPX</div>
+            <div style="font:500 12px 'Barlow',sans-serif;padding:9px 14px;border-radius:8px;border:1px solid #2c3237;color:#eef0ef">Personal-Briefing</div>
+            <div style="font:600 12px 'Barlow',sans-serif;padding:9px 16px;border-radius:8px;background:#f4762a;color:#0e1113">＋ Checkpoint setzen</div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:0;display:flex">
+
+          <div style="width:296px;flex-shrink:0;border-right:1px solid #2c3237;display:flex;flex-direction:column;background:#0e1113">
+            <div style="padding:12px 16px;border-bottom:1px solid #2c3237;display:flex;align-items:center;gap:8px">
+              <span style="flex:1;font:400 12px 'Barlow',sans-serif;color:#8b9499;background:#171a1d;border:1px solid #2c3237;border-radius:7px;padding:7px 10px">Checkpoint suchen…</span>
+              <span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499;border:1px solid #2c3237;border-radius:7px;padding:7px 9px">Sort ⌄</span>
+            </div>
+            <div style="flex:1;overflow:auto">
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #1f2327;background:rgba(244,118,42,.14);box-shadow:inset 2px 0 0 #f4762a">
+                <span style="width:24px;height:24px;border-radius:7px;background:#f4762a;color:#0e1113;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
+                <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px 'Barlow',sans-serif;color:#eef0ef">Zülpicher Platz</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;margin-top:2px">QR · Pflicht · 3,1 km</span></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#2fa46a;flex-shrink:0"></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #1f2327">
+                <span style="width:24px;height:24px;border-radius:7px;background:#1f2327;color:#eef0ef;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
+                <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px 'Barlow',sans-serif;color:#eef0ef">Kölner Dom – Domplatte</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;margin-top:2px">Foto · Pflicht · 2,4 km</span></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#2fa46a;flex-shrink:0"></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #1f2327">
+                <span style="width:24px;height:24px;border-radius:7px;background:#1f2327;color:#eef0ef;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</span>
+                <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px 'Barlow',sans-serif;color:#eef0ef">Hohenzollernbrücke</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;margin-top:2px">Item · Pflicht · 4,0 km</span></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#2fa46a;flex-shrink:0"></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #1f2327">
+                <span style="width:24px;height:24px;border-radius:7px;border:1px dashed #2c3237;color:#8b9499;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</span>
+                <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px 'Barlow',sans-serif;color:#eef0ef">Rheinauhafen – Kranhäuser</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;margin-top:2px">Rätsel · Bonus · 2,9 km</span></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#e05540;flex-shrink:0"></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #1f2327">
+                <span style="width:24px;height:24px;border-radius:7px;background:#1f2327;color:#eef0ef;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</span>
+                <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px 'Barlow',sans-serif;color:#eef0ef">Ebertplatz</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;margin-top:2px">Challenge · Pflicht · 3,3 km</span></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#2fa46a;flex-shrink:0"></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #1f2327">
+                <span style="width:24px;height:24px;border-radius:7px;background:#1f2327;color:#eef0ef;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center;flex-shrink:0">6</span>
+                <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px 'Barlow',sans-serif;color:#eef0ef">Chlodwigplatz</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;margin-top:2px">QR · Pflicht · 2,7 km</span></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#2fa46a;flex-shrink:0"></span>
+              </div>
+              <div style="padding:14px 16px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px dashed #2c3237;border-radius:9px;margin:14px 16px;font:500 12px 'Barlow',sans-serif;color:#8b9499">＋ Checkpoint per Klick auf die Karte</div>
+            </div>
+            <div style="padding:12px 16px;border-top:1px solid #2c3237;display:flex;align-items:center;gap:10px">
+              <span style="font:500 11px 'IBM Plex Mono',monospace;color:#eef0ef">Σ 18,4 km</span>
+              <span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499">· 5 Pflicht · 1 Bonus</span>
+            </div>
+          </div>
+
+          <div style="flex:1;min-width:0;position:relative;background:#171a1d">
+            <div style="position:absolute;inset:0;background-image:url('docs/screenshots/03-map-checkpoints.png');background-position:center 26%;background-size:150% auto;background-repeat:no-repeat;filter:saturate(.55) brightness(.92)"></div>
+            <div style="position:absolute;top:14px;left:14px;display:flex;gap:8px">
+              <span style="background:rgba(14,17,19,.86);border:1px solid #2c3237;border-radius:8px;padding:8px 12px;font:500 12px 'Barlow',sans-serif;color:#eef0ef;backdrop-filter:blur(6px)">⌕ Ort suchen</span>
+              <span style="background:rgba(14,17,19,.86);border:1px solid #2c3237;border-radius:8px;padding:8px 12px;font:500 12px 'Barlow',sans-serif;color:#eef0ef;backdrop-filter:blur(6px)">Zonen</span>
+              <span style="background:rgba(14,17,19,.86);border:1px solid #2c3237;border-radius:8px;padding:8px 12px;font:500 12px 'Barlow',sans-serif;color:#eef0ef;backdrop-filter:blur(6px)">Clue-Vorschau</span>
+              <span style="background:rgba(244,118,42,.16);border:1px solid #f4762a;border-radius:8px;padding:8px 12px;font:500 12px 'Barlow',sans-serif;color:#f4762a">Route anzeigen</span>
+            </div>
+            <div style="position:absolute;bottom:14px;left:14px;background:rgba(14,17,19,.9);border:1px solid #2c3237;border-radius:8px;padding:10px 13px;display:flex;gap:16px;flex-wrap:wrap;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;max-width:560px">
+              <span style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#f4762a"></span>Pflicht</span>
+              <span style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;border:1px dashed #8b9499"></span>Bonus</span>
+              <span style="display:flex;align-items:center;gap:7px"><span style="width:16px;border-top:2px dashed #f4762a"></span>Route</span>
+              <span style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#2fa46a"></span>Personal ok</span>
+              <span style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#e05540"></span>kein Personal</span>
+            </div>
+            <div style="position:absolute;top:16px;right:16px;display:flex;flex-direction:column;gap:6px">
+              <span style="width:32px;height:32px;border-radius:8px;background:rgba(14,17,19,.86);border:1px solid #2c3237;color:#eef0ef;display:flex;align-items:center;justify-content:center;font:500 15px 'IBM Plex Mono',monospace">+</span>
+              <span style="width:32px;height:32px;border-radius:8px;background:rgba(14,17,19,.86);border:1px solid #2c3237;color:#eef0ef;display:flex;align-items:center;justify-content:center;font:500 15px 'IBM Plex Mono',monospace">–</span>
+            </div>
+          </div>
+
+          <div style="width:320px;flex-shrink:0;border-left:1px solid #2c3237;background:#f5f2ec;color:#20211f;display:flex;flex-direction:column;overflow:auto">
+            <div style="padding:16px 18px 14px;border-bottom:1px solid #ddd8cc;display:flex;align-items:center;gap:10px">
+              <span style="width:28px;height:28px;border-radius:8px;background:#f4762a;color:#0e1113;font:600 13px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">1</span>
+              <span style="flex:1;font:600 17px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em">Zülpicher Platz</span>
+              <span style="font:400 15px 'Barlow',sans-serif;color:#8a8577">×</span>
+            </div>
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+              <div>
+                <div style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8577;margin-bottom:5px">Name</div>
+                <div style="font:400 13px 'Barlow',sans-serif;background:#fff;border:1px solid #ddd8cc;border-radius:7px;padding:9px 10px">Zülpicher Platz</div>
+              </div>
+              <div style="display:flex;gap:10px">
+                <div style="flex:1">
+                  <div style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8577;margin-bottom:5px">Typ</div>
+                  <div style="font:400 13px 'Barlow',sans-serif;background:#fff;border:1px solid #ddd8cc;border-radius:7px;padding:9px 10px">QR-Scan ⌄</div>
+                </div>
+                <div style="width:88px">
+                  <div style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8577;margin-bottom:5px">Punkte</div>
+                  <div style="font:400 13px 'IBM Plex Mono',monospace;background:#fff;border:1px solid #ddd8cc;border-radius:7px;padding:9px 10px">3</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <span style="flex:1;text-align:center;font:500 11.5px 'Barlow',sans-serif;background:#20211f;color:#f5f2ec;border-radius:999px;padding:7px 0">Pflicht</span>
+                <span style="flex:1;text-align:center;font:500 11.5px 'Barlow',sans-serif;border:1px solid #ddd8cc;border-radius:999px;padding:7px 0;color:#8a8577">Bonus</span>
+                <span style="flex:1;text-align:center;font:500 11.5px 'Barlow',sans-serif;border:1px solid #ddd8cc;border-radius:999px;padding:7px 0;color:#8a8577">Geheim</span>
+              </div>
+              <div>
+                <div style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8577;margin-bottom:5px">Zeitfenster</div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <div style="flex:1;font:400 12.5px 'IBM Plex Mono',monospace;background:#fff;border:1px solid #ddd8cc;border-radius:7px;padding:9px 10px">13:20</div>
+                  <span style="color:#8a8577">–</span>
+                  <div style="flex:1;font:400 12.5px 'IBM Plex Mono',monospace;background:#fff;border:1px solid #ddd8cc;border-radius:7px;padding:9px 10px">13:55</div>
+                </div>
+              </div>
+              <div>
+                <div style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8577;margin-bottom:5px">Koordinaten</div>
+                <div style="font:400 12px 'IBM Plex Mono',monospace;background:#fff;border:1px solid #ddd8cc;border-radius:7px;padding:9px 10px;color:#5c5849">50.9270 · 6.9370</div>
+              </div>
+              <div>
+                <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
+                  <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8577">Personal</span>
+                  <span style="font:500 10.5px 'IBM Plex Mono',monospace;color:#c25a1e">＋ hinzufügen</span>
+                </div>
+                <div style="background:#fff;border:1px solid #ddd8cc;border-radius:7px;padding:10px;display:flex;flex-direction:column;gap:4px">
+                  <span style="font:500 12.5px 'Barlow',sans-serif">Ines Kolb · Marshal</span>
+                  <span style="font:400 11px 'IBM Plex Mono',monospace;color:#8a8577">0171 88 22 10 · 13:00–14:30</span>
+                </div>
+                <div style="font:400 10.5px/1.5 'IBM Plex Mono',monospace;color:#8a8577;margin-top:6px">Erscheint nur im Personal-Briefing, nie auf Manifest oder Spokecards.</div>
+              </div>
+              <div>
+                <div style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8577;margin-bottom:5px">Clue für Fahrer</div>
+                <div style="font:italic 400 12.5px/1.5 'Barlow',sans-serif;background:#fff;border:1px solid #ddd8cc;border-radius:7px;padding:9px 10px;color:#5c5849">Wo der Ring am lautesten ist, zwischen Kiosk und Kino.</div>
+              </div>
+            </div>
+            <div style="margin-top:auto;padding:14px 18px;border-top:1px solid #ddd8cc;display:flex;gap:8px">
+              <span style="flex:1;text-align:center;font:600 12.5px 'Barlow',sans-serif;background:#f4762a;color:#0e1113;border-radius:8px;padding:11px 0">Speichern</span>
+              <span style="font:500 12.5px 'Barlow',sans-serif;border:1px solid #ddd8cc;border-radius:8px;padding:11px 13px;color:#5c5849">Duplizieren</span>
+              <span style="font:500 12.5px 'Barlow',sans-serif;border:1px solid #e0b6ae;border-radius:8px;padding:11px 13px;color:#c0392b">Löschen</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ C · ZIEL-CHECK-IN ══════════════ -->
+  <div data-screen-label="Neu · Ziel-Check-in" style="display:flex;flex-direction:column;gap:12px">
+    <div style="font:500 11px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">C · Ziel-Check-in — Scanner zuerst, Treffer als Sheet (aus 1g)</div>
+    <div style="width:1440px;height:900px;background:#0e1113;color:#eef0ef;display:flex;overflow:hidden;border:1px solid #2c3237">
+
+      <div style="width:84px;flex-shrink:0;background:#171a1d;border-right:1px solid #2c3237;display:flex;flex-direction:column;align-items:center;padding:16px 0 14px;gap:6px">
+        <div style="width:40px;height:40px;border-radius:11px;background:#f4762a;color:#0e1113;display:flex;align-items:center;justify-content:center;font:700 15px 'Barlow Condensed',sans-serif;letter-spacing:.04em;margin-bottom:12px">AC</div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">ÜB</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Übersicht</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">KA</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Karte</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">FA</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Fahrer</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;background:rgba(244,118,42,.14);box-shadow:inset 2px 0 0 #f4762a;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#f4762a">ZI</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#f4762a">Ziel</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">LB</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Board</span></div>
+        <div style="flex:1"></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">⌘K</span></div>
+      </div>
+
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 26px;border-bottom:1px solid #2c3237">
+          <h2 style="margin:0;font:600 25px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">Ziel-Check-in</h2>
+          <span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:{{stateBg}};color:{{stateFg}};border-radius:999px;padding:4px 10px">{{stateLabel}}</span>
+          <span style="font:400 12px 'IBM Plex Mono',monospace;color:#8b9499">12 offen · 4 im Ziel · Bildschirm bleibt an</span>
+          <div style="flex:1"></div>
+          <div style="font:500 12px 'Barlow',sans-serif;padding:9px 14px;border-radius:8px;border:1px solid #2c3237;color:#eef0ef">↩ Letztes rückgängig</div>
+          <div style="font:600 12px 'Barlow',sans-serif;padding:9px 16px;border-radius:8px;background:#f4762a;color:#0e1113">Raceday-Vollbild</div>
+        </div>
+
+        <div style="flex:1;min-height:0;display:flex">
+          <div style="flex:1;min-width:0;position:relative;background:#08090a;display:flex;align-items:center;justify-content:center">
+            <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,#1b1f22 0%,#08090a 70%)"></div>
+            <div style="position:relative;width:300px;height:300px;border-radius:20px;border:2px solid rgba(244,118,42,.35);overflow:hidden">
+              <div style="position:absolute;left:-1px;top:-1px;width:44px;height:44px;border-top:3px solid #f4762a;border-left:3px solid #f4762a;border-radius:18px 0 0 0"></div>
+              <div style="position:absolute;right:-1px;top:-1px;width:44px;height:44px;border-top:3px solid #f4762a;border-right:3px solid #f4762a;border-radius:0 18px 0 0"></div>
+              <div style="position:absolute;left:-1px;bottom:-1px;width:44px;height:44px;border-bottom:3px solid #f4762a;border-left:3px solid #f4762a;border-radius:0 0 0 18px"></div>
+              <div style="position:absolute;right:-1px;bottom:-1px;width:44px;height:44px;border-bottom:3px solid #f4762a;border-right:3px solid #f4762a;border-radius:0 0 18px 0"></div>
+              <div style="position:absolute;left:12px;right:12px;top:50%;height:2px;background:linear-gradient(90deg,transparent,#f4762a,transparent);animation:scanline 2.4s ease-in-out infinite alternate"></div>
+            </div>
+            <div style="position:absolute;top:calc(50% + 190px);left:0;right:0;text-align:center">
+              <div style="font:600 19px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.1em;color:#eef0ef">Spokecard scannen</div>
+              <div style="font:400 12.5px 'IBM Plex Mono',monospace;color:#8b9499;margin-top:8px">Kamera aktiv · Ziel-Check-in läuft offline weiter</div>
+              <div style="display:inline-flex;align-items:center;gap:10px;margin-top:20px;border:1px solid #2c3237;border-radius:999px;padding:10px 18px;background:#171a1d">
+                <span style="font:500 12.5px 'Barlow',sans-serif;color:#eef0ef">Nummer eintippen</span>
+                <span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.06em;color:#8b9499">TAB</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="width:470px;flex-shrink:0;border-left:1px solid #2c3237;background:#0e1113;display:flex;flex-direction:column">
+            <div style="background:#f5f2ec;color:#20211f;margin:18px;border-radius:14px;box-shadow:0 18px 44px rgba(0,0,0,.5);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid #ddd8cc">
+                <span style="font:600 26px 'IBM Plex Mono',monospace;background:#20211f;color:#f5f2ec;border-radius:9px;padding:6px 12px">#04</span>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font:600 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em">Mona Specht</span>
+                  <span style="display:block;font:400 11px 'IBM Plex Mono',monospace;color:#8a8577;margin-top:2px">Solo · Fixed · gescannt 14:24:12</span>
+                </span>
+                <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;background:#dff0e4;color:#1f7a4d;border-radius:999px;padding:4px 9px">QR ok</span>
+              </div>
+
+              <div style="padding:16px 18px;border-bottom:1px solid #ddd8cc">
+                <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
+                  <span style="font:600 38px/1 'IBM Plex Mono',monospace;letter-spacing:-.02em">1:24:12</span>
+                  <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#8a8577">Start 13:00 · Ziel 14:24</span>
+                </div>
+                <div style="width:100%;font:600 15px 'Barlow',sans-serif;background:#f4762a;color:#0e1113;border-radius:10px;padding:16px 0;text-align:center">Ziel-Ankunft bestätigen</div>
+                <div style="text-align:center;font:400 10.5px 'IBM Plex Mono',monospace;color:#8a8577;margin-top:9px">Enter · rückgängig innerhalb von 30 s</div>
+              </div>
+
+              <div style="padding:14px 18px;border-bottom:1px solid #ddd8cc">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+                  <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8577">Checkpoints</span>
+                  <span style="font:500 11px 'IBM Plex Mono',monospace;color:#20211f">4/4 Pflicht · 6/6 gesamt</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:7px">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="width:22px;height:22px;border-radius:50%;background:#2fa46a;color:#fff;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">✓</span>
+                    <span style="flex:1;font:400 12.5px 'Barlow',sans-serif">Zülpicher Platz</span>
+                    <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8a8577">13:32 · QR</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="width:22px;height:22px;border-radius:50%;background:#2fa46a;color:#fff;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">✓</span>
+                    <span style="flex:1;font:400 12.5px 'Barlow',sans-serif">Kölner Dom – Domplatte</span>
+                    <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8a8577">13:48 · Foto</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="width:22px;height:22px;border-radius:50%;background:#2fa46a;color:#fff;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">✓</span>
+                    <span style="flex:1;font:400 12.5px 'Barlow',sans-serif">Hohenzollernbrücke</span>
+                    <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8a8577">14:02 · Item</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#fff;border:1px solid #ddd8cc;border-radius:9px">
+                    <span style="width:22px;height:22px;border-radius:50%;border:1.5px dashed #b3ac99;color:#8a8577;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">5</span>
+                    <span style="flex:1;font:400 12.5px 'Barlow',sans-serif">Ebertplatz <span style="font:400 9.5px 'IBM Plex Mono',monospace;color:#8a8577">Challenge</span></span>
+                    <span style="display:flex;gap:4px">
+                      <span style="width:26px;height:26px;border-radius:7px;border:1px solid #ddd8cc;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center;color:#8a8577">3</span>
+                      <span style="width:26px;height:26px;border-radius:7px;border:1px solid #ddd8cc;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center;color:#8a8577">4</span>
+                      <span style="width:26px;height:26px;border-radius:7px;background:#20211f;color:#f5f2ec;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">5</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="padding:13px 18px;display:flex;gap:8px">
+                <span style="flex:1;text-align:center;font:500 12.5px 'Barlow',sans-serif;border:1px solid #e0b6ae;color:#c0392b;border-radius:9px;padding:11px 0">DNF</span>
+                <span style="flex:1;text-align:center;font:500 12.5px 'Barlow',sans-serif;border:1px solid #ddd8cc;color:#5c5849;border-radius:9px;padding:11px 0">DNS</span>
+                <span style="flex:1;text-align:center;font:500 12.5px 'Barlow',sans-serif;border:1px solid #ddd8cc;color:#5c5849;border-radius:9px;padding:11px 0">Fahrer öffnen</span>
+              </div>
+            </div>
+
+            <div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:9px;min-height:0">
+              <div style="display:flex;align-items:baseline;justify-content:space-between">
+                <span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">Warteschlange</span>
+                <span style="font:500 10.5px 'IBM Plex Mono',monospace;color:#f4762a">12 offen</span>
+              </div>
+              <div style="display:flex;flex-direction:column;border:1px solid #2c3237;border-radius:10px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #1f2327"><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef;width:26px">#7</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Ben Kessler</span><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">4/4 CP</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #1f2327"><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef;width:26px">#2</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Lea Winter</span><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">3/4 CP</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #1f2327"><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef;width:26px">#9</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Nina Böckler</span><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">3/4 CP</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px"><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef;width:26px">#11</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Sara Lenz</span><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">2/4 CP</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ D · RACEDAY ══════════════ -->
+  <div data-screen-label="Neu · Raceday-Vollbild" style="display:flex;flex-direction:column;gap:12px">
+    <div style="font:500 11px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">D · Raceday-Vollbild — Check-in dominiert (aus 1k) · ohne Rail</div>
+    <div style="width:1440px;height:900px;background:#08090a;color:#eef0ef;display:flex;flex-direction:column;overflow:hidden;border:1px solid #2c3237">
+
+      <div style="display:flex;align-items:center;gap:16px;padding:16px 24px;border-bottom:1px solid #2c3237;background:#0e1113">
+        <span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#f4762a">Raceday</span>
+        <span style="font:600 20px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">Kölner Kurierrennen</span>
+        <span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:{{stateBg}};color:{{stateFg}};border-radius:999px;padding:4px 10px">{{stateLabel}}</span>
+        <div style="flex:1"></div>
+        <div style="display:flex;align-items:baseline;gap:22px">
+          <span style="font:600 32px/1 'IBM Plex Mono',monospace;color:#eef0ef;letter-spacing:-.01em">01:24:09</span>
+          <span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499">Curfew 15:00 · 36 min</span>
+        </div>
+        <div style="width:1px;height:32px;background:#2c3237"></div>
+        <span style="font:500 12px 'Barlow',sans-serif;border:1px solid #2c3237;border-radius:8px;padding:9px 14px;color:#eef0ef">Beamer ↗</span>
+        <span style="font:500 12px 'Barlow',sans-serif;border:1px solid #2c3237;border-radius:8px;padding:9px 14px;color:#8b9499">Verlassen</span>
+      </div>
+
+      <div style="flex:1;min-height:0;display:flex;gap:18px;padding:18px 24px 24px">
+
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:18px">
+          <div style="flex:1;min-height:0;position:relative;border:1px solid #2c3237;border-radius:14px;background:#0e1113;display:flex;align-items:center;justify-content:center;overflow:hidden">
+            <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#1b1f22 0%,#0a0c0d 72%)"></div>
+            <div style="position:relative;width:260px;height:260px;border-radius:18px;border:2px solid rgba(244,118,42,.3);overflow:hidden">
+              <div style="position:absolute;left:-1px;top:-1px;width:40px;height:40px;border-top:3px solid #f4762a;border-left:3px solid #f4762a;border-radius:16px 0 0 0"></div>
+              <div style="position:absolute;right:-1px;top:-1px;width:40px;height:40px;border-top:3px solid #f4762a;border-right:3px solid #f4762a;border-radius:0 16px 0 0"></div>
+              <div style="position:absolute;left:-1px;bottom:-1px;width:40px;height:40px;border-bottom:3px solid #f4762a;border-left:3px solid #f4762a;border-radius:0 0 0 16px"></div>
+              <div style="position:absolute;right:-1px;bottom:-1px;width:40px;height:40px;border-bottom:3px solid #f4762a;border-right:3px solid #f4762a;border-radius:0 0 16px 0"></div>
+              <div style="position:absolute;left:12px;right:12px;top:50%;height:2px;background:linear-gradient(90deg,transparent,#f4762a,transparent);animation:scanline 2.4s ease-in-out infinite alternate"></div>
+            </div>
+            <div style="position:absolute;top:20px;left:22px;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">Scanner aktiv</div>
+            <div style="position:absolute;bottom:20px;left:0;right:0;text-align:center;font:400 12.5px 'IBM Plex Mono',monospace;color:#8b9499">Spokecard vor die Kamera · oder Nummer tippen</div>
+          </div>
+
+          <div style="border:1px solid #2c3237;border-radius:14px;background:#0e1113;padding:18px 20px;display:flex;align-items:center;gap:20px">
+            <div style="font:600 46px/1 'IBM Plex Mono',monospace;color:#eef0ef;letter-spacing:-.02em">#04</div>
+            <div style="flex:1;min-width:0">
+              <div style="font:600 24px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">Mona Specht</div>
+              <div style="display:flex;align-items:center;gap:9px;margin-top:9px">
+                <span style="width:22px;height:22px;border-radius:50%;background:#2fa46a;color:#0e1113;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">✓</span>
+                <span style="width:22px;height:22px;border-radius:50%;background:#2fa46a;color:#0e1113;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">✓</span>
+                <span style="width:22px;height:22px;border-radius:50%;background:#2fa46a;color:#0e1113;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">✓</span>
+                <span style="width:22px;height:22px;border-radius:50%;background:#2fa46a;color:#0e1113;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">✓</span>
+                <span style="width:22px;height:22px;border-radius:50%;background:#1f2327;color:#f4762a;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">5</span>
+                <span style="width:22px;height:22px;border-radius:50%;border:1px dashed #2c3237"></span>
+                <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#8b9499;margin-left:6px">4/4 Pflicht · 5/6 gesamt · 3 Pkt.</span>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font:600 30px/1 'IBM Plex Mono',monospace;color:#eef0ef">1:24:12</div>
+              <div style="font:400 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499;margin-top:5px">Zielzeit</div>
+            </div>
+            <div style="width:250px;font:600 17px 'Barlow',sans-serif;background:#f4762a;color:#0e1113;border-radius:11px;padding:20px 0;text-align:center;flex-shrink:0">Ziel bestätigen</div>
+            <div style="display:flex;flex-direction:column;gap:7px;flex-shrink:0">
+              <span style="font:500 11.5px 'Barlow',sans-serif;border:1px solid #4a2b28;color:#e05540;border-radius:8px;padding:9px 13px;text-align:center">DNF</span>
+              <span style="font:500 11.5px 'Barlow',sans-serif;border:1px solid #2c3237;color:#8b9499;border-radius:8px;padding:9px 13px;text-align:center">↩ Undo</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="width:352px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;min-height:0">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div style="border:1px solid #2c3237;border-radius:12px;background:#0e1113;padding:13px 14px"><div style="font:600 24px/1 'IBM Plex Mono',monospace;color:#eef0ef">12</div><div style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499;margin-top:5px">offen</div></div>
+            <div style="border:1px solid #2c3237;border-radius:12px;background:#0e1113;padding:13px 14px"><div style="font:600 24px/1 'IBM Plex Mono',monospace;color:#2fa46a">4</div><div style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499;margin-top:5px">im ziel</div></div>
+            <div style="border:1px solid #2c3237;border-radius:12px;background:#0e1113;padding:13px 14px"><div style="font:600 24px/1 'IBM Plex Mono',monospace;color:#e05540">1</div><div style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499;margin-top:5px">dnf</div></div>
+          </div>
+
+          <div style="border:1px solid #2c3237;border-radius:12px;background:#0e1113;padding:14px 16px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px">
+              <span style="font:600 13px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Live-Leaderboard</span>
+              <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8b9499">Punkte-Wertung</span>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #1f2327"><span style="width:19px;height:19px;border-radius:50%;background:#f4762a;color:#0e1113;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">1</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Jonas Bergmann</span><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef">5 P</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499;width:48px;text-align:right">1:12</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #1f2327"><span style="width:19px;height:19px;border-radius:50%;background:#1f2327;color:#eef0ef;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">2</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Lea Winter</span><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef">4 P</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499;width:48px;text-align:right">1:15</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #1f2327"><span style="width:19px;height:19px;border-radius:50%;background:#1f2327;color:#eef0ef;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">3</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Mona Specht</span><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#f4762a">3 P</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499;width:48px;text-align:right">1:24</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #1f2327"><span style="width:19px;height:19px;border-radius:50%;background:#1f2327;color:#8b9499;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">4</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Kai Radtke</span><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#8b9499">0 P</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499;width:48px;text-align:right">1:19</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0"><span style="width:19px;height:19px;border-radius:50%;border:1px dashed #2c3237;color:#8b9499;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">5</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#8b9499">Ben Kessler</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499">unterwegs</span></div>
+            </div>
+          </div>
+
+          <div style="flex:1;min-height:0;border:1px solid #2c3237;border-radius:12px;background:#0e1113;padding:14px 16px;display:{{tickerDisplay}};flex-direction:column">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px">
+              <span style="font:600 13px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Ticker</span>
+              <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8b9499">Sound an</span>
+            </div>
+            <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:24</span><span style="font:400 12px/1.4 'Barlow',sans-serif;color:#2fa46a">#4 im Ziel · Platz 3</span></div>
+              <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:22</span><span style="font:400 12px/1.4 'Barlow',sans-serif;color:#eef0ef">#12 sichert Bonus CP 4 · +2 Pkt.</span></div>
+              <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:20</span><span style="font:400 12px/1.4 'Barlow',sans-serif;color:#f4762a">Zone schrumpft auf 1,2 km</span></div>
+              <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:18</span><span style="font:400 12px/1.4 'Barlow',sans-serif;color:#e05540">#5 ausgeschieden · Sudden Death</span></div>
+              <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:15</span><span style="font:400 12px/1.4 'Barlow',sans-serif;color:#eef0ef">Geheimer CP 7 enthüllt</span></div>
+              <div style="display:flex;gap:10px;align-items:baseline"><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499;flex-shrink:0">14:11</span><span style="font:400 12px/1.4 'Barlow',sans-serif;color:#2fa46a">#3 im Ziel · Platz 4</span></div>
+            </div>
+          </div>
+
+          <div style="border:1px solid #2c3237;border-radius:12px;background:#0e1113;padding:12px 14px;display:flex;align-items:center;gap:10px">
+            <span style="width:8px;height:8px;border-radius:50%;background:#2fa46a;flex-shrink:0"></span>
+            <span style="flex:1;font:400 11px/1.4 'IBM Plex Mono',monospace;color:#8b9499">Offline · Backup 14:20 · Wake Lock aktiv</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ E · LEADERBOARD ══════════════ -->
+  <div data-screen-label="Neu · Leaderboard" style="display:flex;flex-direction:column;gap:12px">
+    <div style="font:500 11px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">E · Leaderboard — Matrix + Wertung</div>
+    <div style="width:1440px;height:900px;background:#0e1113;color:#eef0ef;display:flex;overflow:hidden;border:1px solid #2c3237">
+
+      <div style="width:84px;flex-shrink:0;background:#171a1d;border-right:1px solid #2c3237;display:flex;flex-direction:column;align-items:center;padding:16px 0 14px;gap:6px">
+        <div style="width:40px;height:40px;border-radius:11px;background:#f4762a;color:#0e1113;display:flex;align-items:center;justify-content:center;font:700 15px 'Barlow Condensed',sans-serif;letter-spacing:.04em;margin-bottom:12px">AC</div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">ÜB</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Übersicht</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">KA</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Karte</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">FA</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Fahrer</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">ZI</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Ziel</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;background:rgba(244,118,42,.14);box-shadow:inset 2px 0 0 #f4762a;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#f4762a">LB</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#f4762a">Board</span></div>
+        <div style="width:64px;padding:9px 0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">PDF</span><span style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Druck</span></div>
+        <div style="flex:1"></div>
+        <div style="width:64px;padding:9px 0;display:flex;justify-content:center"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">⌘K</span></div>
+      </div>
+
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 26px;border-bottom:1px solid #2c3237">
+          <h2 style="margin:0;font:600 25px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef;white-space:nowrap">Kölner Kurierrennen</h2>
+          <span style="display:inline-flex;align-items:center;gap:6px;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:{{stateBg}};color:{{stateFg}};border-radius:999px;padding:4px 10px">{{stateLabel}}</span>
+          <span style="font:400 12px 'IBM Plex Mono',monospace;color:#8b9499">Leaderboard · Stand 14:24</span>
+          <div style="flex:1"></div>
+          <span style="font:500 12px 'Barlow',sans-serif;padding:9px 14px;border-radius:8px;border:1px solid #2c3237;color:#eef0ef">CSV</span>
+          <span style="font:500 12px 'Barlow',sans-serif;padding:9px 14px;border-radius:8px;border:1px solid #2c3237;color:#eef0ef">Beamer ↗</span>
+          <span style="font:600 12px 'Barlow',sans-serif;padding:9px 16px;border-radius:8px;background:#f4762a;color:#0e1113">Ergebnis drucken</span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 26px;border-bottom:1px solid #2c3237;background:#0e1113">
+          <div style="display:flex;border:1px solid #2c3237;border-radius:8px;overflow:hidden">
+            <span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;padding:7px 13px;background:rgba(244,118,42,.14);color:#f4762a">Punkte</span>
+            <span style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;padding:7px 13px;color:#8b9499;border-left:1px solid #2c3237">Zeit</span>
+            <span style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;padding:7px 13px;color:#8b9499;border-left:1px solid #2c3237">CP-Anzahl</span>
+          </div>
+          <span style="font:400 11.5px 'Barlow',sans-serif;color:#eef0ef;background:#1f2327;border-radius:999px;padding:5px 12px">Alle · 17</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font:400 11.5px 'Barlow',sans-serif;color:#8b9499;background:#1f2327;border-radius:999px;padding:5px 12px"><span style="width:8px;height:8px;border-radius:50%;background:#f4762a"></span>Fixed · 10</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font:400 11.5px 'Barlow',sans-serif;color:#8b9499;background:#1f2327;border-radius:999px;padding:5px 12px"><span style="width:8px;height:8px;border-radius:50%;background:#6c8cf5"></span>Gears · 7</span>
+          <div style="flex:1"></div>
+          <span style="font:400 11px 'IBM Plex Mono',monospace;color:#8b9499">DNF/DNS ausgeblendet</span>
+          <span style="width:26px;height:15px;border-radius:999px;background:#1f2327;border:1px solid #2c3237;position:relative"><span style="position:absolute;top:1px;left:2px;width:11px;height:11px;border-radius:50%;background:#8b9499"></span></span>
+        </div>
+
+        <div style="flex:1;min-height:0;display:flex;gap:18px;padding:18px 26px 26px">
+          <div style="flex:1;min-width:0;border:1px solid #2c3237;border-radius:12px;background:#171a1d;display:flex;flex-direction:column;overflow:hidden">
+            <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;background:#1f2327;border-bottom:1px solid #2c3237;padding:0 14px">
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;padding:10px 0">rg</span>
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">fahrer</span>
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">klasse</span>
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:center">1</span>
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:center">2</span>
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:center">3</span>
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:center">4*</span>
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:center">5</span>
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:center">6</span>
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:right">pkt</span>
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499;text-align:right">zeit</span>
+            </div>
+            <div style="flex:1;min-height:0;overflow:auto">
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#f4762a;padding:11px 0">1</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Jonas Bergmann</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#f4762a"></span>Fixed</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#eef0ef">5</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#eef0ef">1:12:04</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#eef0ef;padding:11px 0">2</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Lea Winter</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#6c8cf5"></span>Gears</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#eef0ef">4</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#eef0ef">1:15:38</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#eef0ef;padding:11px 0">3</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Mona Specht</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#f4762a"></span>Fixed</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#eef0ef">3</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#eef0ef">1:24:12</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#eef0ef;padding:11px 0">4</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Kai Radtke</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#f4762a"></span>Fixed</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#eef0ef">0</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#eef0ef">1:19:11</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327;background:rgba(244,118,42,.06)"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Ben Kessler</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#6c8cf5"></span>Gears</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">0</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Nina Falk</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#f4762a"></span>Fixed</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">0</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Tarek Yildiz</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#6c8cf5"></span>Gears</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">2</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Svea Lorenz</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#f4762a"></span>Fixed</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">0</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Pia Hoffmann</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#f4762a"></span>Fixed</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">2</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Milan Kraus</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#6c8cf5"></span>Gears</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">0</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Rieke Sommer</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#f4762a"></span>Fixed</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">0</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Osman Demir</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#6c8cf5"></span>Gears</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">2</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Frida Baum</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#f4762a"></span>Fixed</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">0</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Levi Arndt</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#6c8cf5"></span>Gears</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">0</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Anke Vogt</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#f4762a"></span>Fixed</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">0</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px;border-bottom:1px solid #1f2327"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#eef0ef">Cem Özcan</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#f4762a"></span>Fixed</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">0</span><span style="text-align:right;font:400 11px 'IBM Plex Mono',monospace;color:#f4762a">unterwegs</span></div>
+              <div style="display:grid;grid-template-columns:46px 240px 92px repeat(6,1fr) 58px 100px;align-items:center;padding:0 14px"><span style="font:600 13px 'IBM Plex Mono',monospace;color:#8b9499;padding:11px 0">–</span><span style="font:400 13px 'Barlow',sans-serif;color:#8b9499">Tom Gerlach</span><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499"><span style="width:7px;height:7px;border-radius:50%;background:#2c3237"></span>Fixed</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#2fa46a">✓</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:#8b9499">–</span><span style="text-align:right;font:600 12.5px 'IBM Plex Mono',monospace;color:#8b9499">0</span><span style="text-align:right;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#e05540">dnf</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;border-top:1px solid #2c3237;background:#1f2327;padding:9px 14px">
+              <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">4* = Bonus-CP · ✓ bestätigt · – offen</span>
+              <div style="flex:1"></div>
+              <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">17 Fahrer · 4 im Ziel · 1 DNF</span>
+            </div>
+          </div>
+
+          <div style="width:330px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;min-height:0">
+            <div style="border:1px solid #2c3237;border-radius:12px;background:#171a1d;padding:16px 18px 18px">
+              <h3 style="margin:0 0 14px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Podium</h3>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:9px;background:#1f2327;box-shadow:inset 2px 0 0 #f4762a"><span style="font:600 19px 'IBM Plex Mono',monospace;color:#f4762a">1</span><span style="flex:1;min-width:0"><span style="display:block;font:600 16px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">Jonas Bergmann</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">Fixed · Dom-Sprint</span></span><span style="text-align:right"><span style="display:block;font:600 14px 'IBM Plex Mono',monospace;color:#eef0ef">5 P</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">1:12:04</span></span></div>
+                <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:9px;background:#1f2327"><span style="font:600 19px 'IBM Plex Mono',monospace;color:#eef0ef">2</span><span style="flex:1;min-width:0"><span style="display:block;font:600 16px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">Lea Winter</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">Gears · Kranhaus</span></span><span style="text-align:right"><span style="display:block;font:600 14px 'IBM Plex Mono',monospace;color:#eef0ef">4 P</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">1:15:38</span></span></div>
+                <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:9px;background:#1f2327"><span style="font:600 19px 'IBM Plex Mono',monospace;color:#eef0ef">3</span><span style="flex:1;min-width:0"><span style="display:block;font:600 16px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#eef0ef">Mona Specht</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">Fixed · Kranhaus</span></span><span style="text-align:right"><span style="display:block;font:600 14px 'IBM Plex Mono',monospace;color:#eef0ef">3 P</span><span style="display:block;font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">1:24:12</span></span></div>
+              </div>
+            </div>
+
+            <div style="border:1px solid #2c3237;border-radius:12px;background:#171a1d;padding:16px 18px 18px">
+              <h3 style="margin:0 0 13px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Klassen-Sieger</h3>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:#f4762a;flex-shrink:0"></span><span style="width:52px;font:400 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Fixed</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Jonas Bergmann</span><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef">5 P</span></div>
+                <div style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:#6c8cf5;flex-shrink:0"></span><span style="width:52px;font:400 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Gears</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Lea Winter</span><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef">4 P</span></div>
+                <div style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:50%;background:#2fa46a;flex-shrink:0"></span><span style="width:52px;font:400 11px 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:#8b9499">Team</span><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#eef0ef">Kranhaus · 7 P</span><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#8b9499">2 Fhr</span></div>
+              </div>
+            </div>
+
+            <div style="border:1px solid #2c3237;border-radius:12px;background:#171a1d;padding:16px 18px 18px">
+              <h3 style="margin:0 0 13px;font:600 14px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#eef0ef">Wertung</h3>
+              <div style="display:flex;flex-direction:column;gap:8px;font:400 12px/1.5 'Barlow',sans-serif;color:#8b9499">
+                <div style="display:flex;justify-content:space-between"><span>Pflicht-CPs vollständig</span><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef">Voraussetzung</span></div>
+                <div style="display:flex;justify-content:space-between"><span>Bonus-CP</span><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef">+2 Pkt.</span></div>
+                <div style="display:flex;justify-content:space-between"><span>Zielankunft 1.–3.</span><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef">+3 / +2 / +1</span></div>
+                <div style="display:flex;justify-content:space-between"><span>Gleichstand</span><span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#eef0ef">Zielzeit</span></div>
+              </div>
+            </div>
+
+            <div style="flex:1;min-height:0"></div>
+            <div style="border:1px solid #2c3237;border-radius:12px;background:#171a1d;padding:12px 14px;display:flex;align-items:center;gap:10px">
+              <span style="width:8px;height:8px;border-radius:50%;background:#2fa46a;flex-shrink:0"></span>
+              <span style="flex:1;font:400 11px/1.4 'IBM Plex Mono',monospace;color:#8b9499">Ergebnis vorläufig · 12 Fahrer unterwegs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ E · BEAMER ══════════════ -->
+  <div data-screen-label="Neu · Beamer-Wand" style="display:flex;flex-direction:column;gap:12px">
+    <div style="font:500 11px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">E · Beamer-Wand — Publikumsansicht 1920 × 1080 · nichts unter 24 px · zweite Wand: <a href="Alleycat Dispatch - Beamer Livekarte.html">Livekarte</a></div>
+    <div style="width:1920px;height:1080px;background:#08090a;color:#eef0ef;display:flex;flex-direction:column;overflow:hidden;border:1px solid #2c3237;position:relative">
+
+      <div style="position:absolute;inset:0;background-image:linear-gradient(#171a1d 1px,transparent 1px),linear-gradient(90deg,#171a1d 1px,transparent 1px);background-size:80px 80px;opacity:.55;pointer-events:none"></div>
+      <div style="position:absolute;top:-240px;left:-160px;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,rgba(244,118,42,.14),transparent 62%);pointer-events:none"></div>
+
+      <div style="position:relative;display:flex;align-items:flex-end;gap:36px;padding:32px 56px 24px;border-bottom:2px solid #2c3237">
+        <div style="width:12px;height:88px;background:#f4762a;flex-shrink:0"></div>
+        <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+          <span style="font:500 26px/1 'IBM Plex Mono',monospace;letter-spacing:.28em;text-transform:uppercase;color:#f4762a">Live-Wertung · {{beamerModusLabel}}</span>
+          <span style="font:700 78px/.9 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.01em;color:#eef0ef">Kölner Kurierrennen</span>
+        </div>
+        <div style="flex:1"></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:12px">
+          <span style="font:600 26px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#8b9499">Renndauer</span>
+          <span style="font:600 90px/.88 'IBM Plex Mono',monospace;letter-spacing:-.03em;color:#eef0ef;font-variant-numeric:tabular-nums">01:24:09</span>
+        </div>
+      </div>
+
+      <div style="position:relative;flex:1;min-height:0;display:flex;gap:40px;padding:26px 56px 0">
+
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px">
+
+          <div style="display:grid;grid-template-columns:104px 1fr 250px 190px 130px;align-items:center;gap:20px;padding:0 26px 6px">
+            <span style="font:500 24px/1 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#8b9499">Rg</span>
+            <span style="font:500 24px/1 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#8b9499">Fahrer</span>
+            <span style="font:500 24px/1 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#8b9499">Checkpoints</span>
+            <span style="font:500 24px/1 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#8b9499;text-align:right">Zeit</span>
+            <span style="font:500 24px/1 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#8b9499;text-align:right">Pkt</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:104px 1fr 250px 190px 130px;align-items:center;gap:20px;padding:15px 26px;border-radius:16px;background:linear-gradient(90deg,rgba(244,118,42,.22),rgba(244,118,42,.04) 70%,transparent);box-shadow:inset 6px 0 0 #f4762a">
+            <span style="font:600 68px/1 'IBM Plex Mono',monospace;color:#f4762a;font-variant-numeric:tabular-nums">1</span>
+            <span style="display:flex;flex-direction:column;gap:6px;min-width:0"><span style="font:700 54px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.01em;color:#eef0ef">Jonas Bergmann</span><span style="font:400 24px/1 'IBM Plex Mono',monospace;color:#f4762a;letter-spacing:.06em;text-transform:uppercase">Fixed · Dom-Sprint</span></span>
+            <span style="display:flex;gap:11px"><span style="width:26px;height:26px;border-radius:50%;background:#2fa46a"></span><span style="width:26px;height:26px;border-radius:50%;background:#2fa46a"></span><span style="width:26px;height:26px;border-radius:50%;background:#2fa46a"></span><span style="width:26px;height:26px;border-radius:50%;background:#f4762a"></span><span style="width:26px;height:26px;border-radius:50%;background:#2fa46a"></span><span style="width:26px;height:26px;border-radius:50%;background:#2fa46a"></span></span>
+            <span style="font:600 40px/1 'IBM Plex Mono',monospace;color:#eef0ef;text-align:right;font-variant-numeric:tabular-nums">1:12:04</span>
+            <span style="font:600 48px/1 'IBM Plex Mono',monospace;color:#eef0ef;text-align:right;font-variant-numeric:tabular-nums">5</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:104px 1fr 250px 190px 130px;align-items:center;gap:20px;padding:12px 26px;border-radius:16px;background:#0e1113;border:1px solid #1f2327">
+            <span style="font:600 52px/1 'IBM Plex Mono',monospace;color:#eef0ef;font-variant-numeric:tabular-nums">2</span>
+            <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 44px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.01em;color:#eef0ef">Lea Winter</span><span style="font:400 24px/1 'IBM Plex Mono',monospace;color:#8b9499;letter-spacing:.06em;text-transform:uppercase">Gears · Kranhaus</span></span>
+            <span style="display:flex;gap:11px"><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;border:2px solid #2c3237"></span></span>
+            <span style="font:600 34px/1 'IBM Plex Mono',monospace;color:#eef0ef;text-align:right;font-variant-numeric:tabular-nums">1:15:38</span>
+            <span style="font:600 40px/1 'IBM Plex Mono',monospace;color:#eef0ef;text-align:right;font-variant-numeric:tabular-nums">4</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:104px 1fr 250px 190px 130px;align-items:center;gap:20px;padding:12px 26px;border-radius:16px;background:#0e1113;border:1px solid #1f2327">
+            <span style="font:600 52px/1 'IBM Plex Mono',monospace;color:#eef0ef;font-variant-numeric:tabular-nums">3</span>
+            <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 44px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.01em;color:#eef0ef">Mona Specht</span><span style="font:400 24px/1 'IBM Plex Mono',monospace;color:#8b9499;letter-spacing:.06em;text-transform:uppercase">Fixed · Kranhaus</span></span>
+            <span style="display:flex;gap:11px"><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;border:2px solid #2c3237"></span></span>
+            <span style="font:600 34px/1 'IBM Plex Mono',monospace;color:#eef0ef;text-align:right;font-variant-numeric:tabular-nums">1:24:12</span>
+            <span style="font:600 40px/1 'IBM Plex Mono',monospace;color:#eef0ef;text-align:right;font-variant-numeric:tabular-nums">3</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:104px 1fr 250px 190px 130px;align-items:center;gap:20px;padding:12px 26px;border-radius:16px;background:#0e1113;border:1px solid #1f2327">
+            <span style="font:600 52px/1 'IBM Plex Mono',monospace;color:#eef0ef;font-variant-numeric:tabular-nums">4</span>
+            <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 44px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.01em;color:#eef0ef">Kai Radtke</span><span style="font:400 24px/1 'IBM Plex Mono',monospace;color:#8b9499;letter-spacing:.06em;text-transform:uppercase">Fixed · Dom-Sprint</span></span>
+            <span style="display:flex;gap:11px"><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;border:2px solid #2c3237"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;border:2px solid #2c3237"></span></span>
+            <span style="font:600 34px/1 'IBM Plex Mono',monospace;color:#eef0ef;text-align:right;font-variant-numeric:tabular-nums">1:19:11</span>
+            <span style="font:600 40px/1 'IBM Plex Mono',monospace;color:#8b9499;text-align:right;font-variant-numeric:tabular-nums">0</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:104px 1fr 250px 190px 130px;align-items:center;gap:20px;padding:12px 26px;border-radius:16px;background:transparent;border:1px dashed #2c3237">
+            <span style="font:600 46px/1 'IBM Plex Mono',monospace;color:#8b9499">–</span>
+            <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 42px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.01em;color:#eef0ef">Ben Kessler</span><span style="font:400 24px/1 'IBM Plex Mono',monospace;color:#8b9499;letter-spacing:.06em;text-transform:uppercase">Gears · unterwegs</span></span>
+            <span style="display:flex;gap:11px"><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;border:2px solid #2c3237"></span><span style="width:22px;height:22px;border-radius:50%;border:2px solid #2c3237"></span><span style="width:22px;height:22px;border-radius:50%;border:2px solid #2c3237"></span></span>
+            <span style="font:500 26px/1 'IBM Plex Mono',monospace;color:#f4762a;text-align:right;letter-spacing:.08em;text-transform:uppercase">CP 3</span>
+            <span style="font:600 40px/1 'IBM Plex Mono',monospace;color:#8b9499;text-align:right">0</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:104px 1fr 250px 190px 130px;align-items:center;gap:20px;padding:12px 26px;border-radius:16px;background:transparent;border:1px dashed #2c3237">
+            <span style="font:600 46px/1 'IBM Plex Mono',monospace;color:#8b9499">–</span>
+            <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 42px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.01em;color:#eef0ef">Tarek Yildiz</span><span style="font:400 24px/1 'IBM Plex Mono',monospace;color:#8b9499;letter-spacing:.06em;text-transform:uppercase">Gears · unterwegs</span></span>
+            <span style="display:flex;gap:11px"><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;background:#2fa46a"></span><span style="width:22px;height:22px;border-radius:50%;border:2px solid #2c3237"></span><span style="width:22px;height:22px;border-radius:50%;background:#f4762a"></span><span style="width:22px;height:22px;border-radius:50%;border:2px solid #2c3237"></span><span style="width:22px;height:22px;border-radius:50%;border:2px solid #2c3237"></span></span>
+            <span style="font:500 26px/1 'IBM Plex Mono',monospace;color:#f4762a;text-align:right;letter-spacing:.08em;text-transform:uppercase">CP 4</span>
+            <span style="font:600 40px/1 'IBM Plex Mono',monospace;color:#8b9499;text-align:right">2</span>
+          </div>
+
+        </div>
+
+        <div style="width:520px;flex-shrink:0;display:flex;flex-direction:column;gap:20px;min-height:0">
+
+          <div style="border:1px solid #2c3237;border-radius:18px;background:#0e1113;padding:20px 28px 22px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;align-items:center;gap:14px">
+              <span style="width:16px;height:16px;border-radius:50%;background:#2fa46a"></span>
+              <span style="font:500 24px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#8b9499">Zuletzt im Ziel</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:baseline;gap:16px"><span style="flex:1;font:600 36px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;color:#eef0ef">Kai Radtke</span><span style="font:500 28px/1 'IBM Plex Mono',monospace;color:#2fa46a;font-variant-numeric:tabular-nums">1:19:11</span></div>
+              <div style="display:flex;align-items:baseline;gap:16px"><span style="flex:1;font:600 36px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;color:#eef0ef">Mona Specht</span><span style="font:500 28px/1 'IBM Plex Mono',monospace;color:#8b9499;font-variant-numeric:tabular-nums">1:24:12</span></div>
+              <div style="display:flex;align-items:baseline;gap:16px"><span style="flex:1;font:600 36px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;color:#eef0ef">Lea Winter</span><span style="font:500 28px/1 'IBM Plex Mono',monospace;color:#8b9499;font-variant-numeric:tabular-nums">1:15:38</span></div>
+            </div>
+          </div>
+
+          <div style="border:1px solid #2c3237;border-radius:18px;background:#0e1113;padding:20px 28px 22px;display:flex;flex-direction:column;gap:20px">
+            <span style="font:500 24px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#8b9499">Checkpoint-Auslastung</span>
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:baseline;gap:12px"><span style="flex:1;font:600 28px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.04em;color:#eef0ef">CP 1 · Heumarkt</span><span style="font:500 26px/1 'IBM Plex Mono',monospace;color:#8b9499">17/17</span></div><span style="display:block;height:10px;border-radius:999px;background:#1f2327"><span style="display:block;width:100%;height:10px;border-radius:999px;background:#2fa46a"></span></span></div>
+              <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:baseline;gap:12px"><span style="flex:1;font:600 28px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.04em;color:#eef0ef">CP 3 · Kranhaus</span><span style="font:500 26px/1 'IBM Plex Mono',monospace;color:#8b9499">12/17</span></div><span style="display:block;height:10px;border-radius:999px;background:#1f2327"><span style="display:block;width:70%;height:10px;border-radius:999px;background:#f4762a"></span></span></div>
+              <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:baseline;gap:12px"><span style="flex:1;font:600 28px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.04em;color:#eef0ef">CP 4 · Bonus</span><span style="font:500 26px/1 'IBM Plex Mono',monospace;color:#8b9499">6/17</span></div><span style="display:block;height:10px;border-radius:999px;background:#1f2327"><span style="display:block;width:35%;height:10px;border-radius:999px;background:#6c8cf5"></span></span></div>
+              <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:baseline;gap:12px"><span style="flex:1;font:600 28px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.04em;color:#eef0ef">CP 6 · Ziel</span><span style="font:500 26px/1 'IBM Plex Mono',monospace;color:#8b9499">4/17</span></div><span style="display:block;height:10px;border-radius:999px;background:#1f2327"><span style="display:block;width:24%;height:10px;border-radius:999px;background:#f4762a"></span></span></div>
+            </div>
+          </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+            <div style="border:1px solid #2c3237;border-radius:16px;background:#0e1113;padding:14px 16px;display:flex;flex-direction:column;gap:6px;align-items:flex-start"><span style="font:600 52px/1 'IBM Plex Mono',monospace;color:#2fa46a;font-variant-numeric:tabular-nums">4</span><span style="font:500 24px/1.1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499">im Ziel</span></div>
+            <div style="border:1px solid #2c3237;border-radius:16px;background:#0e1113;padding:14px 16px;display:flex;flex-direction:column;gap:6px;align-items:flex-start"><span style="font:600 52px/1 'IBM Plex Mono',monospace;color:#f4762a;font-variant-numeric:tabular-nums">12</span><span style="font:500 24px/1.1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499">unterwegs</span></div>
+            <div style="border:1px solid #2c3237;border-radius:16px;background:#0e1113;padding:14px 16px;display:flex;flex-direction:column;gap:6px;align-items:flex-start"><span style="font:600 52px/1 'IBM Plex Mono',monospace;color:#e05540;font-variant-numeric:tabular-nums">1</span><span style="font:500 24px/1.1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499">DNF</span></div>
+          </div>
+
+        </div>
+      </div>
+
+      <div style="position:relative;display:flex;align-items:center;gap:32px;padding:18px 56px;border-top:2px solid #2c3237;background:#0e1113">
+        <span style="font:500 26px/1 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#f4762a">Nächste Wertung 18:30</span>
+        <span style="width:2px;height:34px;background:#2c3237"></span>
+        <span style="font:400 26px/1 'Barlow',sans-serif;color:#8b9499">Ergebnis vorläufig · Aktualisierung alle 15 s</span>
+        <div style="flex:1"></div>
+        <span style="font:500 26px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8b9499">Live mitlesen</span>
+        <span style="font:600 30px/1 'IBM Plex Mono',monospace;letter-spacing:.02em;color:#eef0ef">alleycat.koeln/live</span>
+        <span style="width:64px;height:64px;border:2px solid #2c3237;border-radius:10px;background:repeating-conic-gradient(#eef0ef 0% 25%,#0e1113 0% 50%) 50%/16px 16px"></span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ MOBIL ══════════════ -->
+  <div style="display:{{mobileDisplay}};flex-direction:column;gap:12px">
+    <div style="font:500 11px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#8b9499">F · Mobil — Raceday am Ziel (390 × 844)</div>
+    <div style="display:flex;gap:26px;flex-wrap:wrap">
+
+      <div data-screen-label="Mobil · Check-in Scanner" style="width:390px;height:844px;background:#08090a;color:#eef0ef;border:1px solid #2c3237;border-radius:26px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:9px;padding:16px 18px 12px;border-bottom:1px solid #2c3237;background:#0e1113">
+          <span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#f4762a">Raceday</span>
+          <span style="flex:1"></span>
+          <span style="font:600 15px 'IBM Plex Mono',monospace;color:#eef0ef">01:24:09</span>
+          <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8b9499">12 offen</span>
+        </div>
+        <div style="flex:1;position:relative;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 38%,#1b1f22 0%,#08090a 72%)">
+          <div style="position:relative;width:236px;height:236px;border-radius:18px;border:2px solid rgba(244,118,42,.3)">
+            <div style="position:absolute;left:-1px;top:-1px;width:38px;height:38px;border-top:3px solid #f4762a;border-left:3px solid #f4762a;border-radius:16px 0 0 0"></div>
+            <div style="position:absolute;right:-1px;top:-1px;width:38px;height:38px;border-top:3px solid #f4762a;border-right:3px solid #f4762a;border-radius:0 16px 0 0"></div>
+            <div style="position:absolute;left:-1px;bottom:-1px;width:38px;height:38px;border-bottom:3px solid #f4762a;border-left:3px solid #f4762a;border-radius:0 0 0 16px"></div>
+            <div style="position:absolute;right:-1px;bottom:-1px;width:38px;height:38px;border-bottom:3px solid #f4762a;border-right:3px solid #f4762a;border-radius:0 0 16px 0"></div>
+            <div style="position:absolute;left:10px;right:10px;top:50%;height:2px;background:linear-gradient(90deg,transparent,#f4762a,transparent);animation:scanline 2.4s ease-in-out infinite alternate"></div>
+          </div>
+          <div style="position:absolute;bottom:26px;left:0;right:0;text-align:center;font:400 12px 'IBM Plex Mono',monospace;color:#8b9499">Spokecard scannen</div>
+        </div>
+        <div style="padding:16px 18px;border-top:1px solid #2c3237;background:#0e1113;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:10px">
+            <div style="flex:1;height:56px;border:1px solid #2c3237;border-radius:11px;display:flex;align-items:center;padding:0 16px;font:600 22px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#eef0ef">04</div>
+            <div style="width:96px;height:56px;border:1px solid #2c3237;border-radius:11px;display:flex;align-items:center;justify-content:center;font:500 13px 'Barlow',sans-serif;color:#eef0ef">Suchen</div>
+          </div>
+          <div style="height:60px;background:#f4762a;color:#0e1113;border-radius:12px;display:flex;align-items:center;justify-content:center;font:600 17px 'Barlow',sans-serif">Ziel bestätigen</div>
+          <div style="display:flex;gap:10px">
+            <span style="flex:1;height:48px;border:1px solid #4a2b28;color:#e05540;border-radius:11px;display:flex;align-items:center;justify-content:center;font:500 13px 'Barlow',sans-serif">DNF</span>
+            <span style="flex:1;height:48px;border:1px solid #2c3237;color:#8b9499;border-radius:11px;display:flex;align-items:center;justify-content:center;font:500 13px 'Barlow',sans-serif">DNS</span>
+            <span style="flex:1;height:48px;border:1px solid #2c3237;color:#8b9499;border-radius:11px;display:flex;align-items:center;justify-content:center;font:500 13px 'Barlow',sans-serif">↩ Undo</span>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="Mobil · Treffer bestätigen" style="width:390px;height:844px;background:#08090a;color:#eef0ef;border:1px solid #2c3237;border-radius:26px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:9px;padding:16px 18px 12px;border-bottom:1px solid #2c3237;background:#0e1113">
+          <span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#f4762a">Raceday</span>
+          <span style="flex:1"></span>
+          <span style="font:600 15px 'IBM Plex Mono',monospace;color:#eef0ef">01:24:09</span>
+        </div>
+        <div style="height:190px;position:relative;background:radial-gradient(circle at 50% 45%,#1b1f22 0%,#08090a 72%);display:flex;align-items:center;justify-content:center">
+          <div style="width:118px;height:118px;border-radius:14px;border:2px solid rgba(244,118,42,.3);position:relative">
+            <div style="position:absolute;left:-1px;top:-1px;width:26px;height:26px;border-top:3px solid #f4762a;border-left:3px solid #f4762a;border-radius:12px 0 0 0"></div>
+            <div style="position:absolute;right:-1px;bottom:-1px;width:26px;height:26px;border-bottom:3px solid #f4762a;border-right:3px solid #f4762a;border-radius:0 0 12px 0"></div>
+          </div>
+          <span style="position:absolute;bottom:12px;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#2fa46a">QR erkannt</span>
+        </div>
+        <div style="flex:1;min-height:0;overflow:auto;background:#f5f2ec;color:#20211f;border-radius:20px 20px 0 0;padding:18px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font:600 24px 'IBM Plex Mono',monospace;background:#20211f;color:#f5f2ec;border-radius:9px;padding:7px 12px">#04</span>
+            <span style="flex:1;min-width:0">
+              <span style="display:block;font:600 21px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em">Mona Specht</span>
+              <span style="display:block;font:400 11px 'IBM Plex Mono',monospace;color:#8a8577;margin-top:2px">Solo · Fixed</span>
+            </span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:12px">
+            <span style="font:600 34px/1 'IBM Plex Mono',monospace">1:24:12</span>
+            <span style="font:400 11px 'IBM Plex Mono',monospace;color:#8a8577">Start 13:00</span>
+          </div>
+          <div style="height:64px;background:#f4762a;color:#0e1113;border-radius:12px;display:flex;align-items:center;justify-content:center;font:600 18px 'Barlow',sans-serif">Ziel-Ankunft bestätigen</div>
+          <div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px">
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#8a8577">Checkpoints</span>
+              <span style="font:500 11px 'IBM Plex Mono',monospace">4/4 Pflicht</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:10px;min-height:44px"><span style="width:26px;height:26px;border-radius:50%;background:#2fa46a;color:#fff;font:600 12px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">✓</span><span style="flex:1;font:400 13.5px 'Barlow',sans-serif">Zülpicher Platz</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8a8577">13:32</span></div>
+              <div style="display:flex;align-items:center;gap:10px;min-height:44px"><span style="width:26px;height:26px;border-radius:50%;background:#2fa46a;color:#fff;font:600 12px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">✓</span><span style="flex:1;font:400 13.5px 'Barlow',sans-serif">Kölner Dom</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8a8577">13:48</span></div>
+              <div style="display:flex;align-items:center;gap:10px;min-height:44px"><span style="width:26px;height:26px;border-radius:50%;background:#2fa46a;color:#fff;font:600 12px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">✓</span><span style="flex:1;font:400 13.5px 'Barlow',sans-serif">Hohenzollernbrücke</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8a8577">14:02</span></div>
+              <div style="display:flex;align-items:center;gap:10px;min-height:44px;background:#fff;border:1px solid #ddd8cc;border-radius:10px;padding:0 10px"><span style="width:26px;height:26px;border-radius:50%;border:1.5px dashed #b3ac99;color:#8a8577;font:600 11px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">5</span><span style="flex:1;font:400 13.5px 'Barlow',sans-serif">Ebertplatz</span><span style="display:flex;gap:5px"><span style="width:32px;height:32px;border-radius:8px;border:1px solid #ddd8cc;font:600 12px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center;color:#8a8577">4</span><span style="width:32px;height:32px;border-radius:8px;background:#20211f;color:#f5f2ec;font:600 12px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">5</span></span></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:9px;margin-top:auto">
+            <span style="flex:1;height:48px;border:1px solid #e0b6ae;color:#c0392b;border-radius:11px;display:flex;align-items:center;justify-content:center;font:500 13px 'Barlow',sans-serif">DNF</span>
+            <span style="flex:1;height:48px;border:1px solid #ddd8cc;color:#5c5849;border-radius:11px;display:flex;align-items:center;justify-content:center;font:500 13px 'Barlow',sans-serif">DNS</span>
+            <span style="flex:1;height:48px;border:1px solid #ddd8cc;color:#5c5849;border-radius:11px;display:flex;align-items:center;justify-content:center;font:500 13px 'Barlow',sans-serif">Details</span>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="Mobil · Übersicht" style="width:390px;height:844px;background:#0e1113;color:#eef0ef;border:1px solid #2c3237;border-radius:26px;overflow:hidden;display:flex;flex-direction:column">
+        <div style="padding:16px 18px 14px;border-bottom:1px solid #2c3237">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="width:30px;height:30px;border-radius:9px;background:#f4762a;color:#0e1113;font:700 12px 'Barlow Condensed',sans-serif;display:flex;align-items:center;justify-content:center">AC</span>
+            <span style="flex:1;font:600 18px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em">Kölner Kurierrennen</span>
+            <span style="font:600 9px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;background:{{stateBg}};color:{{stateFg}};border-radius:999px;padding:3px 8px">{{stateLabel}}</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:12px;margin-top:14px">
+            <span style="font:600 30px/1 'IBM Plex Mono',monospace">01:24:09</span>
+            <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8b9499">Curfew 15:00</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #2c3237">
+          <div style="padding:14px 18px;border-right:1px solid #2c3237;border-bottom:1px solid #2c3237"><div style="font:600 26px/1 'IBM Plex Mono',monospace">12</div><div style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499;margin-top:5px">unterwegs</div></div>
+          <div style="padding:14px 18px;border-bottom:1px solid #2c3237"><div style="font:600 26px/1 'IBM Plex Mono',monospace;color:#2fa46a">4</div><div style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499;margin-top:5px">im ziel</div></div>
+          <div style="padding:14px 18px;border-right:1px solid #2c3237"><div style="font:600 26px/1 'IBM Plex Mono',monospace;color:#e05540">1</div><div style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499;margin-top:5px">dnf</div></div>
+          <div style="padding:14px 18px"><div style="font:600 26px/1 'IBM Plex Mono',monospace">86%</div><div style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#8b9499;margin-top:5px">cp-quote</div></div>
+        </div>
+        <div style="flex:1;min-height:0;overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+          <div style="border:1px solid #2c3237;border-radius:12px;padding:14px 15px">
+            <div style="font:600 13px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;margin-bottom:11px">Top 4</div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:20px;border-radius:50%;background:#f4762a;color:#0e1113;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">1</span><span style="flex:1;font:400 13px 'Barlow',sans-serif">Jonas Bergmann</span><span style="font:500 11.5px 'IBM Plex Mono',monospace">1:12</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:20px;border-radius:50%;background:#1f2327;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">2</span><span style="flex:1;font:400 13px 'Barlow',sans-serif">Lea Winter</span><span style="font:500 11.5px 'IBM Plex Mono',monospace">1:15</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:20px;border-radius:50%;background:#1f2327;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">3</span><span style="flex:1;font:400 13px 'Barlow',sans-serif">Kai Radtke</span><span style="font:500 11.5px 'IBM Plex Mono',monospace">1:19</span></div>
+              <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:20px;border-radius:50%;background:#1f2327;color:#8b9499;font:600 10px 'IBM Plex Mono',monospace;display:flex;align-items:center;justify-content:center">4</span><span style="flex:1;font:400 13px 'Barlow',sans-serif">Mona Specht</span><span style="font:500 11.5px 'IBM Plex Mono',monospace">1:24</span></div>
+            </div>
+          </div>
+          <div style="border:1px solid #2c3237;border-radius:12px;padding:14px 15px">
+            <div style="font:600 13px 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.08em;margin-bottom:11px">Checkpoints</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:9px"><span style="flex:1;font:400 12.5px 'Barlow',sans-serif">Zülpicher Platz</span><span style="width:66px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden"><span style="display:block;height:100%;width:100%;background:#f4762a"></span></span><span style="font:500 11px 'IBM Plex Mono',monospace;width:22px;text-align:right">17</span></div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="flex:1;font:400 12.5px 'Barlow',sans-serif">Kölner Dom</span><span style="width:66px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden"><span style="display:block;height:100%;width:82%;background:#f4762a"></span></span><span style="font:500 11px 'IBM Plex Mono',monospace;width:22px;text-align:right">14</span></div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="flex:1;font:400 12.5px 'Barlow',sans-serif">Hohenzollernbrücke</span><span style="width:66px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden"><span style="display:block;height:100%;width:65%;background:#f4762a"></span></span><span style="font:500 11px 'IBM Plex Mono',monospace;width:22px;text-align:right">11</span></div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="flex:1;font:400 12.5px 'Barlow',sans-serif;color:#8b9499">Rheinauhafen</span><span style="width:66px;height:6px;border-radius:3px;background:#1f2327;overflow:hidden"><span style="display:block;height:100%;width:41%;background:#8b9499"></span></span><span style="font:500 11px 'IBM Plex Mono',monospace;width:22px;text-align:right;color:#8b9499">7</span></div>
+            </div>
+          </div>
+          <div style="border:1px solid #2c3237;border-radius:12px;padding:14px 15px;display:flex;align-items:center;gap:10px">
+            <span style="width:8px;height:8px;border-radius:50%;background:#2fa46a"></span>
+            <span style="flex:1;font:400 11px 'IBM Plex Mono',monospace;color:#8b9499">Offline · Backup 14:20</span>
+          </div>
+        </div>
+        <div style="display:flex;border-top:1px solid #2c3237;background:#171a1d">
+          <div style="flex:1;padding:12px 0 16px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#f4762a">ÜB</span><span style="font:500 9px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;color:#f4762a">Übersicht</span></div>
+          <div style="flex:1;padding:12px 0 16px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">KA</span><span style="font:500 9px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;color:#8b9499">Karte</span></div>
+          <div style="flex:1;padding:12px 0 16px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">ZI</span><span style="font:500 9px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;color:#8b9499">Ziel</span></div>
+          <div style="flex:1;padding:12px 0 16px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;color:#8b9499">LB</span><span style="font:500 9px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;color:#8b9499">Board</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;rennstatus&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Planung&quot;,&quot;Bereit&quot;,&quot;Läuft&quot;,&quot;Abgeschlossen&quot;],&quot;default&quot;:&quot;Läuft&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Rennen&quot;},&quot;beamerModus&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Zwischenstand&quot;,&quot;Endergebnis&quot;],&quot;default&quot;:&quot;Zwischenstand&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Beamer&quot;},&quot;tickerZeigen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Raceday&quot;},&quot;mobilZeigen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Ansicht&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.props.rennstatus ?? "Läuft";
+    const map = {
+      "Planung":      { bg: "#1f2327", fg: "#8b9499" },
+      "Bereit":       { bg: "#6c8cf5", fg: "#0e1113" },
+      "Läuft":        { bg: "#f4762a", fg: "#0e1113" },
+      "Abgeschlossen":{ bg: "#2fa46a", fg: "#0e1113" }
+    };
+    const t = map[s] ?? map["Läuft"];
+    return {
+      stateLabel: s,
+      stateBg: t.bg,
+      stateFg: t.fg,
+      beamerModusLabel: this.props.beamerModus ?? "Zwischenstand",
+      tickerDisplay: (this.props.tickerZeigen ?? true) ? "flex" : "none",
+      mobileDisplay: (this.props.mobilZeigen ?? true) ? "flex" : "none"
+    };
+  }
+}
+</script>
+</body>
+</html>

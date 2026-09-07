@@ -1,0 +1,470 @@
+{
+  "startMode": "manual",
+  "startTime": "",
+  "curfewMode": "hard",
+  "curfewTime": "",
+  "curfewPenaltyPerMin": 1,
+  "expectedRiders": 5,
+  "checkpoints": [
+    {
+      "clue": "",
+      "mandatory": true,
+      "type": "qr",
+      "customQuestion": "",
+      "punchCode": "",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": "",
+      "locked": false,
+      "staff": [],
+      "gameHidden": false,
+      "gameRevealPrerequisiteCpId": "",
+      "pairedDropoffCpId": "",
+      "qrCheckinEnabled": false,
+      "qrToken": "",
+      "staffAccessCode": "",
+      "id": "cp-z6lm7wn",
+      "order": 1,
+      "lat": 50,
+      "lng": 8,
+      "name": "CP QR"
+    },
+    {
+      "clue": "",
+      "mandatory": false,
+      "type": "photo",
+      "customQuestion": "",
+      "punchCode": "",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": "",
+      "locked": false,
+      "staff": [],
+      "gameHidden": false,
+      "gameRevealPrerequisiteCpId": "",
+      "pairedDropoffCpId": "",
+      "qrCheckinEnabled": false,
+      "qrToken": "",
+      "staffAccessCode": "",
+      "id": "cp-ls7u2xc",
+      "order": 2,
+      "lat": 50.01,
+      "lng": 8.01,
+      "name": "CP FOTO"
+    },
+    {
+      "clue": "",
+      "mandatory": true,
+      "type": "item",
+      "customQuestion": "",
+      "punchCode": "",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": "",
+      "locked": false,
+      "staff": [],
+      "gameHidden": false,
+      "gameRevealPrerequisiteCpId": "",
+      "pairedDropoffCpId": "",
+      "qrCheckinEnabled": false,
+      "qrToken": "",
+      "staffAccessCode": "",
+      "id": "cp-obvs8ht",
+      "order": 3,
+      "lat": 50.02,
+      "lng": 8.02,
+      "name": "CP ITEM"
+    },
+    {
+      "clue": "",
+      "mandatory": false,
+      "type": "custom",
+      "customQuestion": "",
+      "punchCode": "",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": "",
+      "locked": false,
+      "staff": [],
+      "gameHidden": false,
+      "gameRevealPrerequisiteCpId": "",
+      "pairedDropoffCpId": "",
+      "qrCheckinEnabled": false,
+      "qrToken": "",
+      "staffAccessCode": "",
+      "id": "cp-24mesvi",
+      "order": 4,
+      "lat": 50.03,
+      "lng": 8.03,
+      "name": "CP RÄTSEL"
+    },
+    {
+      "clue": "",
+      "mandatory": true,
+      "type": "challenge",
+      "customQuestion": "",
+      "punchCode": "",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": "",
+      "locked": false,
+      "staff": [],
+      "gameHidden": false,
+      "gameRevealPrerequisiteCpId": "",
+      "pairedDropoffCpId": "",
+      "qrCheckinEnabled": false,
+      "qrToken": "",
+      "staffAccessCode": "",
+      "id": "cp-5j54frt",
+      "order": 5,
+      "lat": 50.04,
+      "lng": 8.04,
+      "name": "CP CHALLENGE"
+    },
+    {
+      "clue": "",
+      "mandatory": false,
+      "type": "pickup",
+      "customQuestion": "",
+      "punchCode": "",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": "",
+      "locked": false,
+      "staff": [],
+      "gameHidden": false,
+      "gameRevealPrerequisiteCpId": "",
+      "pairedDropoffCpId": "",
+      "qrCheckinEnabled": false,
+      "qrToken": "",
+      "staffAccessCode": "",
+      "id": "cp-sk1co6t",
+      "order": 6,
+      "lat": 50.05,
+      "lng": 8.05,
+      "name": "CP ABHOLUNG"
+    },
+    {
+      "clue": "",
+      "mandatory": true,
+      "type": "dropoff",
+      "customQuestion": "",
+      "punchCode": "",
+      "timeWindowEnabled": false,
+      "timeWindowStart": "",
+      "timeWindowEnd": "",
+      "locked": false,
+      "staff": [],
+      "gameHidden": false,
+      "gameRevealPrerequisiteCpId": "",
+      "pairedDropoffCpId": "",
+      "qrCheckinEnabled": false,
+      "qrToken": "",
+      "staffAccessCode": "",
+      "id": "cp-yofvttb",
+      "order": 7,
+      "lat": 50.06,
+      "lng": 8.06,
+      "name": "CP ZUSTELLUNG"
+    }
+  ],
+  "riders": [
+    {
+      "bib": 1,
+      "name": "Alice",
+      "emergencyContact": "",
+      "finishTime": "",
+      "completed": [],
+      "scores": {},
+      "checkpointTimes": {},
+      "riderToken": "hqxl4lr4blfxfqxucc1hnefslrv8p34c",
+      "riderCode": "P485D4UD",
+      "riderStatus": "",
+      "pendingData": null,
+      "gpsFlags": {},
+      "teamId": "team-ts0s336",
+      "categories": {}
+    },
+    {
+      "bib": 2,
+      "name": "Bob",
+      "emergencyContact": "",
+      "finishTime": "",
+      "completed": [],
+      "scores": {},
+      "checkpointTimes": {},
+      "riderToken": "sz91lyrexytmxk2ggo98lntuk2p7gmzu",
+      "riderCode": "T8BF2W7U",
+      "riderStatus": "",
+      "pendingData": null,
+      "gpsFlags": {},
+      "teamId": "team-ts0s336",
+      "categories": {}
+    },
+    {
+      "bib": 3,
+      "name": "",
+      "emergencyContact": "",
+      "finishTime": "",
+      "completed": [],
+      "scores": {},
+      "checkpointTimes": {},
+      "riderToken": "roon6w8z8o47h1so1ly4mqo0jodkdjad",
+      "riderCode": "ZUSF358H",
+      "riderStatus": "",
+      "pendingData": null,
+      "gpsFlags": {},
+      "teamId": "team-ljanioj",
+      "checkpointOrderOverrides": []
+    },
+    {
+      "bib": 4,
+      "name": "",
+      "emergencyContact": "",
+      "finishTime": "",
+      "completed": [],
+      "scores": {},
+      "checkpointTimes": {},
+      "riderToken": "5hww0lyd23qpbq03puxnbi1h1nipocq9",
+      "riderCode": "PJTHBJPR",
+      "riderStatus": "",
+      "pendingData": null,
+      "gpsFlags": {},
+      "raceStatus": "dnf",
+      "teamId": "team-ljanioj"
+    },
+    {
+      "bib": 5,
+      "name": "",
+      "emergencyContact": "",
+      "finishTime": "",
+      "completed": [],
+      "scores": {},
+      "checkpointTimes": {},
+      "riderToken": "3nb7rfotuhixsezpg9cwbssqdfsmzqnw",
+      "riderCode": "9ELTKBQ9",
+      "riderStatus": "",
+      "pendingData": null,
+      "gpsFlags": {},
+      "raceStatus": "dns"
+    }
+  ],
+  "teams": [
+    {
+      "id": "team-ts0s336",
+      "name": "Team Rot",
+      "color": "#e0551c"
+    },
+    {
+      "id": "team-ljanioj",
+      "name": "Team Blau",
+      "color": "#3a6ea5"
+    }
+  ],
+  "spokeCardImage": "",
+  "manifestSettings": {
+    "showNr": true,
+    "showCheckpoint": true,
+    "showTyp": true,
+    "showClue": true,
+    "showKoordinaten": true,
+    "showPunch": true,
+    "headerImage": "",
+    "headerImageWidth": 0,
+    "headerImageHeight": 0
+  },
+  "status": "planning",
+  "statusChangedAt": "2026-09-05T18:55",
+  "startConfirmedAt": "2026-09-05T18:55",
+  "cpLockOverride": false,
+  "spokecardsPrinted": false,
+  "bibsPrinted": false,
+  "manifestGenerated": false,
+  "teamScoringMode": "bestTime",
+  "categoryGroups": [
+    {
+      "id": "catgrp-fwjnv56",
+      "name": "Antrieb",
+      "options": [
+        "Free"
+      ],
+      "sortOrder": 0
+    },
+    {
+      "id": "catgrp-exhcs3r",
+      "name": "Rahmenmaterial",
+      "options": [
+        "Stahl",
+        "Alu"
+      ],
+      "sortOrder": 2
+    }
+  ],
+  "checkpointOrderMode": "frei",
+  "dashboardWidgetOrder": [
+    "statusTiles",
+    "cpLoad",
+    "recentActivity",
+    "categoryDistribution",
+    "miniLeaderboard",
+    "countdown",
+    "todos"
+  ],
+  "dashboardWidgetVisibility": {
+    "statusTiles": true,
+    "cpLoad": true,
+    "recentActivity": false,
+    "categoryDistribution": false,
+    "miniLeaderboard": false,
+    "countdown": true,
+    "todos": false
+  },
+  "soundHooks": {
+    "race_start": {
+      "name": "go.mp3",
+      "dataUrl": "data:audio/wav;base64,AAA="
+    }
+  },
+  "lastBackupAt": "",
+  "tileCacheUpdatedAt": "",
+  "pdfBlocks": [
+    {
+      "id": "block-p7u53j6",
+      "type": "checkpoint_list",
+      "targetDocuments": [
+        "manifest"
+      ],
+      "enabled": true,
+      "sortOrder": 0,
+      "content": "",
+      "config": {},
+      "width": "half",
+      "pageBreakBefore": false
+    },
+    {
+      "id": "block-6ldt2hl",
+      "type": "image",
+      "targetDocuments": [
+        "manifest"
+      ],
+      "enabled": true,
+      "sortOrder": 1,
+      "content": "",
+      "config": {},
+      "width": "half",
+      "pageBreakBefore": false
+    },
+    {
+      "id": "block-uk43jgz",
+      "type": "rules",
+      "targetDocuments": [
+        "manifest"
+      ],
+      "enabled": true,
+      "sortOrder": 2,
+      "content": "",
+      "config": {},
+      "width": "full",
+      "pageBreakBefore": false
+    },
+    {
+      "id": "block-jjhg4m4",
+      "type": "waiver",
+      "targetDocuments": [
+        "manifest"
+      ],
+      "enabled": true,
+      "sortOrder": 3,
+      "content": "",
+      "config": {},
+      "width": "full",
+      "pageBreakBefore": false
+    },
+    {
+      "id": "block-2wc8ue7",
+      "type": "sponsors",
+      "targetDocuments": [
+        "manifest"
+      ],
+      "enabled": true,
+      "sortOrder": 4,
+      "content": "",
+      "config": {},
+      "width": "full",
+      "pageBreakBefore": false
+    },
+    {
+      "id": "block-gnkhyuz",
+      "type": "emergency_info",
+      "targetDocuments": [
+        "spokecards"
+      ],
+      "enabled": true,
+      "sortOrder": 5,
+      "content": "",
+      "config": {},
+      "width": "full",
+      "pageBreakBefore": false
+    },
+    {
+      "id": "block-gywjqs5",
+      "type": "sponsors",
+      "targetDocuments": [
+        "spokecards"
+      ],
+      "enabled": true,
+      "sortOrder": 6,
+      "content": "",
+      "config": {},
+      "width": "full",
+      "pageBreakBefore": false
+    }
+  ],
+  "scoringMode": "time",
+  "gameModes": [],
+  "ruleRuntimeState": {},
+  "pointsLedger": [],
+  "actionLog": [
+    {
+      "id": "action-ba53ruw",
+      "label": "Kategorie „Antrieb\" von Fahrer #1 geändert",
+      "at": "2026-09-05T18:55"
+    },
+    {
+      "id": "action-z5j8h5h",
+      "label": "Kategorie-Option „Fixed Gear\" (Antrieb) gelöscht",
+      "at": "2026-09-05T18:55"
+    },
+    {
+      "id": "action-472fj9n",
+      "label": "Kategorie „Gender\" von Fahrer #2 geändert",
+      "at": "2026-09-05T18:55"
+    },
+    {
+      "id": "action-9wk9bg2",
+      "label": "Kategorie-Gruppe „Gender\" gelöscht",
+      "at": "2026-09-05T18:55"
+    }
+  ],
+  "featureFlags": {
+    "categories": true,
+    "gameModes": true
+  },
+  "zones": [],
+  "eventLocations": [],
+  "orgaPins": [],
+  "importedGeoLayers": [],
+  "publicId": "",
+  "riderApp": {
+    "progress": true,
+    "map": false,
+    "leaderboard": false,
+    "selfRegister": false
+  },
+  "riderLastLogId": 0,
+  "orphanCheckins": [],
+  "id": "evt-nu1eqw3",
+  "name": "Test-Alleycat 2026-09-05T16:55:14.496Z",
+  "date": "",
+  "description": ""
+}

@@ -44,13 +44,15 @@ Die Zugangsdaten aus Schritt 1 eintragen:
 | Datenbank-Passwort | aus Schritt 1 |
 | Tabellen-Prefix | optional, Standard `alleycat_` |
 
-Absenden — der Installer legt die Tabelle an und generiert einen zufälligen API-Key.
+Darunter das **erste Admin-Konto**: Benutzername, Passwort (mindestens 12 Zeichen), Passwort-Wiederholung und optional ein Anzeigename. Mit diesem Konto meldest du dich später in der App an — auf jedem Gerät, ohne den API-Key weiterzugeben.
+
+Absenden — der Installer legt die Tabellen an, erzeugt das Admin-Konto und generiert einen zufälligen API-Key.
 
 ---
 
 ### <img src="install-guide/step-5-key.svg" width="56" align="top"> Schritt 5 — API-Endpunkt + Key kopieren
 
-Auf der Erfolgsseite stehen **API-Endpunkt** und **API-Key** — beide jetzt kopieren, der Key wird danach nicht erneut angezeigt (in `config.php` landet nur ein Hash davon, nicht der Key selbst). Beispiel-Endpunkt:
+Auf der Erfolgsseite stehen **API-Endpunkt** und **API-Key**. Den Key jetzt kopieren und aufbewahren — er wird nicht erneut angezeigt (in `config.php` landet nur ein Hash davon, nicht der Key selbst). Für den Alltag brauchst du ihn **nicht**: er ist der Notfall- und Wartungszugang (`backup.php`, `migrate.php`) und gibt Vollzugriff ohne Rollenbeschränkung. Angemeldet wird sich mit dem Admin-Konto aus Schritt 4. Beispiel-Endpunkt:
 
 ```
 https://deinedomain.tld/php-backend/api.php
@@ -66,7 +68,13 @@ https://deinedomain.tld/php-backend/api.php
 
 ### <img src="install-guide/step-7-verbinden.svg" width="56" align="top"> Schritt 7 — Mit der App verbinden
 
-Im Repo `node build.js` ausführen und `dist/alleycat-dispatch-server.html` öffnen — beim ersten Start erscheint ein Setup-Screen. Dort API-Endpunkt und API-Key aus Schritt 5 eintragen und auf **Verbinden** klicken. Die Zugangsdaten werden danach lokal im Browser gemerkt (nur der Zugang, nicht die Event-Daten selbst).
+Im Repo `node build.js` ausführen und `dist/alleycat-dispatch-server.html` auf den Server laden — am einfachsten als `index.html` in dasselbe Webspace-Wurzelverzeichnis, in dem auch der `php-backend`-Ordner liegt.
+
+**Liegt die App auf derselben Domain wie das Backend**, findet sie den API-Endpunkt selbst (sie probiert `php-backend/auth.php`, `auth.php` und `api/auth.php` durch) — es erscheint direkt der Login, und jedes weitere Gerät braucht nur Benutzername und Passwort. Kein Setup-Screen, kein weitergereichter API-Key.
+
+**Sonst** (App auf einer anderen Domain oder lokal per Doppelklick geöffnet) erscheint beim ersten Start der Setup-Screen: dort den API-Endpunkt aus Schritt 5 eintragen, das Key-Feld leer lassen und auf **Verbinden** klicken — danach kommt der Login. Die Zugangsdaten werden lokal im Browser gemerkt (nur der Zugang, nicht die Event-Daten selbst).
+
+Den API-Key trägst du dort nur ein, wenn du bewusst am Rollensystem vorbei Vollzugriff willst — oder bei einer Altinstallation, in der noch gar kein Benutzerkonto existiert (dann führt der Link *Ersteinrichtung* zum Anlegen des ersten Admins).
 
 Zum späteren Zurücksetzen (z. B. anderes Backend eintragen): die Seite mit `?reset-php-config` an der URL aufrufen. **Danach den Parameter aus der Adresszeile entfernen**, bevor du das Setup abschickst — er wird beim Neuladen mitgenommen und würde die gerade gespeicherten Zugangsdaten sofort wieder löschen.
 
@@ -77,7 +85,7 @@ Zum späteren Zurücksetzen (z. B. anderes Backend eintragen): die Seite mit `?r
 Nur nötig, wenn Fahrer an Checkpoints per QR-Code selbst einchecken sollen. Ohne diesen Schritt funktioniert alles andere unverändert; alle zugehörigen Funktionen bleiben in der Organizer-App einfach ausgeblendet.
 
 1. `node build.js` erzeugt neben den beiden Organizer-Varianten auch **`dist/alleycat-rider.html`**. Diese eine Datei irgendwohin unter deine Domain hochladen — ein bestimmtes Verzeichnis ist nicht nötig, die App kennt `rider.php` aus der Konfiguration.
-2. Im Setup-Screen der Server-Variante die **Fahrer-App-Adresse** eintragen (drittes Feld, z. B. `https://deinedomain.tld/alleycat-rider.html`). Auf diese Adresse zeigen die QR-Codes auf Spokecards und Checkpoint-Aufstellern.
+2. Die **Fahrer-App-Adresse** eintragen (z. B. `https://deinedomain.tld/alleycat-rider.html`) — als Admin unter *Einstellungen → Konto → Benutzer*, oder im Setup-Screen im dritten Feld. Über die Einstellungen eingetragen liegt sie zusätzlich auf dem Server und gilt damit auf allen Geräten; im Setup-Screen eingetragen zunächst nur in diesem Browser. Auf diese Adresse zeigen die QR-Codes auf Spokecards und Checkpoint-Aufstellern.
 3. Im Checkpoint-Editor bei den Checkpoints das Häkchen **QR Check-In** setzen, an denen Fahrer selbst einchecken sollen.
 4. Unter *Manifest → Drucken* die **Checkpoint-QR-Blätter** erzeugen, ausdrucken und laminieren. Die Spokecards tragen ab dann automatisch den Fahrer-Link statt der nackten Startnummer.
 

@@ -34,8 +34,24 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyInstalled){
   $prefix = trim($_POST['table_prefix'] ?? 'alleycat_');
   $prefix = preg_replace('/[^a-zA-Z0-9_]/', '', $prefix);
 
+  $adminUser = trim($_POST['admin_user'] ?? '');
+  $adminPass = (string)($_POST['admin_pass'] ?? '');
+  $adminPass2 = (string)($_POST['admin_pass2'] ?? '');
+  $adminDisplay = trim($_POST['admin_display'] ?? '');
+
   if($host === '' || $name === '' || $user === ''){
     $error = 'Bitte Host, Datenbankname und Benutzer ausfüllen.';
+  } elseif($adminUser === ''){
+    $error = 'Bitte einen Benutzernamen für das erste Admin-Konto angeben.';
+  } elseif(strlen($adminPass) < 12){
+    /* Dieselbe Regel wie authPasswordValid() in auth.php und
+       validatePasswordStrength() in src/core/auth.js — hier bewusst
+       dupliziert statt auth.php einzubinden: das würde bootstrap.php und
+       damit die config.php voraussetzen, die es an dieser Stelle noch
+       nicht gibt. */
+    $error = 'Das Admin-Passwort muss mindestens 12 Zeichen lang sein.';
+  } elseif($adminPass !== $adminPass2){
+    $error = 'Die beiden Admin-Passwörter stimmen nicht überein.';
   } elseif($localOverall === 'error' && !$override){
     $error = 'Der Pre-Flight-Check zeigt kritische Fehler (siehe unten) — Installation abgebrochen. Entweder die Probleme beheben oder "Trotzdem installieren" aktivieren.';
   } else {
@@ -60,6 +76,22 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyInstalled){
         $table = $prefix . 'kv';
         $metaTable = $prefix . 'db_meta';
         runMigrations($pdo, $table, $metaTable, $charset);
+
+        /* Erstes Admin-Konto direkt hier anlegen, statt den Betreiber auf
+           den separaten Bootstrap-Schritt (auth.php?a=bootstrap) zu
+           schicken: sonst ist der Master-Key nach der Installation der
+           einzige Zugang, und wer die App auf einem zweiten Gerät öffnet,
+           müsste ihn dort eintragen — also Vollzugriff weiterreichen.
+           Insert wortgleich zum Bootstrap-Zweig in auth.php. */
+        $userTable = $table . '_admin_user'; // adminTableName() in bootstrap.php, hier ohne config.php nachgebildet
+        $existingUsers = (int)$pdo->query("SELECT COUNT(*) FROM `{$userTable}`")->fetchColumn();
+        $adminCreated = false;
+        if($existingUsers === 0){
+          $pdo->prepare("INSERT INTO `{$userTable}` (`username`,`password_hash`,`role`,`display_name`)
+                         VALUES (?,?,'admin',?)")
+              ->execute([$adminUser, password_hash($adminPass, PASSWORD_DEFAULT), $adminDisplay !== '' ? $adminDisplay : $adminUser]);
+          $adminCreated = true;
+        }
 
         $apiKey = bin2hex(random_bytes(32));
         $apiKeyHash = password_hash($apiKey, PASSWORD_DEFAULT);
@@ -88,7 +120,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyInstalled){
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $apiUrl = $scheme . '://' . $_SERVER['HTTP_HOST'] . $scriptDir . '/api.php';
 
-        $success = ['apiKey' => $apiKey, 'apiUrl' => $apiUrl, 'table' => $table, 'charset' => $charset];
+        $success = ['apiKey' => $apiKey, 'apiUrl' => $apiUrl, 'table' => $table, 'charset' => $charset,
+                    'adminUser' => $adminUser, 'adminCreated' => $adminCreated];
 
         // Selbstsperre: bestmöglicher Versuch, sich selbst vom Server zu
         // löschen. Schlägt das aus Rechte-Gründen fehl (nicht unüblich bei
@@ -161,15 +194,17 @@ $showPreflightWarn = !$showPreflightError && (($localOverall === 'warn') || ($db
         <h2>Installation erfolgreich</h2>
         <div class="hint">Tabelle <code><?= htmlspecialchars($success['table']) ?></code> wurde angelegt (falls sie nicht schon existierte), Zeichensatz <code><?= htmlspecialchars($success['charset']) ?></code>.</div>
       </div>
+      <div class="kv"><b>Anmeldung</b><?php if($success['adminCreated']): ?>Admin-Konto <code><?= htmlspecialchars($success['adminUser']) ?></code> wurde angelegt — App aufrufen und damit anmelden.<?php else: ?>Es existierten bereits Benutzerkonten in dieser Datenbank — es wurde kein neues Konto angelegt. Melde dich mit einem bestehenden Konto an.<?php endif; ?></div>
       <div class="kv"><b>API-Endpunkt</b><?= htmlspecialchars($success['apiUrl']) ?></div>
-      <div class="kv"><b>API-Key (jetzt kopieren — wird nicht erneut angezeigt, nur ein Hash bleibt gespeichert)</b><?= htmlspecialchars($success['apiKey']) ?></div>
+      <div class="kv"><b>API-Key — nur aufbewahren, nicht in die App eintragen (jetzt kopieren, wird nicht erneut angezeigt, nur ein Hash bleibt gespeichert)</b><?= htmlspecialchars($success['apiKey']) ?></div>
+      <div class="hint">Der API-Key ist der Notfall-/Wartungszugang (<code>backup.php</code>, <code>migrate.php</code>) und gibt Vollzugriff. Für den Alltag reicht das Admin-Konto oben.</div>
       <?php if($selfDeleteFailed): ?>
         <div class="warn">
-          Wichtig: <code>install.php</code> konnte sich nicht selbst löschen (fehlende Schreibrechte) — bitte jetzt manuell per FTP/Dateimanager vom Server entfernen. Trage API-Endpunkt und API-Key anschließend in den Einstellungen der App ein.
+          Wichtig: <code>install.php</code> konnte sich nicht selbst löschen (fehlende Schreibrechte) — bitte jetzt manuell per FTP/Dateimanager vom Server entfernen. Danach die App aufrufen und mit dem Admin-Konto anmelden.
         </div>
       <?php else: ?>
         <div class="warn">
-          <code>install.php</code> hat sich selbst vom Server gelöscht. Trage API-Endpunkt und API-Key jetzt in den Einstellungen der App ein.
+          <code>install.php</code> hat sich selbst vom Server gelöscht. Ruf jetzt die App auf und melde dich mit dem Admin-Konto an — liegt sie auf derselben Domain, findet sie den API-Endpunkt selbst.
         </div>
       <?php endif; ?>
     <?php else: ?>
@@ -194,6 +229,21 @@ $showPreflightWarn = !$showPreflightError && (($localOverall === 'warn') || ($db
         <label>Tabellen-Prefix (optional)</label>
         <input type="text" name="table_prefix" value="<?= htmlspecialchars($_POST['table_prefix'] ?? 'alleycat_') ?>">
         <div class="hint">Datenbank und Benutzer müssen bereits existieren (z. B. über das Hosting-Control-Panel angelegt) — der Installer erstellt nur die Tabellen darin.</div>
+
+        <div class="preflight-heading" style="margin-top:26px;">Erstes Admin-Konto</div>
+        <div class="hint">Mit diesem Konto meldest du dich später in der App an — auf jedem Gerät, ohne den API-Key weiterzugeben.</div>
+
+        <label>Benutzername</label>
+        <input type="text" name="admin_user" value="<?= htmlspecialchars($_POST['admin_user'] ?? '') ?>" required>
+
+        <label>Passwort (mindestens 12 Zeichen)</label>
+        <input type="password" name="admin_pass" value="" required>
+
+        <label>Passwort wiederholen</label>
+        <input type="password" name="admin_pass2" value="" required>
+
+        <label>Anzeigename (optional)</label>
+        <input type="text" name="admin_display" value="<?= htmlspecialchars($_POST['admin_display'] ?? '') ?>">
 
         <?php if($showPreflightError || $showPreflightWarn): ?>
           <label class="override-row">

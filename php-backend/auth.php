@@ -7,6 +7,8 @@
    einzige Weg, das allererste Konto anzulegen (?a=bootstrap).
 
    Aktionen:
+     GET  ?a=discover    Endpunkt-Erkennung ohne Auth (API-URL, Fahrer-App-URL,
+                         ob schon Konten existieren)
      POST ?a=bootstrap   API-Key + gewünschtes Konto -> erstes admin-Konto
                          (nur solange noch kein Benutzer existiert)
      POST ?a=login       Username/Passwort -> Sessiontoken
@@ -135,6 +137,41 @@ $action = $_GET['a'] ?? '';
 $pdo = apiConnectDb();
 $userTable = adminTableName('admin_user');
 $sessionTable = adminTableName('admin_session');
+
+/* Unauthentifizierte Erkennung: eine App, die auf derselben Domain liegt,
+   probiert ein paar Kandidatenpfade durch (discoverPhpBackend() in
+   src/storage/storage-server.js) und richtet sich damit selbst ein, statt
+   den Betreiber den API-Endpunkt in jedem neuen Browser eintippen zu
+   lassen. Bewusst ohne Token/Key: die Antwort enthält nichts Geheimes —
+   den Endpunkt kennt ohnehin jeder, der diese Datei aufrufen kann, und
+   'hasUsers' steuert nur, ob der Client Login oder Bootstrap zeigt. */
+if($action === 'discover'){
+  authRequireGet();
+  riderCheckRateLimit($pdo); // gleiche IP-Bremse wie login: unauthentifizierter Endpunkt
+
+  $hasUsers = ((int)$pdo->query("SELECT COUNT(*) FROM `{$userTable}`")->fetchColumn()) > 0;
+
+  $scriptDir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
+  $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+  $apiUrl = $scheme . '://' . $_SERVER['HTTP_HOST'] . $scriptDir . '/api.php';
+
+  $riderAppUrl = '';
+  try{
+    $stmt = $pdo->prepare("SELECT `value` FROM `" . ALLEYCAT_TABLE . "` WHERE `key` = ?");
+    $stmt->execute(['config:riderAppUrl']);
+    $riderAppUrl = (string)($stmt->fetchColumn() ?: '');
+  }catch(Exception $e){
+    error_log('[alleycat discover] riderAppUrl lookup failed: ' . $e->getMessage());
+  }
+
+  authOut([
+    'ok' => true,
+    'product' => 'alleycat-dispatch',
+    'apiUrl' => $apiUrl,
+    'riderAppUrl' => $riderAppUrl,
+    'hasUsers' => $hasUsers
+  ]);
+}
 
 if($action === 'bootstrap'){
   authRequirePost();

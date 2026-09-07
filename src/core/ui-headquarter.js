@@ -1181,6 +1181,32 @@ const ADMIN_ROLE_OPTIONS = ['admin', 'editor', 'viewer', 'checkpoint_staff'];
 function adminRoleLabel(role){
   return t('auth.role' + role.charAt(0).toUpperCase() + role.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase()));
 }
+/* Fahrer-App-Adresse: steht bisher nur auf dem Einrichtungsbildschirm,
+   den ein Browser mit Auto-Erkennung nie zu Gesicht bekommt. Der Wert
+   liegt zusätzlich serverseitig (Storage-Key config:riderAppUrl), damit
+   jedes weitere Gerät ihn mitbekommt statt still ohne Fahrer-App
+   dazustehen. Schreiben geht über die Seam setRiderAppBaseUrl(). */
+function renderRiderAppUrlSection(){
+  if(!hasAdminRoles()) return '';
+  return `
+    <div class="settings-section">
+      <h3>${t('phpSetup.riderAppUrlLabel')}</h3>
+      <div class="settings-section-desc">${t('phpSetup.riderAppUrlHint')}</div>
+      <div class="rider-field">
+        <input type="text" id="settings-rider-app-url" value="${escapeHtml(riderAppBaseUrl())}" placeholder="${escapeHtml(t('phpSetup.riderAppUrlPlaceholder'))}">
+      </div>
+      <button class="btn btn-primary" onclick="submitRiderAppUrl()">${t('auth.usersSaveButton')}</button>
+    </div>
+  `;
+}
+async function submitRiderAppUrl(){
+  const el = document.getElementById('settings-rider-app-url');
+  if(!el) return;
+  const url = (el.value || '').trim();
+  const ok = await setRiderAppBaseUrl(url);
+  showToast({message: ok ? t('featureRegistry.riderAppUrlSaved') : t('featureRegistry.riderAppUrlSaveFailed')});
+  renderSettings();
+}
 function renderSettingsSectionUsers(){
   if(!hasAdminRoles()){
     return `<div class="settings-section"><h3>${t('auth.usersHeading')}</h3><div class="settings-section-desc">${t('auth.usersDesc')}</div></div>`;
@@ -1274,6 +1300,12 @@ function renderSettingsSectionUsers(){
     </div>
   ` : '';
   return `
+    <div class="settings-section" id="users-features-section">
+      <h3>${t('featureRegistry.groupUsersHeading')}</h3>
+      <div class="settings-section-desc">${t('featureRegistry.groupUsersDesc')}</div>
+      <div class="feature-row-list">${renderFeatureRegistryGroupRows('users')}</div>
+    </div>
+    ${renderRiderAppUrlSection()}
     <div class="settings-section">
       <h3>${t('auth.usersHeading')}</h3>
       <div class="settings-section-desc">${t('auth.usersDesc')}</div>

@@ -269,7 +269,7 @@ Die Initiative ist in drei Teilprojekte geschnitten, jedes mit eigener Spec → 
 |---|---|---|---|
 | **14** | Fundament | Token-Datenmodell, `rider.php` + fünf Tabellen, Publish, Merge-Polling, Anmeldungen bestätigen | ✅ 25.08.2026 |
 | **15** | Fahrer-App | eigenes Bundle `dist/alleycat-rider.html` (Login, Fortschritt, Checkpoint-Scan, Offline-Queue, Wildcard-Registrierung); dazu Spokecard-QR-Umstellung, Checkpoint-QR-PDF, `CHECKPOINT_TYPES` in ein geteiltes Modul extrahieren | ✅ 26.08.2026 |
-| 16 | Live + Vorab | Beamer-Ping auf der Kartenansicht, öffentliche Online-Vorab-Registrierung | ❌ offen |
+| 16 | Live + Vorab | Beamer-Ping auf der Kartenansicht, öffentliche Online-Vorab-Registrierung | ✅ 28.08.2026 |
 
 Später vorgemerkt, bewusst nicht in Teilprojekt 15: Checkpoint-Karte in der Fahrer-App, Live-Leaderboard für Fahrer, Liga-/Saison-Profile über mehrere Events hinweg. Die Sichtbarkeit ist bereits als `evt.riderApp`-Schalter angelegt (`progress`/`map`/`leaderboard`/`selfRegister`), der Admin entscheidet also pro Event — die beiden hinteren Schalter sind noch ohne Wirkung.
 
