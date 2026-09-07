@@ -621,8 +621,10 @@ if($action === 'checkpointstaff/set'){
   $t = adminTableName('checkpoint_staff');
   /* org-scoping-guard: ok — checkpoint_staff hat keine org_id-Spalte; der
      Org-Besitz der public_id ist über authRequireOwnEventPublicId() oben
-     geprüft, beide Statements arbeiten nur innerhalb dieser public_id. */
+     geprüft. */
   $pdo->prepare("DELETE FROM `{$t}` WHERE `user_id` = ? AND `public_id` = ?")->execute([$userId, $publicId]);
+  /* org-scoping-guard: ok — dieselbe public_id wie das DELETE direkt
+     darüber, deren Org-Besitz bereits geprüft ist. */
   $ins = $pdo->prepare("INSERT INTO `{$t}` (`user_id`,`public_id`,`cp_id`) VALUES (?,?,?)");
   foreach($cpIds as $cpId){
     if($cpId === '' || $cpId === null) continue;

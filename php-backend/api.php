@@ -141,6 +141,8 @@ if($method === 'GET'){
     $pdo->prepare("INSERT INTO `{$table}` (`key`,`org_id`,`value`) VALUES (?,0,?)
       ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)")->execute([$key, $value]);
   } else {
+    /* org-scoping-guard: ok — gleicher Grund wie der Zweig oben: PK ist
+       (org_id,key), der Upsert kann keine fremde Zeile treffen. */
     $pdo->prepare("INSERT INTO `{$table}` (`key`,`org_id`,`value`) VALUES (?,?,?)
       ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)")->execute([$key, $orgId, $value]);
   }
