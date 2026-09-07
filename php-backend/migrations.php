@@ -308,6 +308,139 @@ function migrationsList($table, $charset){
         KEY `idx_created` (`created_at`)
       ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
     },
+
+    /* Org/RBAC-Fundament (Multi-Tenancy). Additiv wie alle bisherigen
+       Migrationen — admin_user.role bleibt vorerst als Spalte stehen
+       (wird von keiner neuen Abfrage mehr gelesen, aber DROP COLUMN ist
+       nicht idempotent genug für den bestehenden Runner-Stil, siehe
+       Kopf dieser Datei) und wird ignoriert, sobald Migration 7 gelaufen
+       ist — Rollenwahrheit liegt ab hier ausschließlich in org_member. */
+    7 => function(PDO $pdo) use ($table, $charset){
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_organization` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `slug` VARCHAR(64) NOT NULL,
+        `name` VARCHAR(191) NOT NULL,
+        `crest_svg_config` TEXT NULL,
+        `noticeboard_text` TEXT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY `uq_slug` (`slug`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_org_member` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `org_id` INT UNSIGNED NOT NULL,
+        `user_id` INT UNSIGNED NOT NULL,
+        `role` VARCHAR(20) NOT NULL DEFAULT 'viewer',
+        `joined_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY `uq_org_user` (`org_id`,`user_id`),
+        KEY `idx_user` (`user_id`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_event` (
+        `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+        `org_id` INT UNSIGNED NOT NULL,
+        `slug` VARCHAR(191) NOT NULL,
+        `status` VARCHAR(16) NOT NULL DEFAULT 'planning',
+        `start_date` DATE NULL,
+        `payload` LONGTEXT NOT NULL,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY `uq_org_slug` (`org_id`,`slug`),
+        KEY `idx_org` (`org_id`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_org_event_admin` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `org_id` INT UNSIGNED NOT NULL,
+        `event_id` VARCHAR(64) NOT NULL,
+        `user_id` INT UNSIGNED NOT NULL,
+        `granted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY `uq_event_user` (`event_id`,`user_id`),
+        KEY `idx_org` (`org_id`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      foreach([
+        ["{$table}_admin_user", 'is_sysadmin', 'TINYINT(1) NOT NULL DEFAULT 0'],
+        ["{$table}", 'org_id', 'INT UNSIGNED NOT NULL DEFAULT 0'],
+        ["{$table}_checkpoint_staff", 'org_id', 'INT UNSIGNED NOT NULL DEFAULT 0'],
+        ["{$table}_checkpoint_session", 'org_id', 'INT UNSIGNED NOT NULL DEFAULT 0'],
+      ] as $col){
+        [$tbl, $name, $def] = $col;
+        $stmt = $pdo->prepare(
+          "SELECT COUNT(*) FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?"
+        );
+        $stmt->execute([$tbl, $name]);
+        if((int)$stmt->fetchColumn() === 0){
+          $pdo->exec("ALTER TABLE `{$tbl}` ADD COLUMN `{$name}` {$def}");
+        }
+      }
+
+      /* Die alte PK (`key`) allein reicht nicht mehr — zwei Orgs dürfen
+         denselben Key-Namen benutzen (z. B. beide 'seasons:index'). Nur
+         idempotent nachziehen, falls die PK noch die alte Form hat. */
+      $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM information_schema.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = 'PRIMARY' AND COLUMN_NAME = 'org_id'"
+      );
+      $stmt->execute([$table]);
+      if((int)$stmt->fetchColumn() === 0){
+        $pdo->exec("ALTER TABLE `{$table}` DROP PRIMARY KEY, ADD PRIMARY KEY (`org_id`,`key`)");
+      }
+    },
+
+    /* Rider-Daten an eine Org binden. Ohne diese Spalte hängen
+       rider_event/rider_log/rider_slot ausschließlich an der halb-
+       öffentlichen public_id (steht in Fahrer-URLs, Spokecard-QRs und
+       Beamer-Routen) — ein Editor einer fremden Org, der eine public_id
+       kennt, kam damit an fremde Anmelde- und Check-in-Daten. Nur
+       rider_event bekommt die Spalte: log/slot/checkpoint hängen über
+       public_id eindeutig an genau einer rider_event-Zeile, die Prüfung
+       findet deshalb einmal dort statt (siehe riderRequireOrgAccess()
+       in rider.php).
+
+       Default 0 wie bei Migration 7: Bestandszeilen aus der Zeit vor
+       Multi-Tenancy landen im Sentinel-„keine Org“-Wert und werden vom
+       nächsten ?a=sync des Organizers auf dessen echte Org gehoben. */
+    8 => function(PDO $pdo) use ($table, $charset){
+      foreach([
+        ["{$table}_rider_event", 'org_id', 'INT UNSIGNED NOT NULL DEFAULT 0'],
+      ] as $col){
+        [$tbl, $name, $def] = $col;
+        $stmt = $pdo->prepare(
+          "SELECT COUNT(*) FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?"
+        );
+        $stmt->execute([$tbl, $name]);
+        if((int)$stmt->fetchColumn() === 0){
+          $pdo->exec("ALTER TABLE `{$tbl}` ADD COLUMN `{$name}` {$def}");
+        }
+      }
+    },
+
+    /* org_event_admin's Unique-Key deckte bisher nur (event_id,user_id)
+       ab, ohne org_id. Zwei Orgs, die zufällig dieselbe event_id +
+       denselben User delegieren wollen, kollidieren dadurch auf einer
+       fremden Zeile: der ON DUPLICATE KEY UPDATE in
+       ?a=org/event-admins/grant bumpt nur granted_at und lässt die
+       bestehende, falsche org_id stehen — die zweite, eigentlich
+       berechtigte Org bekommt ihre Delegation nie, ohne dass der Grant
+       einen Fehler zeigt (stiller Fehlschlag, kein Datenleck, weil
+       apiHasEventDelegation() ohnehin org_id mitprüft — aber die
+       Funktion selbst ist dadurch kaputt).
+
+       Fix: org_id wird Teil des Unique-Keys, dieselbe event_id+user_id-
+       Kombination kann dann pro Org unabhängig existieren. */
+    9 => function(PDO $pdo) use ($table){
+      $t = "{$table}_org_event_admin";
+      $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM information_schema.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = 'uq_org_event_user'"
+      );
+      $stmt->execute([$t]);
+      if((int)$stmt->fetchColumn() === 0){
+        $pdo->exec("ALTER TABLE `{$t}` DROP INDEX `uq_event_user`, ADD UNIQUE KEY `uq_org_event_user` (`org_id`,`event_id`,`user_id`)");
+      }
+    },
   ];
 }
 

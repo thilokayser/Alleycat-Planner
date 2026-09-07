@@ -155,6 +155,21 @@ async function setRiderAppBaseUrl(){ return false; } // keine Fahrer-App ohne Se
    überhaupt etwas bedeuten würde. currentUserRole() in auth.js liest das
    und behandelt jeden als 'admin'. */
 function hasAdminRoles(){ return false; }
+/* Multi-Tenancy-Seams. Gleiche Begründung wie hasAdminRoles(): ohne
+   geteiltes Backend gibt es keine Organisationen, zwischen denen man
+   wechseln könnte. Der Kern ruft diese vier nur unter hasAdminRoles()
+   auf — sie existieren hier trotzdem, weil ein Seam vollständig sein
+   muss, sonst ist es keiner (gleiche Regel wie bei publishRiderConfig()).
+   Leerer Slug / leere Listen sind die vereinbarten "gibt es nicht"-Werte,
+   an denen der Kern die Workspace-Oberfläche ausblendet. */
+function getActiveOrgSlug(){ return ''; }
+function setActiveOrgSlug(){}
+async function myOrgs(){ return []; }
+async function listEventsForActiveOrg(){ return []; }
+/* Wird vom Kern für die Org-Verwaltungs-Endpunkte benutzt; ohne Backend
+   gibt es keinen Endpunkt, den es rufen könnte. Gleiche Form wie
+   adminListUsers() & Co. oben. */
+async function authRequest(){ return {ok: false, error: 'not_supported'}; }
 async function adminLogin(){ return {ok: false, error: 'not_supported'}; }
 async function adminLogout(){}
 async function adminWhoami(){ return null; }

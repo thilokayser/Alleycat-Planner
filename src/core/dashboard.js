@@ -56,10 +56,30 @@ function withEventDefaults(evt){
 }
 
 /* ---------------- events crud ---------------- */
+/* Org-Scoped-Variante von loadEventsIndex() (ui-headquarter.js): liest
+   über die "?a=events"-Route statt aus dem KV-Index. Gleiche Form (setzt
+   state.eventsIndex) wie loadEventsIndex(), damit renderDashboard() und
+   alles andere, was state.eventsIndex liest, unverändert bleibt — nur
+   der Bootstrap-Aufruf in init() und die CRUD-Pfade unten unterscheiden,
+   welche der beiden Ladefunktionen läuft. */
+async function loadEventsIndexForActiveOrg(){
+  state.eventsIndex = await listEventsForActiveOrg();
+}
 async function createNewEvent(){
   const id = uid('evt');
   const evt = withEventDefaults({id, name:t('dashboard.newEventDefaultName'), date:'', description:'', checkpoints:[]});
   evt.pdfBlocks = defaultPdfBlocksForNewEvent();
+  /* Unter hasAdminRoles() (Multi-Tenancy) pflegt der "event"-Tabellen-
+     Endpunkt in api.php (Task 5) den org-gescopten Index bereits selbst
+     über sein POST — kein separater events:index-KV-Eintrag mehr, den
+     wir hier doppelt führen müssten. Siehe Task-8-Brief Schritt 3. */
+  if(hasAdminRoles()){
+    state.currentEvent = evt;
+    await saveCurrentEvent();
+    await loadEventsIndexForActiveOrg();
+    openEditor(id);
+    return;
+  }
   state.eventsIndex.push({id, name:evt.name, date:evt.date});
   await saveEventsIndex();
   state.currentEvent = evt;
@@ -76,6 +96,13 @@ async function confirmDeleteEvent(id){
      würde sonst nach dem Löschen feuern und das Event mit dem letzten
      In-Memory-Stand wieder anlegen. */
   if(state.currentEvent && state.currentEvent.id === id) cancelPendingSave();
+  if(hasAdminRoles()){
+    await storageDelete('event:' + id);
+    await loadEventsIndexForActiveOrg();
+    state.confirmDeleteEventId = null;
+    render();
+    return;
+  }
   state.eventsIndex = state.eventsIndex.filter(e => e.id !== id);
   await saveEventsIndex();
   await storageDelete('event:' + id);

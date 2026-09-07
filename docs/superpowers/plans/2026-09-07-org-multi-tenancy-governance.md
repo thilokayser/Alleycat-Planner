@@ -22,7 +22,7 @@
 - **Every org-bound query needs a literal `org_id` predicate** — the lint guard (Task 6) enforces this at build time; do not rely on joins alone to satisfy it.
 - **Token never carries org scope** — always resolve org membership live per-request (existing project principle, reused from `checkpointResolveScope()`).
 - **Engineering decisions made during planning, not explicit in the spec, are recorded here so the spec and plan stay consistent:**
-  - The generic KV table (`{table}`, holds everything that isn't an event/rider/admin row — `config:riderAppUrl`, `i18n:customPacks`, `checkpointTypes:custom`, `roster:team:index`, `roster:rider:index`, `season:*`, `seasons:index`) gets a nullable `org_id` column. `NULL` = instance-wide key (`config:riderAppUrl`, `i18n:customPacks` — shared across all crews on the instance, avoids re-uploading the same language pack per org). Non-`NULL` = org-scoped key (everything else in that list).
+  - The generic KV table (`{table}`, holds everything that isn't an event/rider/admin row — `config:riderAppUrl`, `i18n:customPacks`, `checkpointTypes:custom`, `roster:team:index`, `roster:rider:index`, `season:*`, `seasons:index`) gets an `org_id` column (`NOT NULL DEFAULT 0` — matches the pattern already used for `checkpoint_staff`/`checkpoint_session`; a real org's `id` starts at 1 via `AUTO_INCREMENT`, so `0` is a safe, never-colliding sentinel, and unlike a nullable column it can sit inside the composite primary key `(org_id,key)` without breaking `ADD PRIMARY KEY` on a table that already has rows). `org_id = 0` = instance-wide key (`config:riderAppUrl`, `i18n:customPacks` — shared across all crews on the instance, avoids re-uploading the same language pack per org). Any other `org_id` = org-scoped key (everything else in that list).
   - `events:index` (today's KV-based event list) is **not** carried forward for the server variant — the new `event` table is directly queryable, so the dashboard list becomes a real `SELECT`. `events:index` stays exactly as-is for the local variant (untouched file, `storage-local.js`).
   - Org context travels as a request header `X-Org-Slug` (added to `Access-Control-Allow-Headers`), never a query string — consistent with the existing all-header-auth design (`X-Api-Key`, `X-Admin-Token`, …).
   - The existing shared master API key (`ALLEYCAT_API_KEY_HASH`) becomes the SysAdmin-equivalent bypass instance-wide, replacing its old "always `role: admin`" meaning — same backward-compatible role it already played (Task 2).
@@ -94,7 +94,7 @@ Add to `php-backend/migrations.php`, inside the array returned by `migrationsLis
 
       foreach([
         ["{$table}_admin_user", 'is_sysadmin', 'TINYINT(1) NOT NULL DEFAULT 0'],
-        ["{$table}", 'org_id', 'INT UNSIGNED NULL'],
+        ["{$table}", 'org_id', 'INT UNSIGNED NOT NULL DEFAULT 0'],
         ["{$table}_checkpoint_staff", 'org_id', 'INT UNSIGNED NOT NULL DEFAULT 0'],
         ["{$table}_checkpoint_session", 'org_id', 'INT UNSIGNED NOT NULL DEFAULT 0'],
       ] as $col){
@@ -727,14 +727,14 @@ if($isEventKey){
 
 /* Nicht-Event-Keys: weiterhin generischer KV-Store, jetzt org-gescoped.
    Instanzweite Keys (config:riderAppUrl, i18n:customPacks) liegen mit
-   org_id=NULL und werden hier bewusst NICHT über den Org-Filter
+   org_id=0 und werden hier bewusst NICHT über den Org-Filter
    erreicht -> eigener Zweig. */
 $instanceWideKeys = ['config:riderAppUrl', 'i18n:customPacks'];
 $isInstanceWide = in_array($key, $instanceWideKeys, true);
 
 if($method === 'GET'){
   $stmt = $isInstanceWide
-    ? $pdo->prepare("SELECT `value` FROM `{$table}` WHERE `key` = ? AND `org_id` IS NULL")
+    ? $pdo->prepare("SELECT `value` FROM `{$table}` WHERE `key` = ? AND `org_id` = 0")
     : $pdo->prepare("SELECT `value` FROM `{$table}` WHERE `key` = ? AND `org_id` = ?");
   $isInstanceWide ? $stmt->execute([$key]) : $stmt->execute([$key, $orgId]);
   $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -744,7 +744,7 @@ if($method === 'GET'){
 } elseif($method === 'POST'){
   $value = file_get_contents('php://input');
   if($isInstanceWide){
-    $pdo->prepare("INSERT INTO `{$table}` (`key`,`org_id`,`value`) VALUES (?,NULL,?)
+    $pdo->prepare("INSERT INTO `{$table}` (`key`,`org_id`,`value`) VALUES (?,0,?)
       ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)")->execute([$key, $value]);
   } else {
     $pdo->prepare("INSERT INTO `{$table}` (`key`,`org_id`,`value`) VALUES (?,?,?)
@@ -754,7 +754,7 @@ if($method === 'GET'){
 
 } elseif($method === 'DELETE'){
   $stmt = $isInstanceWide
-    ? $pdo->prepare("DELETE FROM `{$table}` WHERE `key` = ? AND `org_id` IS NULL")
+    ? $pdo->prepare("DELETE FROM `{$table}` WHERE `key` = ? AND `org_id` = 0")
     : $pdo->prepare("DELETE FROM `{$table}` WHERE `key` = ? AND `org_id` = ?");
   $isInstanceWide ? $stmt->execute([$key]) : $stmt->execute([$key, $orgId]);
   echo json_encode(['ok' => true]);
@@ -765,7 +765,7 @@ if($method === 'GET'){
 }
 ```
 
-Note: the base KV table's `INSERT ... ON DUPLICATE KEY` relies on the composite PK `(org_id,key)` from Task 1 — a `NULL` `org_id` in that PK works for uniqueness of instance-wide keys because there's a fixed, small allowlist (`$instanceWideKeys`) rather than arbitrary per-org duplication of the same key string.
+Note: the base KV table's `INSERT ... ON DUPLICATE KEY` relies on the composite PK `(org_id,key)` from Task 1 — `org_id = 0` is the reserved instance-wide sentinel (never a real org, since `organization.id` is `AUTO_INCREMENT` starting at 1), used only for the fixed, small allowlist (`$instanceWideKeys`) rather than arbitrary per-org duplication of the same key string.
 
 - [ ] **Step 4: Re-run the Step 2 curl check**
 

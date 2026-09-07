@@ -639,6 +639,7 @@ const translations = {
       groupData: 'Daten & Sicherheit',
       groupHelp: 'Hilfe',
       groupAccount: 'Konto',
+      groupOrganization: 'Organisation',
       navFeatures: 'Feature-Übersicht',
       navTheme: 'Design',
       navIconPack: 'Icon-Pack',
@@ -647,6 +648,7 @@ const translations = {
       navCheckpointTypes: 'Checkpoint-Typen',
       navDataSafety: 'Datensicherheit',
       navDocumentation: 'Dokumentation',
+      navOrganization: 'Organisation',
       backToList: '&larr; Übersicht',
       themeHeading: 'Theme',
       themeDesc: 'Verändert die Farbpalette der gesamten App.',
@@ -702,7 +704,16 @@ const translations = {
       themeHellLabel: 'Hell', themeHellDesc: 'Helles Chrome, klassisches Papier',
       themeDunkelLabel: 'Dunkel', themeDunkelDesc: 'Durchgehend dunkel, ruhiger blauer Akzent',
       themeDraculaLabel: 'Dracula', themeDraculaDesc: 'Pink/Lila-Akzente auf klassischem Dracula-Dunkel',
-      themeOutdoorLabel: 'Sonnenlicht', themeOutdoorDesc: 'Maximaler Kontrast, größere Bedienelemente — für Einsatz im Freien bei direkter Sonne'
+      themeOutdoorLabel: 'Sonnenlicht', themeOutdoorDesc: 'Maximaler Kontrast, größere Bedienelemente — für Einsatz im Freien bei direkter Sonne',
+      org: {
+        noticeboard: 'Schwarzes Brett',
+        loadingMembers: 'Lädt Mitglieder …',
+        membersHeading: 'Mitglieder',
+        membersEmpty: 'Noch keine Mitglieder.',
+        removeMemberButton: 'Entfernen',
+        removeMemberConfirm: 'Mitglied „{username}“ wirklich aus der Organisation entfernen?',
+        lastCaptainError: 'Der letzte Captain kann nicht entfernt oder degradiert werden.'
+      }
     },
     category: {
       presetDrivetrainName: 'Antrieb',
@@ -1301,6 +1312,8 @@ const translations = {
       roleEditor: 'Editor',
       roleViewer: 'Betrachter',
       roleCheckpointStaff: 'Checkpoint-Personal',
+      roleCaptain: 'Captain',
+      roleUnknown: 'Keine Rolle',
       viewerBanner: 'Nur-Lese-Zugriff (Betrachter) — Änderungen werden nicht gespeichert.',
       navUsers: 'Benutzer',
       usersHeading: 'Benutzerverwaltung',
@@ -1382,6 +1395,29 @@ const translations = {
       auditLogHeading: 'Audit-Log',
       auditLogDesc: 'Login, Rollenänderungen und Passwort-Resets der letzten Zeit — installationsweit, nicht an ein Event gebunden.',
       auditLogEmpty: 'Noch keine Einträge.'
+    },
+    /* Multi-Tenancy: Workspace-Dropdown in der Topbar (Org-Wechsel) und
+       das SysAdmin-Instanzpanel (installationsweite Org-Verwaltung) —
+       beide nur unter hasAdminRoles(), siehe ui-headquarter.js. */
+    workspace: {
+      dropdownTitle: 'Organisation wechseln'
+    },
+    instance: {
+      navButton: 'Instanz',
+      title: 'Instanz-Verwaltung',
+      intro: 'Organisationen dieser Installation anlegen und deaktivieren — nur für SysAdmins sichtbar.',
+      accessDenied: 'Kein Zugriff.',
+      createOrgHeading: 'Organisation anlegen',
+      orgSlugLabel: 'Slug',
+      orgSlugPlaceholder: 'z. B. meine-crew',
+      orgNameLabel: 'Name',
+      createOrgButton: 'Anlegen',
+      orgListHeading: 'Organisationen',
+      orgListEmpty: 'Noch keine Organisationen angelegt.',
+      deactivateButton: 'Deaktivieren',
+      deactivateConfirm: 'Organisation „{name}“ wirklich deaktivieren? Alle aktiven Sitzungen ihrer Mitglieder werden beendet.',
+      newOrgValidation: 'Slug und Name sind Pflichtfelder.',
+      slugTaken: 'Dieser Slug ist bereits vergeben.'
     },
     /* Checkpoint-App (Teilprojekt 4) — eigenes Bundle, eigener Namensraum
        wie riderScan fürs Fahrer-Bundle. Zugriffsteuerung (Code/Konto) lebt

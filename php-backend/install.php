@@ -15,6 +15,21 @@
 require __DIR__ . '/preflight.php';
 require __DIR__ . '/migrations.php';
 
+function installWriteHtaccessBlock($dir){
+  $marker = '# BEGIN alleycat-pretty-urls';
+  $endMarker = '# END alleycat-pretty-urls';
+  $block = "{$marker}\n<IfModule mod_rewrite.c>\nRewriteEngine On\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteRule ^([a-z0-9-]+)/(.*)$ alleycat-dispatch-server.html [L]\n</IfModule>\n{$endMarker}\n";
+  $path = rtrim($dir, '/') . '/.htaccess';
+  $existing = file_exists($path) ? file_get_contents($path) : '';
+  if(strpos($existing, $marker) !== false){
+    $existing = preg_replace('/' . preg_quote($marker, '/') . '.*?' . preg_quote($endMarker, '/') . "\n?/s", $block, $existing);
+  } else {
+    $existing = rtrim($existing) . "\n\n" . $block;
+  }
+  $ok = @file_put_contents($path, ltrim($existing));
+  return $ok !== false;
+}
+
 $configPath = __DIR__ . '/config.php';
 $alreadyInstalled = file_exists($configPath);
 
@@ -87,8 +102,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyInstalled){
         $existingUsers = (int)$pdo->query("SELECT COUNT(*) FROM `{$userTable}`")->fetchColumn();
         $adminCreated = false;
         if($existingUsers === 0){
-          $pdo->prepare("INSERT INTO `{$userTable}` (`username`,`password_hash`,`role`,`display_name`)
-                         VALUES (?,?,'admin',?)")
+          $pdo->prepare("INSERT INTO `{$userTable}` (`username`,`password_hash`,`role`,`display_name`,`is_sysadmin`)
+                         VALUES (?,?,'captain',?,1)")
               ->execute([$adminUser, password_hash($adminPass, PASSWORD_DEFAULT), $adminDisplay !== '' ? $adminDisplay : $adminUser]);
           $adminCreated = true;
         }
@@ -116,12 +131,14 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyInstalled){
         }
         @chmod($configPath, 0600);
 
+        $htaccessOk = installWriteHtaccessBlock(__DIR__ . '/..');
+
         $scriptDir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $apiUrl = $scheme . '://' . $_SERVER['HTTP_HOST'] . $scriptDir . '/api.php';
 
         $success = ['apiKey' => $apiKey, 'apiUrl' => $apiUrl, 'table' => $table, 'charset' => $charset,
-                    'adminUser' => $adminUser, 'adminCreated' => $adminCreated];
+                    'adminUser' => $adminUser, 'adminCreated' => $adminCreated, 'htaccessOk' => $htaccessOk];
 
         // Selbstsperre: bestmöglicher Versuch, sich selbst vom Server zu
         // löschen. Schlägt das aus Rechte-Gründen fehl (nicht unüblich bei
@@ -198,6 +215,12 @@ $showPreflightWarn = !$showPreflightError && (($localOverall === 'warn') || ($db
       <div class="kv"><b>API-Endpunkt</b><?= htmlspecialchars($success['apiUrl']) ?></div>
       <div class="kv"><b>API-Key — nur aufbewahren, nicht in die App eintragen (jetzt kopieren, wird nicht erneut angezeigt, nur ein Hash bleibt gespeichert)</b><?= htmlspecialchars($success['apiKey']) ?></div>
       <div class="hint">Der API-Key ist der Notfall-/Wartungszugang (<code>backup.php</code>, <code>migrate.php</code>) und gibt Vollzugriff. Für den Alltag reicht das Admin-Konto oben.</div>
+      <div class="hint">Nach der Anmeldung wird die App auf das Instance-Panel (<code>#/instance</code>) weiterleiten — dort muss die erste Organisation angelegt werden, bevor Veranstaltungen erstellt werden können.</div>
+      <?php if($success['htaccessOk']): ?>
+        <p>Hübsche URLs (<code>/<wbr>&lt;org-slug&gt;/...</code>) wurden versuchsweise eingerichtet — falls dein Hosting kein Apache/mod_rewrite nutzt, funktioniert die App trotzdem unverändert über die Hash-URL.</p>
+      <?php else: ?>
+        <p>Konnte keine .htaccess schreiben (Berechtigungen?) — kein Problem, die App funktioniert vollständig über die Hash-URL (<code>#/org/<wbr>&lt;slug&gt;/...</code>).</p>
+      <?php endif; ?>
       <?php if($selfDeleteFailed): ?>
         <div class="warn">
           Wichtig: <code>install.php</code> konnte sich nicht selbst löschen (fehlende Schreibrechte) — bitte jetzt manuell per FTP/Dateimanager vom Server entfernen. Danach die App aufrufen und mit dem Admin-Konto anmelden.

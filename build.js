@@ -10,6 +10,7 @@
    ------------------------------------------------------------------ */
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const CORE_FILES = [
   'i18n.js',
@@ -373,6 +374,29 @@ if(process.argv.includes('--core-hash')){
 }
 
 assertCoreIsBackendAgnostic();
+
+/* Der Guard ist ein PHP-Skript, der Build läuft in Node — auf einem
+   Rechner ohne `php` im PATH (bei einer reinen Frontend-Änderung völlig
+   normal) darf das den Build nicht töten. Unterschieden wird deshalb
+   zwischen "die Binary gibt es nicht" (Warnung, Build läuft weiter) und
+   "der Guard lief und hat einen echten Verstoß gemeldet" (Abbruch).
+   Der Pfad kommt aus __dirname statt aus dem cwd: `node build.js` aus
+   einem Unterverzeichnis heraus fand das Skript sonst nicht.
+
+   spawnSync statt execSync, und bewusst OHNE Shell: nur so meldet Node
+   eine fehlende Binary als error.code === 'ENOENT'. Über die Shell käme
+   stattdessen ein nichtssagender Exitcode 127 zurück, der von einem
+   echten Guard-Fehlschlag nicht mehr zu unterscheiden wäre. */
+const orgScopingGuardPath = path.join(__dirname, 'php-backend', 'check-org-scoping.php');
+const orgScopingGuard = spawnSync('php', [orgScopingGuardPath], { stdio: 'inherit' });
+if (orgScopingGuard.error && orgScopingGuard.error.code === 'ENOENT') {
+  console.warn('Warnung: `php` nicht im PATH — Org-Scoping-Guard übersprungen.');
+  console.warn('         Vor einem Backend-Commit bitte `php php-backend/check-org-scoping.php` von Hand laufen lassen.');
+} else if (orgScopingGuard.error || orgScopingGuard.status !== 0) {
+  console.error('Org-Scoping-Guard failed — see output above.');
+  process.exit(1);
+}
+
 buildVariant('storage-local.js', 'local.template.html', 'alleycat-dispatch-local.html');
 buildVariant('storage-server.js', 'server.template.html', 'alleycat-dispatch-server.html');
 buildRiderVariant();
