@@ -25,6 +25,12 @@ function getPhpConfig(){
 function savePhpConfig(cfg){
   localStorage.setItem('alleycat:php-config', JSON.stringify(cfg));
 }
+function getActiveOrgSlug(){
+  return localStorage.getItem('alleycat:activeOrgSlug') || '';
+}
+function setActiveOrgSlug(slug){
+  localStorage.setItem('alleycat:activeOrgSlug', slug);
+}
 
 /* ---------------- Admin-Session (Benutzerverwaltung) ----------------
    Zweiter, personalisierter Zugangsweg neben dem einen geteilten
@@ -41,6 +47,7 @@ function currentAuthHeaders(contentType){
   const headers = {};
   if(session && session.token) headers['X-Admin-Token'] = session.token;
   else if(cfg && cfg.apiKey) headers['X-Api-Key'] = cfg.apiKey;
+  if(getActiveOrgSlug()) headers['X-Org-Slug'] = getActiveOrgSlug();
   if(contentType) headers['Content-Type'] = contentType;
   return headers;
 }
@@ -104,6 +111,20 @@ async function adminGetCheckpointStaff(publicId){
 }
 async function adminSetCheckpointStaff(userId, publicId, cpIds){
   return authRequest('POST', 'a=checkpointstaff/set', {userId, publicId, cpIds});
+}
+async function myOrgs(){
+  const res = await authRequest('GET', 'a=my-orgs');
+  const data = await res.json();
+  return data.ok ? data.orgs : [];
+}
+
+async function listEventsForActiveOrg(){
+  const url = new URL(getPhpConfig().apiUrl);
+  url.searchParams.set('a', 'events');
+  const res = await fetch(url.toString(), { headers: currentAuthHeaders() });
+  if(!res.ok) return [];
+  const data = await res.json();
+  return data.ok ? data.events : [];
 }
 /* ---------------- Einladungscodes ----------------
    Vier Funktionen, analog zu adminLogin() & Co. oben — reiner Transport,
