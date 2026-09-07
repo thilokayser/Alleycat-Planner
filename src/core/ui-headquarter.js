@@ -1460,7 +1460,7 @@ function renderOrgMembersList(){
      aus ' ein &#39;, das der Parser VOR dem Auswerten des JS-Strings
      wieder zu ' auflöst — ein Benutzername mit Apostroph bräche damit aus
      dem Stringliteral aus. Übergabe deshalb per data-Attribut, gelesen in
-     einem delegierten Listener (bindOrgMemberActions()). */
+     einem delegierten Listener (ensureOrgActionDelegation()). */
   return members.map(m => `
     <div class="admin-user-row" style="border:1px solid var(--asphalt-3); border-radius:4px; padding:12px 14px; margin-bottom:10px;">
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">

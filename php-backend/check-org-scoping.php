@@ -35,7 +35,13 @@ $riderOrgBoundSuffixes = ['event'];
 $files = ['api.php', 'rider.php', 'auth.php', 'bootstrap.php'];
 $allowMarker = 'org-scoping-guard: ok';
 $maxStatementLines = 10;   // längster Upsert im Bestand sind 9 Zeilen
-$allowLookbehind = 8;      // Freigabekommentar darf über dem Statement stehen
+/* Kein fester Zeilenabstand mehr für den Freigabekommentar — siehe
+   scopingHasAllowMarker(): der Kommentar deckt nur das Statement direkt
+   darunter, egal wie lang er selbst ist, kann aber nie über eine andere
+   Query hinweg „durchsickern". Jedes freigegebene Statement bekommt
+   deshalb seinen eigenen Kommentar, auch wenn zwei Statements direkt
+   hintereinander stehen (siehe checkpointstaff/set: DELETE+INSERT, je
+   ein eigener Marker). */
 
 /* Statement = Zeile mit Query-Schlüsselwort + Folgezeilen, bis die
    SQL-Zeichenkette erkennbar endet. Ohne dieses Fenster hätte jeder
@@ -60,10 +66,21 @@ function scopingHasOrgPredicate($text){
   return (bool)preg_match('/\b(?:WHERE|AND|OR|SET)\s+(?:[A-Za-z_][A-Za-z0-9_]*\.)?`?org_id`?\s*(?:=|<>|!=|\bIN\b|\bIS\b)/i', $text);
 }
 
-function scopingHasAllowMarker(array $lines, $start, $lookbehind, $marker, $statementText){
+/* Läuft von der Statement-Zeile rückwärts, bis sie entweder auf den
+   Freigabekommentar trifft (-> true) oder auf eine ANDERE
+   Query-auslösende Zeile (-> false, der Kommentar gehört dann zu jenem
+   fremden Statement, nicht zu diesem). Kein fester Zeilenabstand mehr:
+   ein Kommentar direkt über seinem Statement gilt unabhängig von seiner
+   eigenen Länge (mehrzeilige Begründungen sind hier Standard), aber er
+   kann nie über eine fremde Query hinweg „durchsickern" — genau das war
+   das Risiko am festen 8-Zeilen-Fenster. $hardCap ist nur ein
+   Sicherheitsnetz gegen eine kaputte Datei ohne jede Statement-Grenze. */
+function scopingHasAllowMarker(array $lines, $start, $marker, $statementText, $hardCap = 30){
   if(strpos($statementText, $marker) !== false) return true;
-  for($i = max(0, $start - $lookbehind); $i < $start; $i++){
+  $limit = max(0, $start - $hardCap);
+  for($i = $start - 1; $i >= $limit; $i--){
     if(strpos($lines[$i], $marker) !== false) return true;
+    if(preg_match('/\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b/i', $lines[$i])) return false;
   }
   return false;
 }
@@ -80,11 +97,15 @@ foreach($files as $file){
   }
   $lines = file($path);
 
-  /* Inline geschriebene Tabellennamen — stehen direkt in der Query-Zeile. */
-  $inlineTokens = [];
-  foreach($adminOrgBoundSuffixes as $s){ $inlineTokens[] = "adminTableName('{$s}')"; }
-  foreach($riderOrgBoundSuffixes as $s){ $inlineTokens[] = "riderTableName('{$s}')"; }
-  $inlineTokens[] = 'ALLEYCAT_TABLE';   // inline verwendet, z. B. in ?a=discover
+  /* Inline geschriebene Tabellennamen — stehen direkt in der Query-Zeile.
+     Als Regex statt als Literal-String, damit sowohl 'event' als auch
+     "event" erkannt werden — PHP-Code in diesem Repo nutzt beide
+     Anführungszeichen-Stile, ein reiner strpos()-Literalvergleich hätte
+     die doppelt zitierte Variante lautlos übersehen. */
+  $inlinePatterns = [];
+  foreach($adminOrgBoundSuffixes as $s){ $inlinePatterns["adminTableName('{$s}')"] = '/adminTableName\(\s*[\'"]' . preg_quote($s, '/') . '[\'"]\s*\)/'; }
+  foreach($riderOrgBoundSuffixes as $s){ $inlinePatterns["riderTableName('{$s}')"] = '/riderTableName\(\s*[\'"]' . preg_quote($s, '/') . '[\'"]\s*\)/'; }
+  $inlinePatterns['ALLEYCAT_TABLE'] = '/\bALLEYCAT_TABLE\b/';   // inline verwendet, z. B. in ?a=discover
 
   /* Aliase werden beim Durchlauf mitgeführt statt einmal für die ganze
      Datei gesammelt: Kurznamen wie $t werden hier in fast jeder Funktion
@@ -95,7 +116,7 @@ foreach($files as $file){
   $alias = [];
 
   foreach($lines as $i => $line){
-    if(preg_match('/\$([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(admin|rider)TableName\(\s*\'([a-z_]+)\'\s*\)/', $line, $a)){
+    if(preg_match('/\$([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(admin|rider)TableName\(\s*[\'"]([a-z_]+)[\'"]\s*\)/', $line, $a)){
       $suffixes = $a[2] === 'admin' ? $adminOrgBoundSuffixes : $riderOrgBoundSuffixes;
       $alias['{$' . $a[1] . '}'] = in_array($a[3], $suffixes, true) ? "{$a[2]}TableName('{$a[3]}')" : null;
     } elseif(preg_match('/\$([A-Za-z_][A-Za-z0-9_]*)\s*=\s*ALLEYCAT_TABLE\s*;/', $line, $a)){
@@ -110,8 +131,8 @@ foreach($files as $file){
     if(!preg_match('/\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b/i', $line)) continue;
 
     $touched = null;
-    foreach($inlineTokens as $tok){
-      if(strpos($line, $tok) !== false){ $touched = $tok; break; }
+    foreach($inlinePatterns as $label => $pattern){
+      if(preg_match($pattern, $line)){ $touched = $label; break; }
     }
     if($touched === null){
       foreach($alias as $var => $kind){
@@ -124,7 +145,7 @@ foreach($files as $file){
     $stmtText = scopingStatementText($lines, $i, $maxStatementLines);
     $checked[] = "{$file}:" . ($i + 1) . "  [{$touched}]";
 
-    if(scopingHasAllowMarker($lines, $i, $allowLookbehind, $allowMarker, $stmtText)) continue;
+    if(scopingHasAllowMarker($lines, $i, $allowMarker, $stmtText)) continue;
     if(scopingHasOrgPredicate($stmtText)) continue;
 
     $violations[] = "{$file}:" . ($i + 1) . ': ' . trim($line);
