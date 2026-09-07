@@ -105,6 +105,17 @@ let state = {
   cluePreviewMode: false,
   settingsSection: null,
   settingsMobileDetailOpen: false,
+  /* Multi-Tenancy/Orgs (nur unter hasAdminRoles() befüllt, siehe init()) */
+  myOrgs: [],
+  activeOrgSlug: '',
+  orgMembersList: null,  // gecachte ?a=org/members-Antwort für die Organisations-Einstellungen
+  orgMembersError: '',
+  /* SysAdmin-Instanzpanel (state.view = 'instance'): eigene, vom
+     Workspace-Dropdown unabhängige Liste, weil ein SysAdmin ganz ohne
+     Org-Mitgliedschaft dastehen kann (myOrgs() wäre dann leer). */
+  instanceIsSysAdmin: false,
+  instanceOrgsList: null,
+  instanceOrgsError: '',
 };
 let pdfPreviewDoc = null;
 let map, markersLayer, zonesLayer, eventLocationsLayer, orgaPinsLayer, importedGeoLayer, routeLine, routeEstimateLine, proximityBufferLayer, cpMarkers = {};
@@ -285,7 +296,22 @@ async function init(){
   if(isBeamerRoute()){ await initBeamer(); return; }
   state.adminSession = loadAdminSession();
   if(!(await initStorageBackend())) return;
-  await Promise.all([loadAppSettings(), loadCustomLanguagePacks(), loadCustomCheckpointTypes(), loadEventsIndex(), loadTeamRoster(), loadRiderRoster(), loadSeasonsIndex()]);
+  /* Workspace/Org-Bootstrap (Paket "Multi-Tenancy"): nur unter
+     hasAdminRoles() — die lokale Variante und der geteilte
+     window.storage-Modus kennen keine Orgs. myOrgs() ist damit ein reiner
+     No-Op-Aufruf, den es unter beiden Bedingungen gar nicht erst gibt. */
+  if(hasAdminRoles()){
+    state.myOrgs = await myOrgs();
+    state.activeOrgSlug = getActiveOrgSlug() || (state.myOrgs[0] ? state.myOrgs[0].slug : '');
+    if(state.activeOrgSlug) setActiveOrgSlug(state.activeOrgSlug);
+    /* SysAdmin-Instanzpanel-Sichtbarkeit: eigener whoami()-Check statt
+       myOrgs()-Länge, weil ein SysAdmin ganz ohne Org-Mitgliedschaft
+       dastehen kann (siehe state.instanceIsSysAdmin-Kommentar oben). */
+    const who = await adminWhoami();
+    state.instanceIsSysAdmin = !!(who.ok && who.isSysAdmin);
+    ensureInstancePanelContainer();
+  }
+  await Promise.all([loadAppSettings(), loadCustomLanguagePacks(), loadCustomCheckpointTypes(), hasAdminRoles() ? loadEventsIndexForActiveOrg() : loadEventsIndex(), loadTeamRoster(), loadRiderRoster(), loadSeasonsIndex()]);
   applyAppSettings();
   await seedDemoEventIfNeeded();
   state.loading = false;
@@ -543,6 +569,12 @@ function render(){
   document.getElementById('view-leaderboard').classList.toggle('active', state.view === 'leaderboard');
   document.getElementById('view-settings').classList.toggle('active', state.view === 'settings');
   document.getElementById('view-league').classList.toggle('active', state.view === 'league');
+  /* view-instance existiert nur unter hasAdminRoles() (siehe
+     ensureInstancePanelContainer() in init()) — im lokalen Build und ohne
+     Server-Accounts gibt es das Element nie, daher der Null-Check statt
+     des unbedingten .classList.toggle() der anderen Views oben. */
+  const instanceEl = document.getElementById('view-instance');
+  if(instanceEl) instanceEl.classList.toggle('active', state.view === 'instance');
 
   if(state.view === 'dashboard') renderDashboard();
   if(state.view === 'overview') renderOverview();
@@ -553,6 +585,7 @@ function render(){
   if(state.view === 'leaderboard') renderLeaderboard();
   if(state.view === 'settings') renderSettings();
   if(state.view === 'league') renderLeague();
+  if(state.view === 'instance') renderInstancePanel();
   syncWakeLockForView();
 }
 
@@ -611,6 +644,34 @@ function renderAuthBadge(){
   `;
 }
 
+/* Workspace-Dropdown (Multi-Tenancy): analog zu renderAuthBadge() nur
+   unter hasAdminRoles() sichtbar, und zusätzlich nur mit mindestens einer
+   Org-Mitgliedschaft — ein Konto ohne Orgs (noch nicht eingeladen) soll
+   kein leeres Dropdown sehen. */
+function renderWorkspaceDropdown(){
+  if(!hasAdminRoles() || !(state.myOrgs || []).length) return '';
+  const options = state.myOrgs.map(o =>
+    `<option value="${escapeHtml(o.slug)}" ${o.slug === state.activeOrgSlug ? 'selected' : ''}>${escapeHtml(o.name)}</option>`
+  ).join('');
+  return `<select class="workspace-dropdown" title="${escapeHtml(t('workspace.dropdownTitle'))}" onchange="onWorkspaceChange(this.value)">${options}</select>`;
+}
+async function onWorkspaceChange(slug){
+  setActiveOrgSlug(slug);
+  state.activeOrgSlug = slug;
+  state.eventsIndex = await listEventsForActiveOrg();
+  state.currentEvent = null;
+  state.view = 'dashboard';
+  render();
+}
+/* Einstiegspunkt fürs SysAdmin-Instanzpanel: nur unter hasAdminRoles()
+   und nur für SysAdmins sichtbar (state.instanceIsSysAdmin, gesetzt in
+   init() über adminWhoami() — nicht myOrgs()-Länge, siehe dortiger
+   Kommentar). */
+function renderInstancePanelButton(){
+  if(!hasAdminRoles() || !state.instanceIsSysAdmin) return '';
+  return `<button class="btn btn-ghost" onclick="openInstancePanel()">${t('instance.navButton')}</button>`;
+}
+
 function renderTopbar(){
   const sub = document.getElementById('topbar-sub');
   const actions = document.getElementById('topbar-actions');
@@ -627,7 +688,7 @@ function renderTopbar(){
 
   if(state.view === 'dashboard' || !state.currentEvent){
     sub.textContent = t('ui.headquarter');
-    actions.innerHTML = renderAuthBadge();
+    actions.innerHTML = `${renderWorkspaceDropdown()}${renderInstancePanelButton()}${renderAuthBadge()}`;
     bottomNav.innerHTML = '';
     if(iconSidebar) iconSidebar.innerHTML = `<div class="icon-sidebar-mark">AC</div>`;
     return;
@@ -640,6 +701,7 @@ function renderTopbar(){
     <button class="btn btn-ghost" onclick="goDashboard()">${t('ui.backToAllEvents')}</button>
     ${state.currentEvent.status === 'running' ? `<span class="running-hint">${t('dataSafety.keepTabOpenHint')}</span>` : ''}
     ${renderStatusControl(state.currentEvent)}
+    ${renderWorkspaceDropdown()}
     ${renderAuthBadge()}
   `;
   bottomNav.innerHTML = navItems.map(item => `
@@ -695,6 +757,14 @@ const SETTINGS_NAV_GROUPS = [
      nicht als deaktivierten Eintrag. */
   {id: 'account', label: () => t('settings.groupAccount'), items: [
     {id: 'users', icon: '👤', label: () => t('auth.navUsers')}
+  ]},
+  /* Organisation (Multi-Tenancy): eigene Gruppe statt Item unter 'account'
+     — die Sichtbarkeit hängt an Org-Mitgliedschaft (state.myOrgs), nicht
+     an der Geräte-Rolle manageUsers, die 'account' oben gate. Ein Editor
+     ohne Benutzerverwaltungsrechte soll seine eigene Org trotzdem sehen
+     können. */
+  {id: 'organization', label: () => t('settings.groupOrganization'), items: [
+    {id: 'orgSettings', icon: '🏢', label: () => t('settings.navOrganization')}
   ]}
 ];
 function settingsNavItem(id){
@@ -712,6 +782,7 @@ function renderSettingsSidebar(){
         <p>${t('settings.intro')}</p>
       </div>
       ${SETTINGS_NAV_GROUPS.filter(group => group.id !== 'account' || (hasAdminRoles() && currentUserCan('manageUsers')))
+        .filter(group => group.id !== 'organization' || (hasAdminRoles() && (state.myOrgs || []).length))
         .filter(group => group.id !== 'league' || isFeatureEnabled('seasons_league')).map(group => `
         <div class="settings-nav-group">
           <div class="settings-nav-group-label">${group.label()}</div>
@@ -917,6 +988,7 @@ function settingsSectionContent(id){
     case 'dataSafety': return renderDataSafetySection();
     case 'documentation': return renderDocumentationSection();
     case 'users': return renderSettingsSectionUsers();
+    case 'orgSettings': return renderOrganizationSettingsSection();
     case 'features':
     default: return renderFeatureRegistrySection();
   }
@@ -1324,6 +1396,158 @@ function renderSettingsSectionUsers(){
   `;
 }
 
+/* ---------------- Organisation (Multi-Tenancy) ---------------- */
+/* Vier Org-Rollen, analog zu ADMIN_ROLE_OPTIONS oben, aber ein eigenes
+   Set — 'captain' statt 'admin' (auth.php: org/members/set-role prüft
+   genau diese vier Werte), editor/viewer/checkpoint_staff teilen sich
+   Label-Keys mit den Geräte-Rollen (gleiche Bedeutung). */
+const ORG_ROLE_OPTIONS = ['captain', 'editor', 'viewer', 'checkpoint_staff'];
+function orgRoleLabel(role){
+  if(role === 'captain') return t('auth.roleCaptain');
+  return adminRoleLabel(role);
+}
+async function loadOrgMembersIfNeeded(force){
+  if(state.orgMembersList && !force) return;
+  const res = await authRequest('GET', 'a=org/members');
+  state.orgMembersError = res.ok ? '' : (res.error || 'error');
+  state.orgMembersList = res.ok ? res.members : [];
+  if(state.settingsSection === 'orgSettings') renderSettings();
+}
+function renderOrgMembersList(){
+  if(state.orgMembersError) return `<div class="rider-note rider-note-error">${escapeHtml(state.orgMembersError)}</div>`;
+  const members = state.orgMembersList;
+  if(members === null) return t('settings.org.loadingMembers');
+  if(!members.length) return `<div class="settings-section-desc">${t('settings.org.membersEmpty')}</div>`;
+  return members.map(m => `
+    <div class="admin-user-row" style="border:1px solid var(--asphalt-3); border-radius:4px; padding:12px 14px; margin-bottom:10px;">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <strong>${escapeHtml(m.username)}</strong>
+        <span style="color:var(--steel); font-size:12px;">${escapeHtml(m.display_name || '')}</span>
+        <select onchange="updateOrgMemberRole(${m.user_id}, this.value)" style="margin-left:auto;">
+          ${ORG_ROLE_OPTIONS.map(r => `<option value="${r}" ${r === m.role ? 'selected' : ''}>${escapeHtml(orgRoleLabel(r))}</option>`).join('')}
+        </select>
+        <button class="btn btn-ghost" onclick="removeOrgMember(${m.user_id}, '${escapeHtml(m.username)}')">${t('settings.org.removeMemberButton')}</button>
+      </div>
+    </div>
+  `).join('');
+}
+async function updateOrgMemberRole(userId, role){
+  const res = await authRequest('POST', 'a=org/members/set-role', {userId, role});
+  if(!res.ok && res.error === 'last_captain') alert(t('settings.org.lastCaptainError'));
+  await loadOrgMembersIfNeeded(true);
+}
+async function removeOrgMember(userId, username){
+  if(!confirm(t('settings.org.removeMemberConfirm', {username}))) return;
+  const res = await authRequest('POST', 'a=org/members/remove', {userId});
+  if(!res.ok && res.error === 'last_captain') alert(t('settings.org.lastCaptainError'));
+  await loadOrgMembersIfNeeded(true);
+}
+function renderOrganizationSettingsSection(){
+  if(!hasAdminRoles()) return '';
+  const org = (state.myOrgs || []).find(o => o.slug === state.activeOrgSlug);
+  if(!org) return '';
+  return `
+    <div class="settings-section">
+      <h3>${escapeHtml(org.name)}</h3>
+      <div class="settings-section-desc">${escapeHtml(org.slug)}</div>
+    </div>
+    <div class="settings-section">
+      <h3>${t('settings.org.membersHeading')}</h3>
+      <div id="org-members-list">${renderOrgMembersList()}</div>
+    </div>
+  `;
+}
+
+/* ---------------- SysAdmin-Instanzpanel ---------------- */
+/* Eigenständige Top-Level-View, gleiche Form wie #view-league (event-
+   unabhängig, eigene Route, nicht Teil der Settings-Sidebar) — aber ohne
+   eigenes Template-Element, weil dieser Task nur src/core/*-Dateien
+   ändern darf. Das Container-Div wird deshalb hier per JS angelegt statt
+   in templates/server.template.html, siehe ensureInstancePanelContainer(). */
+function ensureInstancePanelContainer(){
+  let el = document.getElementById('view-instance');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'view-instance';
+    el.className = 'view';
+    const app = document.getElementById('app');
+    if(app) app.appendChild(el);
+  }
+  return el;
+}
+function openInstancePanel(){
+  if(!state.instanceIsSysAdmin) return;
+  state.view = 'instance';
+  state.currentEvent = null;
+  render();
+  loadInstanceOrgsIfNeeded();
+}
+async function loadInstanceOrgsIfNeeded(force){
+  if(state.instanceOrgsList && !force) return;
+  const res = await authRequest('GET', 'a=org/list');
+  state.instanceOrgsError = res.ok ? '' : (res.error || 'error');
+  state.instanceOrgsList = res.ok ? res.orgs : [];
+  if(state.view === 'instance') renderInstancePanel();
+}
+async function submitNewOrg(){
+  const slugEl = document.getElementById('instance-new-org-slug');
+  const nameEl = document.getElementById('instance-new-org-name');
+  const slug = (slugEl && slugEl.value || '').trim();
+  const name = (nameEl && nameEl.value || '').trim();
+  if(!slug || !name){ alert(t('instance.newOrgValidation')); return; }
+  const res = await authRequest('POST', 'a=org/create', {slug, name});
+  if(!res.ok){
+    alert(res.error === 'slug_taken' ? t('instance.slugTaken') : t('checkpointScan.errGeneric'));
+    return;
+  }
+  await loadInstanceOrgsIfNeeded(true);
+}
+async function deactivateOrgRow(orgId, name){
+  if(!confirm(t('instance.deactivateConfirm', {name}))) return;
+  await authRequest('POST', 'a=org/deactivate', {orgId});
+  await loadInstanceOrgsIfNeeded(true);
+}
+function renderInstancePanel(){
+  const el = document.getElementById('view-instance');
+  if(!el) return;
+  if(!state.instanceIsSysAdmin){
+    el.innerHTML = `<div class="loading-row">${t('instance.accessDenied')}</div>`;
+    return;
+  }
+  const orgs = state.instanceOrgsList;
+  const rows = orgs === null ? t('settings.org.loadingMembers') : !orgs.length ? `<div class="settings-section-desc">${t('instance.orgListEmpty')}</div>` : orgs.map(o => `
+    <div class="admin-user-row" style="border:1px solid var(--asphalt-3); border-radius:4px; padding:12px 14px; margin-bottom:10px;">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <strong>${escapeHtml(o.name)}</strong>
+        <span style="color:var(--steel); font-size:12px;">${escapeHtml(o.slug)}</span>
+        <button class="btn btn-ghost" style="margin-left:auto;" onclick="deactivateOrgRow(${o.id}, '${escapeHtml(o.name)}')">${t('instance.deactivateButton')}</button>
+      </div>
+    </div>
+  `).join('');
+  el.innerHTML = `
+    <div class="dash-head">
+      <div>
+        <h2>${t('instance.title')}</h2>
+        <p>${t('instance.intro')}</p>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="goDashboard()">${t('ui.backToAllEvents')}</button>
+      </div>
+    </div>
+    ${state.instanceOrgsError ? `<div class="rider-note rider-note-error">${escapeHtml(state.instanceOrgsError)}</div>` : ''}
+    <div class="settings-section">
+      <h3>${t('instance.createOrgHeading')}</h3>
+      <div class="rider-field"><label>${t('instance.orgSlugLabel')}</label><input type="text" id="instance-new-org-slug" placeholder="${escapeHtml(t('instance.orgSlugPlaceholder'))}"></div>
+      <div class="rider-field"><label>${t('instance.orgNameLabel')}</label><input type="text" id="instance-new-org-name"></div>
+      <button class="btn btn-primary" onclick="submitNewOrg()">${t('instance.createOrgButton')}</button>
+    </div>
+    <div class="settings-section">
+      <h3>${t('instance.orgListHeading')}</h3>
+      ${rows}
+    </div>
+  `;
+}
+
 function renderSettings(){
   Object.entries(ICON_PACKS).forEach(([key, p]) => {
     if(!p.cdn) return;
@@ -1356,6 +1580,9 @@ function renderSettings(){
       loadInviteCodesIfNeeded();
       if(isFeatureEnabled('user_audit_log')) loadAuditLogIfNeeded();
     }
+  }
+  if(state.settingsSection === 'orgSettings' && hasAdminRoles()){
+    loadOrgMembersIfNeeded();
   }
 }
 

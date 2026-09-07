@@ -3443,6 +3443,13 @@ async function runAlleycatTestSuite(){
     state.riderRoster = rosterRiderBackup;
   }
 
+  /* Multi-Tenancy (Paket "Org-Governance"): Workspace-Dropdown existiert
+     als Funktion in beiden Varianten (gleicher Core-Code, siehe
+     hasAdminRoles()-Gating in ui-headquarter.js) — volle interaktive
+     Abdeckung (Org-Wechsel, Rollen-Änderung im Mitglieder-Tab) nur live
+     im Browser gegen dist/alleycat-dispatch-server.html, nicht hier. */
+  check('renderWorkspaceDropdown existiert', typeof renderWorkspaceDropdown === 'function');
+
   /* Zusammenfassung */
   const failed = results.filter(r => !r.pass);
   const color = failed.length ? 'color:#c0392b' : 'color:#2e7d32';
