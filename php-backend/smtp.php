@@ -62,6 +62,13 @@ function smtpSendMail(PDO $pdo, $toEmail, $subject, $bodyText){
   $cfg = smtpLoadSettings($pdo);
   if(!$cfg) throw new Exception('SMTP nicht konfiguriert (config:smtpSettings fehlt)');
 
+  /* Härtung gegen SMTP-/Header-Injection: $toEmail und $subject landen
+     roh in RCPT TO:/To:/Subject:. Ein eingebettetes CR/LF könnte
+     zusätzliche Befehle oder Header einschleusen. */
+  if(preg_match('/[\r\n]/', $toEmail) || preg_match('/[\r\n]/', $subject)){
+    throw new Exception('SMTP: ungültige Zeichen in Empfänger oder Betreff');
+  }
+
   $useImplicitTls = $cfg['port'] === 465;
   $transport = $useImplicitTls ? 'ssl://' : 'tcp://';
   $sock = @stream_socket_client($transport . $cfg['host'] . ':' . $cfg['port'], $errno, $errstr, 10);
@@ -96,10 +103,19 @@ function smtpSendMail(PDO $pdo, $toEmail, $subject, $bodyText){
     ? "{$cfg['fromName']} <{$cfg['fromAddress']}>"
     : $cfg['fromAddress'];
   $headers = "From: {$fromHeader}\r\nTo: {$toEmail}\r\nSubject: {$subject}\r\nContent-Type: text/plain; charset=UTF-8\r\n";
+  /* RFC 5321 §2.3.7 verlangt CRLF auf der Leitung. Aufrufer übergeben hier
+     typischerweise \n-only PHP-Strings — erst auf \n normalisieren (falls
+     schon \r\n oder einzelne \r drinstecken), dann Dot-Stuffing auf den
+     \n-getrennten Zeilen durchführen (^. matcht sonst nicht zuverlässig
+     hinter \r), und erst danach zu \r\n expandieren. */
+  $normalizedBody = str_replace(["\r\n", "\r"], "\n", $bodyText);
   /* Führende Punkte in Zeilen müssen verdoppelt werden (SMTP-Dot-Stuffing),
      sonst interpretiert der Server eine Zeile als Nachrichtenende. */
-  $escapedBody = preg_replace('/^\./m', '..', $bodyText);
-  fwrite($sock, $headers . "\r\n" . $escapedBody . "\r\n.\r\n");
+  $escapedBody = preg_replace('/^\./m', '..', $normalizedBody);
+  $message = $headers . "\r\n" . $escapedBody . "\r\n.\r\n";
+  $message = str_replace(["\r\n", "\r"], "\n", $message);
+  $message = str_replace("\n", "\r\n", $message);
+  fwrite($sock, $message);
   $code = smtpReadResponse($sock);
   if($code !== 250) throw new Exception("SMTP: Zustellung abgelehnt (Code {$code})");
 
