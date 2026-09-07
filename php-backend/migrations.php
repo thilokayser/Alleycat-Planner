@@ -360,7 +360,7 @@ function migrationsList($table, $charset){
 
       foreach([
         ["{$table}_admin_user", 'is_sysadmin', 'TINYINT(1) NOT NULL DEFAULT 0'],
-        ["{$table}", 'org_id', 'INT UNSIGNED NULL'],
+        ["{$table}", 'org_id', 'INT UNSIGNED NOT NULL DEFAULT 0'],
         ["{$table}_checkpoint_staff", 'org_id', 'INT UNSIGNED NOT NULL DEFAULT 0'],
         ["{$table}_checkpoint_session", 'org_id', 'INT UNSIGNED NOT NULL DEFAULT 0'],
       ] as $col){
