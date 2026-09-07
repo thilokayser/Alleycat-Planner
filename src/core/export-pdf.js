@@ -611,11 +611,18 @@ async function buildCheckpointQrDoc(evt){
     doc.setTextColor('#5b5340');
     doc.text(t('exportPdf.cpQrFooter'), pageW / 2, pageH - 24, {align: 'center', maxWidth: pageW - 30});
 
-    /* Kennung klein am Fuß: wenn ein Aufsteller vertauscht wird, lässt
-       sich am Papier nachvollziehen, wohin er gehört. */
+    /* Kennung + Code klein am Fuß: die Kennung zeigt bei vertauschtem
+       Aufsteller, wohin er gehört. Der Code ist der Fallback, wenn die
+       Kamera eines Fahrers ausfällt — sonst gibt es keinen Weg zum
+       digitalen Check-in (siehe riderScan.cpCode* in i18n.js). Als
+       4er-Gruppen, gleiches Muster wie der riderCode auf der Spokecard. */
     doc.setFont('courier', 'normal'); doc.setFontSize(7);
     doc.setTextColor('#8a8069');
-    doc.text(cp.id, pageW / 2, pageH - 12, {align: 'center'});
+    doc.text(cp.id, pageW / 2, pageH - 14, {align: 'center'});
+    doc.text(
+      t('exportPdf.cpQrManualCode', {code: String(cp.qrToken || '').match(/.{1,4}/g).join(' ')}),
+      pageW / 2, pageH - 9, {align: 'center'}
+    );
   });
 
   return doc;

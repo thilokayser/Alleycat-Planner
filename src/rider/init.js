@@ -312,7 +312,28 @@ async function riderSubmitClaim(){
 /* ---------------- Checkpoint-Scan ---------------- */
 
 function riderStartCheckpointScan(){
-  startRiderScan(payload => riderHandleCheckpointPayload(payload));
+  startRiderScan(payload => riderHandleCheckpointPayload(payload), 'checkpointCode');
+}
+
+/* ---------------- Checkpoint-Code manuell ----------------
+   Fällt die Kamera aus (kein Zugriff, kein Gerät, kein Leser), bleibt
+   sonst kein Weg zum digitalen Check-in — siehe scanCameraDenied/
+   scanCameraUnsupported/scanNoReader, die alle schon "Code eintippen"
+   versprechen. Checkpoint-ID und Code stehen auf dem laminierten
+   Checkpoint-Blatt (buildCheckpointQrDoc), falls die Kamera streikt. */
+function riderGoCheckpointCode(){
+  riderState.error = '';
+  riderState.view = 'checkpointCode';
+  renderRider();
+}
+
+function riderSubmitCheckpointCode(){
+  const cpIdInput = document.getElementById('rider-cp-code-cpid');
+  const codeInput = document.getElementById('rider-cp-code-token');
+  const cpId = (cpIdInput ? cpIdInput.value : '').trim();
+  const code = (codeInput ? codeInput.value : '').trim().toLowerCase();
+  if(!cpId || !code){ return; }
+  riderHandleCheckpointPayload(`c.${riderState.session.publicId}.${cpId}.${code}`);
 }
 
 async function riderHandleCheckpointPayload(payload){

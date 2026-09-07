@@ -17,6 +17,7 @@ function renderRider(){
     case 'scanner':  el.innerHTML = riderViewScanner(); break;
     case 'confirm':  el.innerHTML = riderViewConfirm(); break;
     case 'error':    el.innerHTML = riderViewError(); break;
+    case 'checkpointCode': el.innerHTML = riderViewCheckpointCode(); break;
     case 'selfRegisterList': el.innerHTML = riderViewSelfRegisterList(); break;
     case 'selfRegisterForm': el.innerHTML = riderViewSelfRegisterForm(); break;
     default:         el.innerHTML = riderViewLoading();
@@ -262,6 +263,30 @@ function riderViewError(){
     </div>
     <div class="rider-actions">
       <button type="button" class="rider-btn rider-btn-primary" onclick="riderRecoverFromError()">${t('riderScan.errRetry')}</button>
+      ${riderState.errorManualView === 'checkpointCode' ? `<button type="button" class="rider-btn rider-btn-ghost" onclick="riderGoCheckpointCode()">${t('riderScan.cpCodeButton')}</button>` : ''}
+    </div>
+  `;
+}
+
+function riderViewCheckpointCode(){
+  return `
+    ${riderHead()}
+    <div class="rider-body">
+      <div class="rider-title">${t('riderScan.cpCodeTitle')}</div>
+      <div class="rider-lead">${t('riderScan.cpCodeLead')}</div>
+      ${riderState.error ? `<div class="rider-note rider-note-error">${escapeHtml(riderState.error)}</div>` : ''}
+      <div class="rider-field">
+        <label for="rider-cp-code-cpid">${t('riderScan.cpCodeCpIdLabel')}</label>
+        <input type="text" id="rider-cp-code-cpid" class="mono" autocapitalize="none" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="rider-field">
+        <label for="rider-cp-code-token">${t('riderScan.cpCodeTokenLabel')}</label>
+        <input type="text" id="rider-cp-code-token" class="code" autocapitalize="none" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="rider-actions">
+      <button type="button" class="rider-btn rider-btn-primary" onclick="riderSubmitCheckpointCode()">${t('riderScan.cpCodeSubmit')}</button>
+      <button type="button" class="rider-btn rider-btn-ghost" onclick="riderGoHome()">${t('riderScan.cpCodeCancel')}</button>
     </div>
   `;
 }

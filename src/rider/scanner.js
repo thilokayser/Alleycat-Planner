@@ -14,9 +14,11 @@
 let riderScanStream = null;
 let riderScanRAF = null;
 let riderScanOnResult = null;
+let riderScanManualView = null;
 
-async function startRiderScan(onResult){
+async function startRiderScan(onResult, manualView){
   riderScanOnResult = onResult;
+  riderScanManualView = manualView || null;
   riderState.view = 'scanner';
   riderState.error = '';
   renderRider();
@@ -77,6 +79,7 @@ function stopRiderScan(silent){
     riderScanStream = null;
   }
   riderScanOnResult = null;
+  riderScanManualView = null;
   if(!silent){
     riderState.view = riderState.session ? 'home' : 'login';
     renderRider();
@@ -84,9 +87,11 @@ function stopRiderScan(silent){
 }
 
 function riderScanFail(message){
+  const manualView = riderScanManualView;
   stopRiderScan(true);
   riderState.error = message;
   riderState.errorRetry = riderState.session ? 'home' : 'login';
+  riderState.errorManualView = manualView;
   riderState.view = 'error';
   renderRider();
 }
