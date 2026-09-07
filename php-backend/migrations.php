@@ -416,6 +416,31 @@ function migrationsList($table, $charset){
         }
       }
     },
+
+    /* org_event_admin's Unique-Key deckte bisher nur (event_id,user_id)
+       ab, ohne org_id. Zwei Orgs, die zufällig dieselbe event_id +
+       denselben User delegieren wollen, kollidieren dadurch auf einer
+       fremden Zeile: der ON DUPLICATE KEY UPDATE in
+       ?a=org/event-admins/grant bumpt nur granted_at und lässt die
+       bestehende, falsche org_id stehen — die zweite, eigentlich
+       berechtigte Org bekommt ihre Delegation nie, ohne dass der Grant
+       einen Fehler zeigt (stiller Fehlschlag, kein Datenleck, weil
+       apiHasEventDelegation() ohnehin org_id mitprüft — aber die
+       Funktion selbst ist dadurch kaputt).
+
+       Fix: org_id wird Teil des Unique-Keys, dieselbe event_id+user_id-
+       Kombination kann dann pro Org unabhängig existieren. */
+    9 => function(PDO $pdo) use ($table){
+      $t = "{$table}_org_event_admin";
+      $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM information_schema.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = 'uq_org_event_user'"
+      );
+      $stmt->execute([$t]);
+      if((int)$stmt->fetchColumn() === 0){
+        $pdo->exec("ALTER TABLE `{$t}` DROP INDEX `uq_event_user`, ADD UNIQUE KEY `uq_org_event_user` (`org_id`,`event_id`,`user_id`)");
+      }
+    },
   ];
 }
 
