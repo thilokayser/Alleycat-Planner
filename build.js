@@ -10,6 +10,7 @@
    ------------------------------------------------------------------ */
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const CORE_FILES = [
   'i18n.js',
@@ -373,6 +374,14 @@ if(process.argv.includes('--core-hash')){
 }
 
 assertCoreIsBackendAgnostic();
+
+try {
+  execSync('php php-backend/check-org-scoping.php', { stdio: 'inherit' });
+} catch (e) {
+  console.error('Org-Scoping-Guard failed — see output above.');
+  process.exit(1);
+}
+
 buildVariant('storage-local.js', 'local.template.html', 'alleycat-dispatch-local.html');
 buildVariant('storage-server.js', 'server.template.html', 'alleycat-dispatch-server.html');
 buildRiderVariant();
