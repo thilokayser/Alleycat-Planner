@@ -441,6 +441,28 @@ function migrationsList($table, $charset){
         $pdo->exec("ALTER TABLE `{$t}` DROP INDEX `uq_event_user`, ADD UNIQUE KEY `uq_org_event_user` (`org_id`,`event_id`,`user_id`)");
       }
     },
+
+    /* Einladungscodes können jetzt optional eine Org tragen: registriert
+       sich jemand über einen Code mit org_id, bekommt der neue Account
+       automatisch eine org_member-Zeile in dieser Org (siehe ?a=register
+       in auth.php). Ohne diese Spalte landete ein eingeladener
+       Captain/Editor/Betrachter zwar mit gültigem Konto, aber ganz ohne
+       Org-Mitgliedschaft — ?a=my-orgs lieferte ihm eine leere Liste, ein
+       SysAdmin musste ihn danach von Hand zuordnen. NULL bleibt ein
+       gültiger Wert (anders als bei den org_id-Spalten aus Migration
+       7/8/9): ein Einladungscode ohne Org ist der Normalfall für die
+       Rolle checkpoint_staff, die keine Org-Mitgliedschaft kennt. */
+    10 => function(PDO $pdo) use ($table){
+      $t = "{$table}_invite_code";
+      $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'org_id'"
+      );
+      $stmt->execute([$t]);
+      if((int)$stmt->fetchColumn() === 0){
+        $pdo->exec("ALTER TABLE `{$t}` ADD COLUMN `org_id` INT UNSIGNED NULL");
+      }
+    },
   ];
 }
 
