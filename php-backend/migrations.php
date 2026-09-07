@@ -463,6 +463,57 @@ function migrationsList($table, $charset){
         $pdo->exec("ALTER TABLE `{$t}` ADD COLUMN `org_id` INT UNSIGNED NULL");
       }
     },
+
+    /* Persistente Fahrer-Konten (Spokecard-Claiming-Flow). Vier neue
+       Tabellen, alle instanzweit — ein Fahrer-Konto gehört keiner Org,
+       anders als admin_user/checkpoint_staff. rider_claim macht eine
+       bereits gedruckte Spokecard (public_id,bib, siehe rider_slot aus
+       Migration 2) einem Konto zugehörig; die unclaimte rider_slot-Zeile
+       selbst ist bereits das "Ghost-Profil" — kein zusätzliches Feld
+       dafür nötig.
+
+       rider_session hat bewusst kein expires_at, genau wie admin_session/
+       checkpoint_session: Sessions laufen nicht automatisch ab, nur
+       Logout oder ein Passwort-Reset (siehe rider_password_reset) löschen
+       sie. */
+    11 => function(PDO $pdo) use ($table, $charset){
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_rider_user` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `email` VARCHAR(191) NOT NULL,
+        `password_hash` VARCHAR(255) NOT NULL,
+        `display_name` VARCHAR(191) NOT NULL DEFAULT '',
+        `status` VARCHAR(16) NOT NULL DEFAULT 'active',
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY `uq_email` (`email`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_rider_session` (
+        `token_hash` CHAR(64) NOT NULL PRIMARY KEY,
+        `rider_user_id` INT UNSIGNED NOT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `last_seen_at` DATETIME NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      /* PK (public_id,bib) statt eigener id-Spalte: ein Slot claimt sich
+         zu genau einem Konto, wie bei rider_slot selbst. Erneutes
+         Claimen (ON DUPLICATE KEY UPDATE, siehe rider.php) überschreibt
+         den vorherigen Owner — wer Token/Code kennt, hat die Autorität. */
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_rider_claim` (
+        `public_id` VARCHAR(16) NOT NULL,
+        `bib` INT UNSIGNED NOT NULL,
+        `rider_user_id` INT UNSIGNED NOT NULL,
+        `claimed_at` DATETIME NOT NULL,
+        PRIMARY KEY (`public_id`, `bib`),
+        KEY `idx_rider_user` (`rider_user_id`)
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+
+      $pdo->exec("CREATE TABLE IF NOT EXISTS `{$table}_rider_password_reset` (
+        `token_hash` CHAR(64) NOT NULL PRIMARY KEY,
+        `rider_user_id` INT UNSIGNED NOT NULL,
+        `expires_at` DATETIME NOT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET={$charset}");
+    },
   ];
 }
 
