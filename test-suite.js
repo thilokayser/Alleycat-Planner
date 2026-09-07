@@ -2608,8 +2608,8 @@ async function runAlleycatTestSuite(){
      vorher direkt im HTML nach jeder Überschrift zu suchen. */
   {
     const allNavIds = SETTINGS_NAV_GROUPS.flatMap(g => g.items.map(i => i.id));
-    checkEqual('SETTINGS_NAV_GROUPS hat 6 Gruppen', SETTINGS_NAV_GROUPS.length, 6);
-    checkEqual('SETTINGS_NAV_GROUPS listet 11 Screens', allNavIds.length, 11);
+    checkEqual('SETTINGS_NAV_GROUPS hat 7 Gruppen', SETTINGS_NAV_GROUPS.length, 7);
+    checkEqual('SETTINGS_NAV_GROUPS listet 12 Screens', allNavIds.length, 12);
     checkEqual('Alle Nav-IDs sind eindeutig', new Set(allNavIds).size, allNavIds.length);
 
     const viewBeforeNav = state.view;
