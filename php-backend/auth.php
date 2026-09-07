@@ -148,6 +148,15 @@ function authUserRow($row){
   return [
     'id' => (int)$row['id'],
     'username' => $row['username'],
+    /* role bleibt trotz org_member/is_sysadmin die einzige Quelle für
+       'checkpoint_staff' — diese Rolle ist keine Org-Rolle (sie hat keine
+       org_member-Zeile), sondern ein eigenes Konto ausschließlich für die
+       Checkpoint-App, aufgelöst über checkpointResolveScope() in
+       bootstrap.php. Ohne role hier zeigt die Benutzerverwaltungs-UI die
+       Rolle jedes Benutzers falsch an und die Checkpoint-Personal-
+       Zuweisung (die auf role==='checkpoint_staff' filtert) findet nie
+       einen Treffer. */
+    'role' => $row['role'],
     'isSysAdmin' => (bool)(int)$row['is_sysadmin'],
     'displayName' => $row['display_name'],
     'active' => (bool)(int)$row['active'],
