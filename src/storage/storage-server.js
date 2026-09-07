@@ -113,17 +113,19 @@ async function adminSetCheckpointStaff(userId, publicId, cpIds){
   return authRequest('POST', 'a=checkpointstaff/set', {userId, publicId, cpIds});
 }
 async function myOrgs(){
-  const res = await authRequest('GET', 'a=my-orgs');
-  const data = await res.json();
+  const data = await authRequest('GET', 'a=my-orgs');
   return data.ok ? data.orgs : [];
 }
 
 async function listEventsForActiveOrg(){
-  const url = new URL(getPhpConfig().apiUrl);
+  const cfg = getPhpConfig();
+  if(!cfg) throw new Error('PHP-Backend nicht konfiguriert');
+  const url = new URL(cfg.apiUrl);
   url.searchParams.set('a', 'events');
   const res = await fetch(url.toString(), { headers: currentAuthHeaders() });
   if(!res.ok) return [];
-  const data = await res.json();
+  let data = null;
+  try{ data = await res.json(); }catch(e){ return []; }
   return data.ok ? data.events : [];
 }
 /* ---------------- Einladungscodes ----------------
