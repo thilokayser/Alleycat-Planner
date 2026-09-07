@@ -99,6 +99,7 @@ function inviteRow($row){
   return [
     'id' => (int)$row['id'],
     'role' => $row['role'],
+    'orgId' => isset($row['org_id']) ? (int)$row['org_id'] : null,
     'note' => $row['note'],
     'expiresAt' => $row['expires_at'],
     'usedAt' => $row['used_at'],
@@ -660,10 +661,26 @@ if($action === 'invite-create'){
   if(!authValidRole($role) || $expiresAt === '' || strtotime($expiresAt) === false || strtotime($expiresAt) <= time()){
     apiSendJsonError(400, 'invalid_input');
   }
+  /* orgId ist optional: checkpoint_staff kennt keine Org-Mitgliedschaft
+     (siehe Migration 10), für captain/editor/viewer macht ein Code ohne
+     Org aber weiterhin Sinn — der SysAdmin ordnet die Person dann später
+     von Hand über org/members/set-role zu, statt bei jeder Einladung
+     eine Org erzwingen zu müssen. Wird eine orgId mitgeschickt, muss sie
+     eine echte Org sein — sonst würde ?a=register später stillschweigend
+     eine org_member-Zeile auf eine nicht existierende Org anlegen. */
+  $orgId = isset($body['orgId']) && $body['orgId'] !== null ? (int)$body['orgId'] : null;
+  if($orgId !== null){
+    /* org-scoping-guard: ok — Existenzprüfung der Org selbst (WHERE
+       `id` = ?, die PK der organization-Tabelle), nicht eine Query GEGEN
+       eine fremde org_id. Analog zu apiResolveOrgId() in bootstrap.php. */
+    $orgCheck = $pdo->prepare("SELECT COUNT(*) FROM `{$orgTable}` WHERE `id` = ?");
+    $orgCheck->execute([$orgId]);
+    if((int)$orgCheck->fetchColumn() === 0) apiSendJsonError(400, 'invalid_org');
+  }
   $expiresAtSql = date('Y-m-d H:i:s', strtotime($expiresAt));
 
-  $ins = $pdo->prepare("INSERT INTO `{$inviteTable}` (`code_hash`,`role`,`note`,`expires_at`,`created_by_user_id`)
-                        VALUES (?,?,?,?,?)");
+  $ins = $pdo->prepare("INSERT INTO `{$inviteTable}` (`code_hash`,`role`,`org_id`,`note`,`expires_at`,`created_by_user_id`)
+                        VALUES (?,?,?,?,?,?)");
   $codes = [];
   for($i = 0; $i < $count; $i++){
     /* Kollision ist bei 33^10 möglichen Codes praktisch ausgeschlossen,
@@ -672,7 +689,7 @@ if($action === 'invite-create'){
     for($attempt = 0; $attempt < 5; $attempt++){
       $code = inviteGenerateCode();
       try{
-        $ins->execute([inviteHashCode($code), $role, $note !== '' ? $note : null, $expiresAtSql, $access['userId']]);
+        $ins->execute([inviteHashCode($code), $role, $orgId, $note !== '' ? $note : null, $expiresAtSql, $access['userId']]);
         $codes[] = $code;
         break;
       }catch(PDOException $e){
@@ -749,6 +766,19 @@ if($action === 'register'){
     throw $e;
   }
   $newUserId = (int)$pdo->lastInsertId();
+
+  /* Einladung mit orgId (Migration 10): das neue Konto bekommt sofort
+     eine org_member-Zeile, statt mit gültigem Login, aber leerer
+     Org-Liste dazustehen (siehe ?a=my-orgs) — vorher musste ein SysAdmin
+     jede Einladung von Hand nachträglich einer Org zuordnen. */
+  if($invite['org_id'] !== null){
+    /* org-scoping-guard: ok — org_id kommt aus der Einladungszeile, nicht
+       aus dem Request-Body; ?a=invite-create hat sie bereits gegen die
+       organization-Tabelle validiert (siehe dortige Prüfung). */
+    $pdo->prepare("INSERT INTO `{$orgMemberTable}` (`org_id`,`user_id`,`role`) VALUES (?,?,?)
+                   ON DUPLICATE KEY UPDATE `role` = VALUES(`role`)")
+        ->execute([(int)$invite['org_id'], $newUserId, $invite['role']]);
+  }
 
   $pdo->prepare("UPDATE `{$inviteTable}` SET `used_at` = UTC_TIMESTAMP(), `used_by_user_id` = ? WHERE `id` = ?")
       ->execute([$newUserId, $invite['id']]);
