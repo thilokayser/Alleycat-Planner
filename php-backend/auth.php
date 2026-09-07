@@ -126,7 +126,7 @@ function authUserRow($row){
   return [
     'id' => (int)$row['id'],
     'username' => $row['username'],
-    'role' => $row['role'],
+    'isSysAdmin' => (bool)(int)$row['is_sysadmin'],
     'displayName' => $row['display_name'],
     'active' => (bool)(int)$row['active'],
     'lastSeenAt' => $row['last_seen_at']
@@ -226,7 +226,7 @@ if($action === 'login'){
   $pdo->prepare("UPDATE `{$userTable}` SET `last_seen_at` = UTC_TIMESTAMP() WHERE `id` = ?")->execute([$user['id']]);
   authLogAudit($pdo, (int)$user['id'], $user['username'], 'login', null, null);
 
-  authOut(['ok' => true, 'token' => $token, 'role' => $user['role'], 'username' => $user['username'], 'displayName' => $user['display_name']]);
+  authOut(['ok' => true, 'token' => $token, 'isSysAdmin' => (bool)(int)$user['is_sysadmin'], 'username' => $user['username'], 'displayName' => $user['display_name']]);
 }
 
 if($action === 'logout'){
@@ -241,19 +241,190 @@ if($action === 'logout'){
 if($action === 'whoami'){
   authRequireGet();
   $access = apiVerifyAccess($pdo, 'viewer');
-  authOut(['ok' => true, 'role' => $access['role'], 'username' => $access['username']]);
+  authOut(['ok' => true, 'role' => $access['role'], 'username' => $access['username'], 'isSysAdmin' => $access['isSysAdmin'], 'orgId' => $access['orgId']]);
+}
+
+if($action === 'my-orgs'){
+  authRequireGet();
+  $access = apiVerifyAccess($pdo, 'viewer'); // keine Org im Header nötig für diese Aktion selbst
+  $orgTable = adminTableName('organization');
+  if($access['isSysAdmin']){
+    $rows = $pdo->query("SELECT `id`,`slug`,`name` FROM `{$orgTable}` ORDER BY `name` ASC")->fetchAll(PDO::FETCH_ASSOC);
+  } else {
+    $stmt = $pdo->prepare(
+      "SELECT o.`id`, o.`slug`, o.`name`, m.`role` FROM `{$orgTable}` o
+       JOIN `" . adminTableName('org_member') . "` m ON m.org_id = o.id
+       WHERE m.user_id = ? ORDER BY o.name ASC"
+    );
+    $stmt->execute([$access['userId']]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+  authOut(['ok' => true, 'orgs' => array_map(function($r){
+    return ['id' => (int)$r['id'], 'slug' => $r['slug'], 'name' => $r['name'], 'role' => $r['role'] ?? 'captain'];
+  }, $rows)]);
+}
+
+$orgTable = adminTableName('organization');
+
+function authRequireSysAdmin($access){
+  if(!$access['isSysAdmin']) apiSendJsonError(403, 'sysadmin_required');
+}
+
+if($action === 'org/create'){
+  authRequirePost();
+  $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
+  $body = authJsonBody();
+  $slug = trim((string)($body['slug'] ?? ''));
+  $name = trim((string)($body['name'] ?? ''));
+  if($slug === '' || $name === '' || !preg_match('/^[a-z0-9-]{2,64}$/', $slug)) apiSendJsonError(400, 'invalid_input');
+  try{
+    $pdo->prepare("INSERT INTO `{$orgTable}` (`slug`,`name`) VALUES (?,?)")->execute([$slug, $name]);
+  }catch(PDOException $e){
+    if($e->getCode() === '23000') apiSendJsonError(409, 'slug_taken');
+    throw $e;
+  }
+  authOut(['ok' => true, 'id' => (int)$pdo->lastInsertId()]);
+}
+
+if($action === 'org/list'){
+  authRequireGet();
+  $access = apiVerifyAccess($pdo, 'viewer');
+  authRequireSysAdmin($access);
+  $rows = $pdo->query("SELECT `id`,`slug`,`name`,`created_at` FROM `{$orgTable}` ORDER BY `created_at` DESC")->fetchAll(PDO::FETCH_ASSOC);
+  authOut(['ok' => true, 'orgs' => $rows]);
+}
+
+if($action === 'org/deactivate'){
+  authRequirePost();
+  $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
+  $body = authJsonBody();
+  $orgId = (int)($body['orgId'] ?? 0);
+  if($orgId <= 0) apiSendJsonError(400, 'invalid_input');
+  /* Kein DELETE — Events/Mitglieder sollen nicht mitgerissen werden.
+     "Deaktivieren" heißt: alle Sessions der Org-Mitglieder invalidieren,
+     Slug für Neuvergabe sperren bleibt der Org selbst überlassen (sie
+     existiert weiter, nur keine aktiven Logins mehr). */
+  $memberIds = $pdo->prepare("SELECT `user_id` FROM `" . adminTableName('org_member') . "` WHERE `org_id` = ?");
+  $memberIds->execute([$orgId]);
+  $ids = $memberIds->fetchAll(PDO::FETCH_COLUMN);
+  if($ids){
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $pdo->prepare("DELETE FROM `" . adminTableName('admin_session') . "` WHERE `user_id` IN ({$placeholders})")->execute($ids);
+  }
+  authOut(['ok' => true]);
+}
+
+$orgMemberTable = adminTableName('org_member');
+
+if($action === 'org/members'){
+  authRequireGet();
+  $access = apiVerifyAccess($pdo, 'viewer');
+  if($access['orgId'] === null) apiSendJsonError(400, 'missing_org');
+  $stmt = $pdo->prepare(
+    "SELECT m.`user_id`, m.`role`, u.`username`, u.`display_name` FROM `{$orgMemberTable}` m
+     JOIN `{$userTable}` u ON u.id = m.user_id WHERE m.org_id = ? ORDER BY u.username ASC"
+  );
+  $stmt->execute([$access['orgId']]);
+  authOut(['ok' => true, 'members' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+}
+
+if($action === 'org/members/set-role'){
+  authRequirePost();
+  $access = apiVerifyAccess($pdo, 'captain');
+  if($access['orgId'] === null) apiSendJsonError(400, 'missing_org');
+  $body = authJsonBody();
+  $userId = (int)($body['userId'] ?? 0);
+  $role = (string)($body['role'] ?? '');
+  if($userId <= 0 || !in_array($role, ['captain','editor','viewer','checkpoint_staff'], true)) apiSendJsonError(400, 'invalid_input');
+  /* Letzter Captain der Org darf sich nicht selbst degradieren — analog
+     zur bestehenden last_admin-Regel in users/update. */
+  if($role !== 'captain'){
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM `{$orgMemberTable}` WHERE `org_id` = ? AND `role` = 'captain'");
+    $stmt->execute([$access['orgId']]);
+    $captainCount = (int)$stmt->fetchColumn();
+    $target = $pdo->prepare("SELECT `role` FROM `{$orgMemberTable}` WHERE `org_id` = ? AND `user_id` = ?");
+    $target->execute([$access['orgId'], $userId]);
+    if($target->fetchColumn() === 'captain' && $captainCount <= 1) apiSendJsonError(409, 'last_captain');
+  }
+  $pdo->prepare("INSERT INTO `{$orgMemberTable}` (`org_id`,`user_id`,`role`) VALUES (?,?,?)
+                 ON DUPLICATE KEY UPDATE `role` = VALUES(`role`)")
+      ->execute([$access['orgId'], $userId, $role]);
+  authOut(['ok' => true]);
+}
+
+if($action === 'org/members/remove'){
+  authRequirePost();
+  $access = apiVerifyAccess($pdo, 'captain');
+  if($access['orgId'] === null) apiSendJsonError(400, 'missing_org');
+  $body = authJsonBody();
+  $userId = (int)($body['userId'] ?? 0);
+  if($userId <= 0) apiSendJsonError(400, 'invalid_input');
+  $target = $pdo->prepare("SELECT `role` FROM `{$orgMemberTable}` WHERE `org_id` = ? AND `user_id` = ?");
+  $target->execute([$access['orgId'], $userId]);
+  if($target->fetchColumn() === 'captain'){
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM `{$orgMemberTable}` WHERE `org_id` = ? AND `role` = 'captain'");
+    $stmt->execute([$access['orgId']]);
+    if((int)$stmt->fetchColumn() <= 1) apiSendJsonError(409, 'last_captain');
+  }
+  $pdo->prepare("DELETE FROM `{$orgMemberTable}` WHERE `org_id` = ? AND `user_id` = ?")->execute([$access['orgId'], $userId]);
+  authOut(['ok' => true]);
+}
+
+$eventAdminTable = adminTableName('org_event_admin');
+
+if($action === 'org/event-admins'){
+  authRequireGet();
+  $access = apiVerifyAccess($pdo, 'viewer');
+  if($access['orgId'] === null) apiSendJsonError(400, 'missing_org');
+  $eventId = (string)($_GET['eventId'] ?? '');
+  if($eventId === '') apiSendJsonError(400, 'invalid_input');
+  $stmt = $pdo->prepare(
+    "SELECT a.`user_id`, u.`username` FROM `{$eventAdminTable}` a
+     JOIN `{$userTable}` u ON u.id = a.user_id WHERE a.org_id = ? AND a.event_id = ?"
+  );
+  $stmt->execute([$access['orgId'], $eventId]);
+  authOut(['ok' => true, 'admins' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+}
+
+if($action === 'org/event-admins/grant'){
+  authRequirePost();
+  $access = apiVerifyAccess($pdo, 'captain');
+  if($access['orgId'] === null) apiSendJsonError(400, 'missing_org');
+  $body = authJsonBody();
+  $userId = (int)($body['userId'] ?? 0);
+  $eventId = (string)($body['eventId'] ?? '');
+  if($userId <= 0 || $eventId === '') apiSendJsonError(400, 'invalid_input');
+  $pdo->prepare("INSERT INTO `{$eventAdminTable}` (`org_id`,`event_id`,`user_id`) VALUES (?,?,?)
+                 ON DUPLICATE KEY UPDATE `granted_at` = CURRENT_TIMESTAMP")
+      ->execute([$access['orgId'], $eventId, $userId]);
+  authOut(['ok' => true]);
+}
+
+if($action === 'org/event-admins/revoke'){
+  authRequirePost();
+  $access = apiVerifyAccess($pdo, 'captain');
+  if($access['orgId'] === null) apiSendJsonError(400, 'missing_org');
+  $body = authJsonBody();
+  $userId = (int)($body['userId'] ?? 0);
+  $eventId = (string)($body['eventId'] ?? '');
+  if($userId <= 0 || $eventId === '') apiSendJsonError(400, 'invalid_input');
+  $pdo->prepare("DELETE FROM `{$eventAdminTable}` WHERE `org_id` = ? AND `event_id` = ? AND `user_id` = ?")
+      ->execute([$access['orgId'], $eventId, $userId]);
+  authOut(['ok' => true]);
 }
 
 if($action === 'users'){
   authRequireGet();
-  apiVerifyAccess($pdo, 'admin');
+  apiVerifyAccess($pdo, 'captain');
   $rows = $pdo->query("SELECT * FROM `{$userTable}` ORDER BY `username` ASC")->fetchAll(PDO::FETCH_ASSOC);
   authOut(['ok' => true, 'users' => array_map('authUserRow', $rows)]);
 }
 
 if($action === 'users/create'){
   authRequirePost();
-  apiVerifyAccess($pdo, 'admin');
+  apiVerifyAccess($pdo, 'captain');
   $body = authJsonBody();
   $username = trim((string)($body['username'] ?? ''));
   $password = (string)($body['password'] ?? '');
@@ -273,7 +444,7 @@ if($action === 'users/create'){
 
 if($action === 'users/update'){
   authRequirePost();
-  $access = apiVerifyAccess($pdo, 'admin');
+  $access = apiVerifyAccess($pdo, 'captain');
   $body = authJsonBody();
   $id = (int)($body['id'] ?? 0);
   if($id <= 0) apiSendJsonError(400, 'invalid_input');
@@ -325,7 +496,7 @@ if($action === 'users/update'){
 
 if($action === 'users/delete'){
   authRequirePost();
-  $access = apiVerifyAccess($pdo, 'admin');
+  $access = apiVerifyAccess($pdo, 'captain');
   $body = authJsonBody();
   $id = (int)($body['id'] ?? 0);
   if($id <= 0) apiSendJsonError(400, 'invalid_input');
@@ -347,7 +518,7 @@ if($action === 'users/delete'){
 
 if($action === 'checkpointstaff'){
   authRequireGet();
-  apiVerifyAccess($pdo, 'admin');
+  apiVerifyAccess($pdo, 'captain');
   $publicId = (string)($_GET['public_id'] ?? '');
   $stmt = $pdo->prepare("SELECT `user_id`,`cp_id` FROM `" . adminTableName('checkpoint_staff') . "` WHERE `public_id` = ?");
   $stmt->execute([$publicId]);
@@ -356,7 +527,7 @@ if($action === 'checkpointstaff'){
 
 if($action === 'checkpointstaff/set'){
   authRequirePost();
-  apiVerifyAccess($pdo, 'admin');
+  apiVerifyAccess($pdo, 'captain');
   $body = authJsonBody();
   $userId = (int)($body['userId'] ?? 0);
   $publicId = (string)($body['publicId'] ?? '');
@@ -377,7 +548,7 @@ $inviteTable = adminTableName('invite_code');
 
 if($action === 'invite-create'){
   authRequirePost();
-  $access = apiVerifyAccess($pdo, 'admin');
+  $access = apiVerifyAccess($pdo, 'captain');
   $body = authJsonBody();
   $role = (string)($body['role'] ?? '');
   $expiresAt = (string)($body['expiresAt'] ?? '');
@@ -411,7 +582,7 @@ if($action === 'invite-create'){
 
 if($action === 'invite-list'){
   authRequireGet();
-  apiVerifyAccess($pdo, 'admin');
+  apiVerifyAccess($pdo, 'captain');
   $rows = $pdo->query("SELECT i.*, u.username AS used_by_username FROM `{$inviteTable}` i
                         LEFT JOIN `{$userTable}` u ON u.id = i.used_by_user_id
                         ORDER BY i.created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
@@ -420,7 +591,7 @@ if($action === 'invite-list'){
 
 if($action === 'invite-revoke'){
   authRequirePost();
-  apiVerifyAccess($pdo, 'admin');
+  apiVerifyAccess($pdo, 'captain');
   $body = authJsonBody();
   $id = (int)($body['id'] ?? 0);
   if($id <= 0) apiSendJsonError(400, 'invalid_input');
@@ -482,7 +653,7 @@ $resetTable = adminTableName('admin_reset_code');
 
 if($action === 'users/reset-code-create'){
   authRequirePost();
-  $access = apiVerifyAccess($pdo, 'admin');
+  $access = apiVerifyAccess($pdo, 'captain');
   $body = authJsonBody();
   $userId = (int)($body['id'] ?? 0);
   if($userId <= 0) apiSendJsonError(400, 'invalid_input');
@@ -551,7 +722,7 @@ if($action === 'reset-password'){
 
 if($action === 'users/logout-all'){
   authRequirePost();
-  $access = apiVerifyAccess($pdo, 'admin');
+  $access = apiVerifyAccess($pdo, 'captain');
   $body = authJsonBody();
   $userId = (int)($body['id'] ?? 0);
   if($userId <= 0) apiSendJsonError(400, 'invalid_input');
@@ -566,7 +737,7 @@ if($action === 'users/logout-all'){
 
 if($action === 'audit-log'){
   authRequireGet();
-  apiVerifyAccess($pdo, 'admin');
+  apiVerifyAccess($pdo, 'captain');
   $limit = max(1, min(500, (int)($_GET['limit'] ?? 200)));
   $rows = $pdo->prepare("SELECT * FROM `" . adminTableName('admin_audit_log') . "` ORDER BY `id` DESC LIMIT " . $limit);
   $rows->execute();
