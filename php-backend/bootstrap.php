@@ -194,14 +194,18 @@ function riderDistanceMeters($lat1, $lon1, $lat2, $lon2){
 
 /* ================= Admin-Benutzer/Rollen =================
    Zweite Ebene über dem einen geteilten API-Key: der Key bleibt gültig
-   (Rückwärtskompatibilität, Ersteinrichtung), zusätzlich kann sich ein
-   Browser als benannter Benutzer mit Rolle anmelden. Bearer-Token statt
+   (Rückwärtskompatibilität, Ersteinrichtung, jetzt SysAdmin-Äquivalent —
+   siehe apiVerifyAccess()), zusätzlich kann sich ein Browser als
+   benannter Benutzer mit Rolle anmelden. Bearer-Token statt
    PHP-Session-Cookie — Begründung siehe Migration 4 in migrations.php.
 
-   Rollen, aufsteigend:
-     viewer   nur GET
-     editor   GET/POST/DELETE, aber keine Benutzerverwaltung
-     admin    alles, inkl. Benutzerverwaltung
+   Rollen liegen NICHT mehr auf admin_user (instanzweit), sondern auf
+   org_member (pro Org) — siehe apiOrgMemberRole(). admin_user.is_sysadmin
+   ist die einzige instanzweite Sonderrolle, besteht jede Org-Prüfung
+   implizit. admin_user.role bleibt als Spalte stehen (nicht idempotent
+   entfernbar, siehe Migration 7), wird aber von keiner Abfrage mehr
+   gelesen — Rollenwahrheit ist ausschließlich org_member/is_sysadmin.
+
    checkpoint_staff hat KEINEN Zugriff auf api.php/auth.php-Verwaltung —
    die Rolle wird ausschließlich in rider.php für die Checkpoint-App
    aufgelöst (siehe dort), nie über apiVerifyAccess(). */
@@ -218,10 +222,43 @@ function adminGenerateToken(){
   return bin2hex(random_bytes(32));
 }
 
-const ADMIN_ROLE_RANK = ['viewer' => 1, 'editor' => 2, 'admin' => 3];
+const ADMIN_ROLE_RANK = ['viewer' => 1, 'checkpoint_staff' => 1, 'editor' => 2, 'captain' => 3];
 
 function adminRoleAtLeast($role, $min){
   return ($role !== null) && (ADMIN_ROLE_RANK[$role] ?? 0) >= (ADMIN_ROLE_RANK[$min] ?? 99);
+}
+
+function apiResolveOrgId(PDO $pdo, $slug){
+  if($slug === '' || $slug === null) return null;
+  $stmt = $pdo->prepare("SELECT `id` FROM `" . adminTableName('organization') . "` WHERE `slug` = ?");
+  $stmt->execute([$slug]);
+  $id = $stmt->fetchColumn();
+  return $id === false ? null : (int)$id;
+}
+
+function apiRequestOrgSlug(){
+  return trim((string)($_SERVER['HTTP_X_ORG_SLUG'] ?? ''));
+}
+
+/* Rolle einer Person innerhalb einer bestimmten Org, live nachgeschlagen
+   (nie im Token gebacken — siehe checkpointResolveScope() für dasselbe
+   Prinzip bei Checkpoints). null = kein Mitglied dieser Org. */
+function apiOrgMemberRole(PDO $pdo, $userId, $orgId){
+  if($orgId === null) return null;
+  $stmt = $pdo->prepare("SELECT `role` FROM `" . adminTableName('org_member') . "` WHERE `org_id` = ? AND `user_id` = ?");
+  $stmt->execute([$orgId, $userId]);
+  $role = $stmt->fetchColumn();
+  return $role === false ? null : $role;
+}
+
+/* true, wenn $userId für genau $eventId als Event-Admin delegiert wurde
+   (org_event_admin) — gilt als 'editor'-Äquivalent, aber ausschließlich
+   für dieses eine Event. */
+function apiHasEventDelegation(PDO $pdo, $userId, $eventId){
+  if($eventId === null) return false;
+  $stmt = $pdo->prepare("SELECT COUNT(*) FROM `" . adminTableName('org_event_admin') . "` WHERE `event_id` = ? AND `user_id` = ?");
+  $stmt->execute([$eventId, $userId]);
+  return ((int)$stmt->fetchColumn()) > 0;
 }
 
 function adminResolveSessionUser(PDO $pdo, $token){
@@ -296,31 +333,46 @@ function checkpointResolveScope(PDO $pdo, $publicId){
 }
 
 /* Prüft Zugriff für die aktuelle Anfrage und bricht mit 401/403 ab, wenn
-   nicht ausreichend. Zwei Zugangswege, beide vollwertig:
-     - X-Api-Key: bestehender Vollzugriffs-Key -> zählt immer als 'admin'.
-     - X-Admin-Token: personalisierte Session -> Rolle aus admin_user.
-   $minRole ist die für DIESE Anfrage nötige Mindestrolle (z. B. 'editor'
-   für einen schreibenden api.php-Aufruf, 'admin' für Benutzerverwaltung).
-   Gibt die aufgelöste Rolle zurück (für Aufrufer, die z. B. den
-   Benutzernamen fürs Log brauchen). */
-function apiVerifyAccess(PDO $pdo, $minRole = 'viewer'){
+   nicht ausreichend. $minRole ist die für DIESE Anfrage nötige
+   Mindestrolle INNERHALB DER AKTIVEN ORG (aus dem X-Org-Slug-Header).
+   $eventId ist optional — wenn gesetzt, zählt zusätzlich zur Org-Rolle
+   eine passende org_event_admin-Delegation als 'editor'-Äquivalent.
+
+   Zugangswege, alle vollwertig:
+     - X-Api-Key: Master-Key -> SysAdmin-Äquivalent, besteht jede Prüfung
+       ohne org_member-Zeile (Top-Down-Vererbung, siehe Spec §4/§6).
+     - X-Admin-Token: personalisierte Session -> user.is_sysadmin ODER
+       org_member.role für die im Header genannte Org ODER (bei gesetztem
+       $eventId) org_event_admin-Delegation.
+
+   Gibt die aufgelöste Rolle inkl. orgId zurück (Aufrufer brauchen die
+   Org-ID für jede weitere Query in dieser Anfrage). */
+function apiVerifyAccess(PDO $pdo, $minRole = 'viewer', $eventId = null){
+  $orgSlug = apiRequestOrgSlug();
+  $orgId = apiResolveOrgId($pdo, $orgSlug);
+
   $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? '';
   if($apiKey !== ''){
-    if(defined('ALLEYCAT_API_KEY_HASH') && password_verify($apiKey, ALLEYCAT_API_KEY_HASH)){
-      return ['role' => 'admin', 'username' => null, 'userId' => null];
-    }
-    if(defined('ALLEYCAT_API_KEY') && hash_equals(ALLEYCAT_API_KEY, $apiKey)){
-      return ['role' => 'admin', 'username' => null, 'userId' => null];
+    if((defined('ALLEYCAT_API_KEY_HASH') && password_verify($apiKey, ALLEYCAT_API_KEY_HASH))
+       || (defined('ALLEYCAT_API_KEY') && hash_equals(ALLEYCAT_API_KEY, $apiKey))){
+      return ['role' => 'captain', 'username' => null, 'userId' => null, 'orgId' => $orgId, 'isSysAdmin' => true];
     }
   }
 
   $adminToken = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '';
   if($adminToken !== ''){
     $user = adminResolveSessionUser($pdo, $adminToken);
-    if($user && adminRoleAtLeast($user['role'], $minRole)){
-      return ['role' => $user['role'], 'username' => $user['username'], 'userId' => (int)$user['id']];
-    }
     if($user){
+      if((int)$user['is_sysadmin'] === 1){
+        return ['role' => 'captain', 'username' => $user['username'], 'userId' => (int)$user['id'], 'orgId' => $orgId, 'isSysAdmin' => true];
+      }
+      $orgRole = apiOrgMemberRole($pdo, (int)$user['id'], $orgId);
+      if($orgRole !== null && adminRoleAtLeast($orgRole, $minRole)){
+        return ['role' => $orgRole, 'username' => $user['username'], 'userId' => (int)$user['id'], 'orgId' => $orgId, 'isSysAdmin' => false];
+      }
+      if(adminRoleAtLeast('editor', $minRole) && apiHasEventDelegation($pdo, (int)$user['id'], $eventId)){
+        return ['role' => 'editor', 'username' => $user['username'], 'userId' => (int)$user['id'], 'orgId' => $orgId, 'isSysAdmin' => false];
+      }
       apiSendJsonError(403, 'insufficient_role');
     }
   }
