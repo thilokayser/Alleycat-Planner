@@ -43,7 +43,7 @@ function apiLoadConfig(){
 
 function apiSendCorsHeaders(){
   header('Access-Control-Allow-Origin: ' . ALLEYCAT_ALLOWED_ORIGIN);
-  header('Access-Control-Allow-Headers: X-Api-Key, X-Rider-Token, X-Rider-Code, X-Admin-Token, X-Checkpoint-Token, X-Org-Slug, Content-Type');
+  header('Access-Control-Allow-Headers: X-Api-Key, X-Rider-Token, X-Rider-Code, X-Rider-Auth-Token, X-Admin-Token, X-Checkpoint-Token, X-Org-Slug, Content-Type');
   header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
 }
 
@@ -190,6 +190,51 @@ function riderRecordFailure(PDO $pdo){
 function riderClearFailures(PDO $pdo){
   $pdo->prepare("DELETE FROM `" . riderTableName('ratelimit') . "` WHERE `ip_hash` = ?")
       ->execute([riderClientIpHash()]);
+}
+
+/* ================= Fahrer-Konten (Spokecard-Claiming) =================
+   Eigener Bearer-Header (X-Rider-Auth-Token), getrennt von X-Rider-Token
+   (Slot-Nachweis) und X-Admin-Token (Organizer-Rolle) — ein Fahrer-Konto
+   ist keins von beidem: instanzweit, ohne Org-Bezug, ohne Rolle. */
+
+function riderUserGenerateToken(){
+  return bin2hex(random_bytes(32));
+}
+
+function riderEmailValid($email){
+  return is_string($email) && strlen($email) <= 191
+      && filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+/* Löst die eingeloggte Session auf, oder null. Kein riderRejectAuth()
+   hier drin — die Aufrufer entscheiden selbst, ob eine fehlende Session
+   ein 401 oder (bei ?a=rider-claim) einen anderen Fehlercode auslöst. */
+function riderUserResolveSession(PDO $pdo){
+  $token = (string)($_SERVER['HTTP_X_RIDER_AUTH_TOKEN'] ?? '');
+  if($token === '') return null;
+  $stmt = $pdo->prepare(
+    "SELECT u.`id`, u.`email`, u.`display_name`, u.`status`
+     FROM `" . riderTableName('session') . "` s
+     JOIN `" . riderTableName('user') . "` u ON u.`id` = s.`rider_user_id`
+     WHERE s.`token_hash` = ?"
+  );
+  $stmt->execute([riderHashToken($token)]);
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
+  if(!$row || $row['status'] !== 'active') return null;
+  $pdo->prepare("UPDATE `" . riderTableName('session') . "` SET `last_seen_at` = UTC_TIMESTAMP() WHERE `token_hash` = ?")
+      ->execute([riderHashToken($token)]);
+  return ['id' => (int)$row['id'], 'email' => $row['email'], 'displayName' => $row['display_name']];
+}
+
+/* Bricht mit 401 ab, wenn keine gültige Session vorliegt. Eigener Helfer
+   analog zu riderRejectAuth(), aber ohne die Fehlversuch-Bremse: ein
+   fehlendes/abgelaufenes Session-Token ist kein Rateraten-Versuch auf ein
+   Geheimnis, sondern der Normalfall bei jedem Neustart der App ohne
+   gespeicherte Session. */
+function riderUserRequireSession(PDO $pdo){
+  $session = riderUserResolveSession($pdo);
+  if(!$session) apiSendJsonError(401, 'not_logged_in');
+  return $session;
 }
 
 /* Fehlgeschlagene Authentifizierung: zählen, dann abbrechen. Ein
