@@ -64,6 +64,11 @@ function riderRequireGet(){
 }
 function riderLoadEvent(PDO $pdo, $publicId){
   $t = riderTableName('event');
+  /* org-scoping-guard: ok — die öffentlichen Fahrer-/Checkpoint-Endpunkte
+     haben gar keinen Org-Kontext (kein Login, nur die public_id). Die
+     Org-Prüfung sitzt eine Ebene höher bei den Organizer-Aktionen
+     (riderRequireOrgAccess()); hier wird ausschließlich per public_id
+     nachgeschlagen, die selbst das Zugangsmerkmal ist. */
   $stmt = $pdo->prepare("SELECT * FROM `{$t}` WHERE `public_id` = ?");
   $stmt->execute([$publicId]);
   return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
@@ -72,15 +77,45 @@ function riderLoadEvent(PDO $pdo, $publicId){
 $action = $_GET['a'] ?? '';
 $pdo = apiConnectDb();
 
-/* ================= Admin-Aktionen ================= */
+/* ================= Admin-Aktionen =================
+   Alle drei Organizer-Aktionen (sync/log/slotstatus) arbeiten über eine
+   public_id. Die ist halböffentlich — sie steht in jeder Fahrer-URL, in
+   jedem Spokecard-QR und in der Beamer-Route. Die Rollenprüfung allein
+   (apiVerifyAccess) sagt nur „diese Person darf in IHRER Org
+   schreiben“, nicht „diese public_id gehört zu ihrer Org“. Ohne den
+   zweiten Schritt käme ein Editor von Org B mit einer aufgeschnappten
+   public_id an die Anmeldungen und Check-ins von Org A. Deshalb hier
+   die Besitzprüfung vor jedem Zugriff. */
+
+/* 404 statt 403 bei fremder Org: welche public_ids es auf der Instanz
+   gibt, ist selbst schon eine Information (dieselbe Logik wie beim
+   Event-GET in api.php). */
+function riderRequireOrgAccess(PDO $pdo, $publicId, $access, $allowUnowned = false){
+  if($access['orgId'] === null) apiSendJsonError(400, 'missing_org');
+  $owner = riderEventOrgId($pdo, $publicId);
+  if($owner === null){
+    /* Noch gar nicht veröffentlicht: nur ?a=sync darf das anlegen. */
+    if($allowUnowned) return;
+    apiSendJsonError(404, 'not_found');
+  }
+  /* org_id = 0: Zeile stammt aus der Zeit vor Migration 8 und ist noch
+     keiner Org zugeordnet. Der nächste ?a=sync übernimmt sie in die Org
+     des Aufrufers; lesende Aktionen bleiben so lange offen für jede
+     angemeldete Org, sonst wären Bestandsevents nach dem Update sofort
+     unerreichbar (auch für ihren rechtmäßigen Besitzer). */
+  if($owner === 0) return;
+  if($owner !== (int)$access['orgId']) apiSendJsonError(404, 'not_found');
+}
 
 if($action === 'sync'){
   riderRequirePost();
-  apiVerifyAccess($pdo, 'editor');
+  $access = apiVerifyAccess($pdo, 'editor');
   $body = riderJsonBody();
 
   $publicId = (string)($body['publicId'] ?? '');
   if(!preg_match('/^[a-z0-9]{12}$/', $publicId)) apiSendJsonError(400, 'invalid_public_id');
+  riderRequireOrgAccess($pdo, $publicId, $access, true);
+  $orgId = (int)$access['orgId'];
 
   $evtT  = riderTableName('event');
   $slotT = riderTableName('slot');
@@ -88,14 +123,20 @@ if($action === 'sync'){
 
   $pdo->beginTransaction();
   try {
-    $pdo->prepare("INSERT INTO `{$evtT}` (`public_id`,`storage_key`,`name`,`status`,`settings`)
-                   VALUES (?,?,?,?,?)
-                   ON DUPLICATE KEY UPDATE `storage_key`=VALUES(`storage_key`),
+    /* org-scoping-guard: ok — der Upsert ist durch riderRequireOrgAccess()
+       oben abgesichert (fremde public_id kommt hier nie an), und er
+       schreibt die org_id des Aufrufers mit, damit eine Bestandszeile mit
+       org_id=0 beim ersten Publish ihren Besitzer bekommt. */
+    $pdo->prepare("INSERT INTO `{$evtT}` (`public_id`,`org_id`,`storage_key`,`name`,`status`,`settings`)
+                   VALUES (?,?,?,?,?,?)
+                   ON DUPLICATE KEY UPDATE `org_id`=VALUES(`org_id`),
+                                           `storage_key`=VALUES(`storage_key`),
                                            `name`=VALUES(`name`),
                                            `status`=VALUES(`status`),
                                            `settings`=VALUES(`settings`)")
         ->execute([
           $publicId,
+          $orgId,
           (string)($body['storageKey'] ?? ''),
           (string)($body['name'] ?? ''),
           (string)($body['status'] ?? 'planning'),
@@ -201,8 +242,9 @@ if($action === 'sync'){
 
 if($action === 'log'){
   riderRequireGet();
-  apiVerifyAccess($pdo, 'viewer');
+  $access = apiVerifyAccess($pdo, 'viewer');
   $publicId = (string)($_GET['public_id'] ?? '');
+  riderRequireOrgAccess($pdo, $publicId, $access);
   $since = max(0, (int)($_GET['since'] ?? 0));
   $limit = (int)($_GET['limit'] ?? 200);
   $limit = max(1, min(500, $limit));
@@ -232,9 +274,10 @@ if($action === 'log'){
 
 if($action === 'slotstatus'){
   riderRequirePost();
-  apiVerifyAccess($pdo, 'editor');
+  $access = apiVerifyAccess($pdo, 'editor');
   $body = riderJsonBody();
   $publicId = (string)($body['publicId'] ?? '');
+  riderRequireOrgAccess($pdo, $publicId, $access);
   $bib = (int)($body['bib'] ?? 0);
   $status = (string)($body['status'] ?? '');
   if(!in_array($status, ['free', 'pending', 'confirmed'], true)) apiSendJsonError(400, 'invalid_status');
@@ -564,6 +607,10 @@ if($action === 'checkpoint-auth'){
   riderClearFailures($pdo);
 
   $token = adminGenerateToken();
+  /* org-scoping-guard: ok — checkpoint_session hat bewusst keine org_id:
+     eine Zeile hängt an genau einer (public_id, cp_id), und die stammt aus
+     dem gerade verifizierten Checkpoint-Code. Die Org ergibt sich daraus
+     mittelbar über rider_event. */
   $pdo->prepare("INSERT INTO `" . adminTableName('checkpoint_session') . "` (`token_hash`,`public_id`,`cp_id`,`last_seen_at`) VALUES (?,?,?,UTC_TIMESTAMP())")
       ->execute([adminHashToken($token), $publicId, $cpId]);
   riderOut(['ok' => true, 'token' => $token, 'cpId' => $cpId, 'label' => $cp['label']]);
@@ -601,6 +648,8 @@ if($action === 'checkpoint-logout'){
     $pdo->prepare("DELETE FROM `" . adminTableName('admin_session') . "` WHERE `token_hash` = ?")->execute([adminHashToken($adminToken)]);
   }
   if($cpToken !== ''){
+    /* org-scoping-guard: ok — Logout löscht genau die eigene Session; das
+       Token selbst ist das Zugangsmerkmal, eine org_id gäbe es hier nicht. */
     $pdo->prepare("DELETE FROM `" . adminTableName('checkpoint_session') . "` WHERE `token_hash` = ?")->execute([adminHashToken($cpToken)]);
   }
   riderOut(['ok' => true]);

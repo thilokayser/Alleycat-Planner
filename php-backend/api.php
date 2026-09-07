@@ -77,6 +77,23 @@ if($isEventKey){
     $slug = (string)($decoded['id'] ?? $eventId);
     $status = (string)($decoded['status'] ?? 'planning');
     $startDate = !empty($decoded['date']) ? substr((string)$decoded['date'], 0, 10) : null;
+    /* Der Primärschlüssel der Event-Tabelle ist `id` allein, nicht
+       (org_id,id) — ein ON DUPLICATE KEY UPDATE würde deshalb auch dann
+       zuschlagen, wenn die Zeile einer FREMDEN Org gehört, und ihren
+       Payload überschreiben. Die org_id selbst bliebe stehen, der Inhalt
+       wäre weg. Deshalb vorher nachsehen, wem die id gehört; 404 statt
+       403, damit die Antwort nicht verrät, dass es die id anderswo gibt
+       (gleiches Verhalten wie der GET-Zweig oben). */
+    /* org-scoping-guard: ok — genau diese Query IST die Besitzprüfung; sie
+       fragt die org_id ab, statt nach ihr zu filtern. */
+    $ownerStmt = $pdo->prepare("SELECT `org_id` FROM `{$eventTable}` WHERE `id` = ?");
+    $ownerStmt->execute([$eventId]);
+    $owner = $ownerStmt->fetchColumn();
+    if($owner !== false && (int)$owner !== (int)$orgId){
+      http_response_code(404); echo json_encode(['error' => 'not_found']); exit;
+    }
+    /* org-scoping-guard: ok — Upsert auf einer PK ohne org_id, aber durch
+       die Besitzprüfung direkt darüber abgesichert. */
     $pdo->prepare("INSERT INTO `{$eventTable}` (`id`,`org_id`,`slug`,`status`,`start_date`,`payload`)
                    VALUES (?,?,?,?,?,?)
                    ON DUPLICATE KEY UPDATE `status` = VALUES(`status`), `start_date` = VALUES(`start_date`), `payload` = VALUES(`payload`)")
@@ -99,6 +116,14 @@ if($isEventKey){
 $instanceWideKeys = ['config:riderAppUrl', 'i18n:customPacks'];
 $isInstanceWide = in_array($key, $instanceWideKeys, true);
 
+/* Lesen darf jede Org (die Fahrer-App-URL braucht jeder Organizer),
+   SCHREIBEN nur der SysAdmin: config:riderAppUrl bestimmt, wohin die
+   Fahrer JEDER Org geschickt werden — ein Editor einer einzigen Org
+   könnte damit sonst instanzweit umleiten. */
+if($isInstanceWide && $method !== 'GET'){
+  apiRequireSysAdmin($access);
+}
+
 if($method === 'GET'){
   $stmt = $isInstanceWide
     ? $pdo->prepare("SELECT `value` FROM `{$table}` WHERE `key` = ? AND `org_id` = 0")
@@ -110,6 +135,8 @@ if($method === 'GET'){
 
 } elseif($method === 'POST'){
   $value = file_get_contents('php://input');
+  /* org-scoping-guard: ok — die PK der Basis-KV-Tabelle ist (org_id,key)
+     (Migration 7), der Upsert kann deshalb keine fremde Zeile treffen. */
   if($isInstanceWide){
     $pdo->prepare("INSERT INTO `{$table}` (`key`,`org_id`,`value`) VALUES (?,0,?)
       ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)")->execute([$key, $value]);

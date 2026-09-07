@@ -387,6 +387,35 @@ function migrationsList($table, $charset){
         $pdo->exec("ALTER TABLE `{$table}` DROP PRIMARY KEY, ADD PRIMARY KEY (`org_id`,`key`)");
       }
     },
+
+    /* Rider-Daten an eine Org binden. Ohne diese Spalte hängen
+       rider_event/rider_log/rider_slot ausschließlich an der halb-
+       öffentlichen public_id (steht in Fahrer-URLs, Spokecard-QRs und
+       Beamer-Routen) — ein Editor einer fremden Org, der eine public_id
+       kennt, kam damit an fremde Anmelde- und Check-in-Daten. Nur
+       rider_event bekommt die Spalte: log/slot/checkpoint hängen über
+       public_id eindeutig an genau einer rider_event-Zeile, die Prüfung
+       findet deshalb einmal dort statt (siehe riderRequireOrgAccess()
+       in rider.php).
+
+       Default 0 wie bei Migration 7: Bestandszeilen aus der Zeit vor
+       Multi-Tenancy landen im Sentinel-„keine Org“-Wert und werden vom
+       nächsten ?a=sync des Organizers auf dessen echte Org gehoben. */
+    8 => function(PDO $pdo) use ($table, $charset){
+      foreach([
+        ["{$table}_rider_event", 'org_id', 'INT UNSIGNED NOT NULL DEFAULT 0'],
+      ] as $col){
+        [$tbl, $name, $def] = $col;
+        $stmt = $pdo->prepare(
+          "SELECT COUNT(*) FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?"
+        );
+        $stmt->execute([$tbl, $name]);
+        if((int)$stmt->fetchColumn() === 0){
+          $pdo->exec("ALTER TABLE `{$tbl}` ADD COLUMN `{$name}` {$def}");
+        }
+      }
+    },
   ];
 }
 

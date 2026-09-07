@@ -13,21 +13,29 @@
                          (nur solange noch kein Benutzer existiert)
      POST ?a=login       Username/Passwort -> Sessiontoken
      POST ?a=logout      Sessiontoken (X-Admin-Token) löschen
-     GET  ?a=whoami       eigene Rolle/Anzeigename
-     GET  ?a=users        Benutzerliste (nur admin)
-     POST ?a=users/create  neues Konto (nur admin)
-     POST ?a=users/update  Rolle/Anzeigename/Aktiv-Status/Passwort ändern (nur admin)
-     POST ?a=users/delete  Konto löschen (nur admin)
-     GET  ?a=checkpointstaff  Checkpoint-Zuweisungen eines Events (nur admin)
-     POST ?a=checkpointstaff/set  Zuweisungen für einen Benutzer ersetzen (nur admin)
-     POST ?a=invite-create  Einladungscode(s) erzeugen (nur admin)
-     GET  ?a=invite-list    Liste aller Codes, ohne Klartext (nur admin)
-     POST ?a=invite-revoke  offenen Code vorzeitig entwerten (nur admin)
+     GET  ?a=whoami       eigene Rolle/Anzeigename (ohne Org-Kontext möglich)
+     GET  ?a=my-orgs      eigene Org-Mitgliedschaften (ohne Org-Kontext möglich)
+     GET  ?a=users        Benutzerliste (nur SysAdmin)
+     POST ?a=users/create  neues Konto (nur SysAdmin)
+     POST ?a=users/update  Rolle/Anzeigename/Aktiv-Status/Passwort ändern (nur SysAdmin)
+     POST ?a=users/delete  Konto löschen (nur SysAdmin)
+     GET  ?a=checkpointstaff  Checkpoint-Zuweisungen eines Events (Captain der besitzenden Org)
+     POST ?a=checkpointstaff/set  Zuweisungen für einen Benutzer ersetzen (Captain der besitzenden Org)
+     POST ?a=invite-create  Einladungscode(s) erzeugen (nur SysAdmin)
+     GET  ?a=invite-list    Liste aller Codes, ohne Klartext (nur SysAdmin)
+     POST ?a=invite-revoke  offenen Code vorzeitig entwerten (nur SysAdmin)
      POST ?a=register       Selbstregistrierung mit Einladungscode (kein Token)
-     POST ?a=users/reset-code-create  Passwort-Reset-Code für einen Benutzer (nur admin)
+     POST ?a=users/reset-code-create  Passwort-Reset-Code für einen Benutzer (nur SysAdmin)
      POST ?a=reset-password  Passwort mit Reset-Code setzen (kein Token)
-     POST ?a=users/logout-all  alle Sessions eines Benutzers invalidieren (nur admin)
-     GET  ?a=audit-log      jüngste Audit-Log-Einträge (nur admin)
+     POST ?a=users/logout-all  alle Sessions eines Benutzers invalidieren (nur SysAdmin)
+     GET  ?a=audit-log      jüngste Audit-Log-Einträge (nur SysAdmin)
+
+   Instanzweit vs. org-weit: alles unter ?a=users*, ?a=invite* und
+   ?a=audit-log betrifft die GESAMTE Instanz und verlangt deshalb
+   zusätzlich zur Rolle 'captain' den SysAdmin-Status
+   (authRequireSysAdmin). Ein Captain ist nur INNERHALB seiner Org
+   mächtig — ohne diese zweite Prüfung könnte er das Passwort des
+   SysAdmins zurücksetzen und die Instanz übernehmen.
    ------------------------------------------------------------------ */
 
 require __DIR__ . '/bootstrap.php';
@@ -56,7 +64,7 @@ function authRequireGet(){
   if($_SERVER['REQUEST_METHOD'] !== 'GET') apiSendJsonError(405, 'method_not_allowed');
 }
 function authValidRole($role){
-  return in_array($role, ['admin', 'editor', 'viewer', 'checkpoint_staff'], true);
+  return in_array($role, ['captain', 'editor', 'viewer', 'checkpoint_staff'], true);
 }
 /* Eine Policy für jeden Passwort-Eingabepunkt (Bootstrap, Registrierung,
    Admin-Benutzerverwaltung) statt mehrerer divergierender Regeln.
@@ -122,6 +130,20 @@ function authLogAudit(PDO $pdo, $actorUserId, $actorUsername, $action, $targetUs
     error_log('[alleycat audit] insert failed: ' . $e->getMessage());
   }
 }
+/* Der letzte aktive SysAdmin darf weder deaktiviert noch gelöscht werden.
+   Früher zählte diese Sperre `role='admin'` — seit Migration 7 schreibt
+   nichts mehr diesen Wert, die Prüfung war also immer 0 und damit tot.
+   is_sysadmin ist die knappe Ressource: ohne einen davon kann niemand
+   mehr Orgs anlegen oder Konten verwalten, auch nicht mit dem Master-Key
+   (der lebt nur in config.php, nicht im Kopf des Betreibers). */
+function authRequireNotLastSysAdmin(PDO $pdo, $userTable, $targetId){
+  $target = $pdo->prepare("SELECT `is_sysadmin` FROM `{$userTable}` WHERE `id` = ?");
+  $target->execute([$targetId]);
+  if((int)$target->fetchColumn() !== 1) return;
+  $count = (int)$pdo->query("SELECT COUNT(*) FROM `{$userTable}` WHERE `is_sysadmin` = 1 AND `active` = 1")->fetchColumn();
+  if($count <= 1) apiSendJsonError(409, 'last_admin');
+}
+
 function authUserRow($row){
   return [
     'id' => (int)$row['id'],
@@ -157,7 +179,10 @@ if($action === 'discover'){
 
   $riderAppUrl = '';
   try{
-    $stmt = $pdo->prepare("SELECT `value` FROM `" . ALLEYCAT_TABLE . "` WHERE `key` = ?");
+    /* org_id = 0 ist der instanzweite Sentinel (Migration 7) — ohne den
+       Filter träfe die Abfrage auch die org-eigene Zeile einer beliebigen
+       Org, die zufällig denselben Key benutzt. */
+    $stmt = $pdo->prepare("SELECT `value` FROM `" . ALLEYCAT_TABLE . "` WHERE `key` = ? AND `org_id` = 0");
     $stmt->execute(['config:riderAppUrl']);
     $riderAppUrl = (string)($stmt->fetchColumn() ?: '');
   }catch(Exception $e){
@@ -196,8 +221,14 @@ if($action === 'bootstrap'){
   $displayName = trim((string)($body['displayName'] ?? ''));
   if($username === '' || !authPasswordValid($password)) apiSendJsonError(400, 'invalid_input');
 
-  $pdo->prepare("INSERT INTO `{$userTable}` (`username`,`password_hash`,`role`,`display_name`)
-                 VALUES (?,?,'admin',?)")
+  /* Das Bootstrap-Konto ist der instanzweite SysAdmin — dieselbe Regel
+     wie im Bootstrap-Pfad von install.php. Ohne is_sysadmin=1 stünde die
+     Installation nach dem Setup ganz ohne SysAdmin da: niemand könnte
+     eine Org anlegen, und die Sperre "letzter SysAdmin" hätte nichts zu
+     schützen. `role` ist nur noch ein historisches Feld (siehe
+     Migration 7), wird aber konsistent auf 'captain' gesetzt. */
+  $pdo->prepare("INSERT INTO `{$userTable}` (`username`,`password_hash`,`role`,`is_sysadmin`,`display_name`)
+                 VALUES (?,?,'captain',1,?)")
       ->execute([$username, password_hash($password, PASSWORD_DEFAULT), $displayName ?: $username]);
 
   authOut(['ok' => true]);
@@ -240,17 +271,26 @@ if($action === 'logout'){
 
 if($action === 'whoami'){
   authRequireGet();
-  $access = apiVerifyAccess($pdo, 'viewer');
+  /* $requireOrg = false: Diese Aktion (und ?a=my-orgs) läuft beim
+     allerersten Login, wenn der Client noch gar keinen X-Org-Slug kennt.
+     Mit der normalen Prüfung gäbe es dort ein 403, der Client bekäme nie
+     eine Org-Liste, könnte nie eine Org wählen — eine Sackgasse, aus der
+     nur ein manuelles Leeren des localStorage herausführt. */
+  $access = apiVerifyAccess($pdo, 'viewer', null, false);
   authOut(['ok' => true, 'role' => $access['role'], 'username' => $access['username'], 'isSysAdmin' => $access['isSysAdmin'], 'orgId' => $access['orgId']]);
 }
 
 if($action === 'my-orgs'){
   authRequireGet();
-  $access = apiVerifyAccess($pdo, 'viewer'); // keine Org im Header nötig für diese Aktion selbst
+  $access = apiVerifyAccess($pdo, 'viewer', null, false); // siehe ?a=whoami: darf ohne aufgelöste Org laufen
   $orgTable = adminTableName('organization');
   if($access['isSysAdmin']){
+    /* org-scoping-guard: ok — SysAdmins sehen die Orgs der ganzen Instanz;
+       ein org_id-Filter wäre hier genau das Gegenteil der Absicht. */
     $rows = $pdo->query("SELECT `id`,`slug`,`name` FROM `{$orgTable}` ORDER BY `name` ASC")->fetchAll(PDO::FETCH_ASSOC);
   } else {
+    /* org-scoping-guard: ok — diese Query BESTIMMT erst, welche Orgs der
+       Aufrufer sehen darf; gefiltert wird deshalb über m.user_id. */
     $stmt = $pdo->prepare(
       "SELECT o.`id`, o.`slug`, o.`name`, m.`role` FROM `{$orgTable}` o
        JOIN `" . adminTableName('org_member') . "` m ON m.org_id = o.id
@@ -267,7 +307,26 @@ if($action === 'my-orgs'){
 $orgTable = adminTableName('organization');
 
 function authRequireSysAdmin($access){
-  if(!$access['isSysAdmin']) apiSendJsonError(403, 'sysadmin_required');
+  apiRequireSysAdmin($access);
+}
+
+/* Anders als die Benutzerverwaltung sind die beiden checkpointstaff-
+   Aktionen echt org-gebunden: ein Captain SOLL die Checkpoints seiner
+   eigenen Events besetzen dürfen. Nur eben nicht die einer fremden Org —
+   und genau das wäre möglich, weil die Aktionen eine halböffentliche
+   public_id entgegennehmen (siehe rider.php). Besitz steht in
+   rider_event.org_id (Migration 8). SysAdmins dürfen wie überall
+   durchgreifen. */
+function authRequireOwnEventPublicId(PDO $pdo, $publicId, $access){
+  if($access['isSysAdmin']) return;
+  if($publicId === '' || $access['orgId'] === null) apiSendJsonError(400, 'invalid_input');
+  $owner = riderEventOrgId($pdo, $publicId);
+  /* null = unbekannte public_id, 0 = Bestandszeile vor Migration 8.
+     Beides ist kein Besitznachweis für eine fremde Org, aber auch kein
+     Leck: es gibt dann nichts zu sehen. 404 statt 403, damit die Antwort
+     die Existenz fremder public_ids nicht bestätigt. */
+  if($owner === null || $owner === 0) return;
+  if($owner !== (int)$access['orgId']) apiSendJsonError(404, 'not_found');
 }
 
 if($action === 'org/create'){
@@ -279,6 +338,9 @@ if($action === 'org/create'){
   $name = trim((string)($body['name'] ?? ''));
   if($slug === '' || $name === '' || !preg_match('/^[a-z0-9-]{2,64}$/', $slug)) apiSendJsonError(400, 'invalid_input');
   try{
+    /* org-scoping-guard: ok — legt die Org erst an; die org_id entsteht hier
+       (lastInsertId), es gibt noch nichts, wogegen zu filtern wäre.
+       Absicherung: authRequireSysAdmin() direkt oben. */
     $pdo->prepare("INSERT INTO `{$orgTable}` (`slug`,`name`) VALUES (?,?)")->execute([$slug, $name]);
   }catch(PDOException $e){
     if($e->getCode() === '23000') apiSendJsonError(409, 'slug_taken');
@@ -291,6 +353,8 @@ if($action === 'org/list'){
   authRequireGet();
   $access = apiVerifyAccess($pdo, 'viewer');
   authRequireSysAdmin($access);
+  /* org-scoping-guard: ok — instanzweite Org-Liste fürs SysAdmin-Panel,
+     bewusst ungefiltert; abgesichert durch authRequireSysAdmin() darüber. */
   $rows = $pdo->query("SELECT `id`,`slug`,`name`,`created_at` FROM `{$orgTable}` ORDER BY `created_at` DESC")->fetchAll(PDO::FETCH_ASSOC);
   authOut(['ok' => true, 'orgs' => $rows]);
 }
@@ -348,6 +412,9 @@ if($action === 'org/members/set-role'){
     $target->execute([$access['orgId'], $userId]);
     if($target->fetchColumn() === 'captain' && $captainCount <= 1) apiSendJsonError(409, 'last_captain');
   }
+  /* org-scoping-guard: ok — Upsert auf dem PK (org_id,user_id); die org_id
+     stammt aus $access (X-Org-Slug + Captain-Prüfung), nicht aus dem Body,
+     kann also keine fremde Zeile treffen. */
   $pdo->prepare("INSERT INTO `{$orgMemberTable}` (`org_id`,`user_id`,`role`) VALUES (?,?,?)
                  ON DUPLICATE KEY UPDATE `role` = VALUES(`role`)")
       ->execute([$access['orgId'], $userId, $role]);
@@ -396,6 +463,8 @@ if($action === 'org/event-admins/grant'){
   $userId = (int)($body['userId'] ?? 0);
   $eventId = (string)($body['eventId'] ?? '');
   if($userId <= 0 || $eventId === '') apiSendJsonError(400, 'invalid_input');
+  /* org-scoping-guard: ok — Upsert auf dem PK (org_id,event_id,user_id);
+     die org_id stammt aus $access, nicht aus dem Body. */
   $pdo->prepare("INSERT INTO `{$eventAdminTable}` (`org_id`,`event_id`,`user_id`) VALUES (?,?,?)
                  ON DUPLICATE KEY UPDATE `granted_at` = CURRENT_TIMESTAMP")
       ->execute([$access['orgId'], $eventId, $userId]);
@@ -417,14 +486,24 @@ if($action === 'org/event-admins/revoke'){
 
 if($action === 'users'){
   authRequireGet();
-  apiVerifyAccess($pdo, 'captain');
+  /* Instanzweit, nicht org-weit: diese Aktion sieht/ändert Konten der
+     GESAMTEN Instanz. Ein Captain ist nur innerhalb SEINER Org mächtig —
+     ohne diese zweite Prüfung könnte er jedes fremde Konto (auch das des
+     SysAdmins) zurücksetzen und die Instanz übernehmen. */
+  $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
   $rows = $pdo->query("SELECT * FROM `{$userTable}` ORDER BY `username` ASC")->fetchAll(PDO::FETCH_ASSOC);
   authOut(['ok' => true, 'users' => array_map('authUserRow', $rows)]);
 }
 
 if($action === 'users/create'){
   authRequirePost();
-  apiVerifyAccess($pdo, 'captain');
+  /* Instanzweit, nicht org-weit: diese Aktion sieht/ändert Konten der
+     GESAMTEN Instanz. Ein Captain ist nur innerhalb SEINER Org mächtig —
+     ohne diese zweite Prüfung könnte er jedes fremde Konto (auch das des
+     SysAdmins) zurücksetzen und die Instanz übernehmen. */
+  $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
   $body = authJsonBody();
   $username = trim((string)($body['username'] ?? ''));
   $password = (string)($body['password'] ?? '');
@@ -444,7 +523,12 @@ if($action === 'users/create'){
 
 if($action === 'users/update'){
   authRequirePost();
+  /* Instanzweit, nicht org-weit: diese Aktion sieht/ändert Konten der
+     GESAMTEN Instanz. Ein Captain ist nur innerhalb SEINER Org mächtig —
+     ohne diese zweite Prüfung könnte er jedes fremde Konto (auch das des
+     SysAdmins) zurücksetzen und die Instanz übernehmen. */
   $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
   $body = authJsonBody();
   $id = (int)($body['id'] ?? 0);
   if($id <= 0) apiSendJsonError(400, 'invalid_input');
@@ -457,27 +541,18 @@ if($action === 'users/update'){
   $params = [];
   if(isset($body['role'])){
     if(!authValidRole($body['role'])) apiSendJsonError(400, 'invalid_role');
-    /* Der letzte Admin darf sich nicht selbst degradieren — sonst könnte
-       eine Installation ohne jeden Admin dastehen und niemand käme mehr in
-       die Benutzerverwaltung, nicht einmal mit dem Master-Key (der Key
-       lebt nur in config.php, nicht mehr im Kopf des Betreibers). */
-    if($body['role'] !== 'admin'){
-      $adminCount = (int)$pdo->query("SELECT COUNT(*) FROM `{$userTable}` WHERE `role`='admin' AND `active`=1")->fetchColumn();
-      $target = $pdo->prepare("SELECT `role` FROM `{$userTable}` WHERE `id` = ?");
-      $target->execute([$id]);
-      $targetRole = $target->fetchColumn();
-      if($targetRole === 'admin' && $adminCount <= 1) apiSendJsonError(409, 'last_admin');
-    }
+    /* Hier steht bewusst KEINE "letzter Admin"-Sperre mehr: admin_user.role
+       wird seit Migration 7 von keiner Berechtigungsprüfung mehr gelesen
+       (Rollenwahrheit = org_member + is_sysadmin), eine Änderung an dieser
+       Spalte kann also niemanden aussperren. Was geschützt werden muss,
+       ist der letzte instanzweite SysAdmin — das erledigt
+       authRequireNotLastSysAdmin() beim Deaktivieren und beim Löschen.
+       Die Org-Ebene hat ihre eigene Sperre in org/members/set-role. */
     $sets[] = '`role` = ?'; $params[] = $body['role'];
   }
   if(isset($body['displayName'])){ $sets[] = '`display_name` = ?'; $params[] = (string)$body['displayName']; }
   if(isset($body['active'])){
-    if(!$body['active']){
-      $adminCount = (int)$pdo->query("SELECT COUNT(*) FROM `{$userTable}` WHERE `role`='admin' AND `active`=1")->fetchColumn();
-      $target = $pdo->prepare("SELECT `role` FROM `{$userTable}` WHERE `id` = ?");
-      $target->execute([$id]);
-      if($target->fetchColumn() === 'admin' && $adminCount <= 1) apiSendJsonError(409, 'last_admin');
-    }
+    if(!$body['active']) authRequireNotLastSysAdmin($pdo, $userTable, $id);
     $sets[] = '`active` = ?'; $params[] = $body['active'] ? 1 : 0;
   }
   if(isset($body['password'])){
@@ -496,20 +571,25 @@ if($action === 'users/update'){
 
 if($action === 'users/delete'){
   authRequirePost();
+  /* Instanzweit, nicht org-weit: diese Aktion sieht/ändert Konten der
+     GESAMTEN Instanz. Ein Captain ist nur innerhalb SEINER Org mächtig —
+     ohne diese zweite Prüfung könnte er jedes fremde Konto (auch das des
+     SysAdmins) zurücksetzen und die Instanz übernehmen. */
   $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
   $body = authJsonBody();
   $id = (int)($body['id'] ?? 0);
   if($id <= 0) apiSendJsonError(400, 'invalid_input');
 
-  $target = $pdo->prepare("SELECT `role`,`username` FROM `{$userTable}` WHERE `id` = ?");
+  $target = $pdo->prepare("SELECT `is_sysadmin`,`username` FROM `{$userTable}` WHERE `id` = ?");
   $target->execute([$id]);
   $targetRow = $target->fetch(PDO::FETCH_ASSOC);
-  if($targetRow && $targetRow['role'] === 'admin'){
-    $adminCount = (int)$pdo->query("SELECT COUNT(*) FROM `{$userTable}` WHERE `role`='admin' AND `active`=1")->fetchColumn();
-    if($adminCount <= 1) apiSendJsonError(409, 'last_admin');
-  }
+  authRequireNotLastSysAdmin($pdo, $userTable, $id);
 
   $pdo->prepare("DELETE FROM `{$sessionTable}` WHERE `user_id` = ?")->execute([$id]);
+  /* org-scoping-guard: ok — beim Löschen eines Kontos müssen ALLE seine
+     Checkpoint-Zuweisungen mit, org-übergreifend; das ist eine instanzweite
+     Aktion (authRequireSysAdmin() oben). */
   $pdo->prepare("DELETE FROM `" . adminTableName('checkpoint_staff') . "` WHERE `user_id` = ?")->execute([$id]);
   $pdo->prepare("DELETE FROM `{$userTable}` WHERE `id` = ?")->execute([$id]);
   if($targetRow) authLogAudit($pdo, $access['userId'], $access['username'], 'delete_user', $targetRow['username'], null);
@@ -518,8 +598,11 @@ if($action === 'users/delete'){
 
 if($action === 'checkpointstaff'){
   authRequireGet();
-  apiVerifyAccess($pdo, 'captain');
+  $access = apiVerifyAccess($pdo, 'captain');
   $publicId = (string)($_GET['public_id'] ?? '');
+  authRequireOwnEventPublicId($pdo, $publicId, $access);
+  /* org-scoping-guard: ok — checkpoint_staff hat keine org_id-Spalte; der
+     Org-Besitz der public_id ist eine Zeile darüber geprüft. */
   $stmt = $pdo->prepare("SELECT `user_id`,`cp_id` FROM `" . adminTableName('checkpoint_staff') . "` WHERE `public_id` = ?");
   $stmt->execute([$publicId]);
   authOut(['ok' => true, 'assignments' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
@@ -527,14 +610,18 @@ if($action === 'checkpointstaff'){
 
 if($action === 'checkpointstaff/set'){
   authRequirePost();
-  apiVerifyAccess($pdo, 'captain');
+  $access = apiVerifyAccess($pdo, 'captain');
   $body = authJsonBody();
   $userId = (int)($body['userId'] ?? 0);
   $publicId = (string)($body['publicId'] ?? '');
   $cpIds = is_array($body['cpIds'] ?? null) ? $body['cpIds'] : [];
   if($userId <= 0 || $publicId === '') apiSendJsonError(400, 'invalid_input');
+  authRequireOwnEventPublicId($pdo, $publicId, $access);
 
   $t = adminTableName('checkpoint_staff');
+  /* org-scoping-guard: ok — checkpoint_staff hat keine org_id-Spalte; der
+     Org-Besitz der public_id ist über authRequireOwnEventPublicId() oben
+     geprüft, beide Statements arbeiten nur innerhalb dieser public_id. */
   $pdo->prepare("DELETE FROM `{$t}` WHERE `user_id` = ? AND `public_id` = ?")->execute([$userId, $publicId]);
   $ins = $pdo->prepare("INSERT INTO `{$t}` (`user_id`,`public_id`,`cp_id`) VALUES (?,?,?)");
   foreach($cpIds as $cpId){
@@ -548,7 +635,12 @@ $inviteTable = adminTableName('invite_code');
 
 if($action === 'invite-create'){
   authRequirePost();
+  /* Instanzweit, nicht org-weit: diese Aktion sieht/ändert Konten der
+     GESAMTEN Instanz. Ein Captain ist nur innerhalb SEINER Org mächtig —
+     ohne diese zweite Prüfung könnte er jedes fremde Konto (auch das des
+     SysAdmins) zurücksetzen und die Instanz übernehmen. */
   $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
   $body = authJsonBody();
   $role = (string)($body['role'] ?? '');
   $expiresAt = (string)($body['expiresAt'] ?? '');
@@ -582,7 +674,12 @@ if($action === 'invite-create'){
 
 if($action === 'invite-list'){
   authRequireGet();
-  apiVerifyAccess($pdo, 'captain');
+  /* Instanzweit, nicht org-weit: diese Aktion sieht/ändert Konten der
+     GESAMTEN Instanz. Ein Captain ist nur innerhalb SEINER Org mächtig —
+     ohne diese zweite Prüfung könnte er jedes fremde Konto (auch das des
+     SysAdmins) zurücksetzen und die Instanz übernehmen. */
+  $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
   $rows = $pdo->query("SELECT i.*, u.username AS used_by_username FROM `{$inviteTable}` i
                         LEFT JOIN `{$userTable}` u ON u.id = i.used_by_user_id
                         ORDER BY i.created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
@@ -591,7 +688,12 @@ if($action === 'invite-list'){
 
 if($action === 'invite-revoke'){
   authRequirePost();
-  apiVerifyAccess($pdo, 'captain');
+  /* Instanzweit, nicht org-weit: diese Aktion sieht/ändert Konten der
+     GESAMTEN Instanz. Ein Captain ist nur innerhalb SEINER Org mächtig —
+     ohne diese zweite Prüfung könnte er jedes fremde Konto (auch das des
+     SysAdmins) zurücksetzen und die Instanz übernehmen. */
+  $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
   $body = authJsonBody();
   $id = (int)($body['id'] ?? 0);
   if($id <= 0) apiSendJsonError(400, 'invalid_input');
@@ -653,7 +755,12 @@ $resetTable = adminTableName('admin_reset_code');
 
 if($action === 'users/reset-code-create'){
   authRequirePost();
+  /* Instanzweit, nicht org-weit: diese Aktion sieht/ändert Konten der
+     GESAMTEN Instanz. Ein Captain ist nur innerhalb SEINER Org mächtig —
+     ohne diese zweite Prüfung könnte er jedes fremde Konto (auch das des
+     SysAdmins) zurücksetzen und die Instanz übernehmen. */
   $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
   $body = authJsonBody();
   $userId = (int)($body['id'] ?? 0);
   if($userId <= 0) apiSendJsonError(400, 'invalid_input');
@@ -722,7 +829,12 @@ if($action === 'reset-password'){
 
 if($action === 'users/logout-all'){
   authRequirePost();
+  /* Instanzweit, nicht org-weit: diese Aktion sieht/ändert Konten der
+     GESAMTEN Instanz. Ein Captain ist nur innerhalb SEINER Org mächtig —
+     ohne diese zweite Prüfung könnte er jedes fremde Konto (auch das des
+     SysAdmins) zurücksetzen und die Instanz übernehmen. */
   $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
   $body = authJsonBody();
   $userId = (int)($body['id'] ?? 0);
   if($userId <= 0) apiSendJsonError(400, 'invalid_input');
@@ -737,7 +849,12 @@ if($action === 'users/logout-all'){
 
 if($action === 'audit-log'){
   authRequireGet();
-  apiVerifyAccess($pdo, 'captain');
+  /* Instanzweit, nicht org-weit: diese Aktion sieht/ändert Konten der
+     GESAMTEN Instanz. Ein Captain ist nur innerhalb SEINER Org mächtig —
+     ohne diese zweite Prüfung könnte er jedes fremde Konto (auch das des
+     SysAdmins) zurücksetzen und die Instanz übernehmen. */
+  $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
   $limit = max(1, min(500, (int)($_GET['limit'] ?? 200)));
   $rows = $pdo->prepare("SELECT * FROM `" . adminTableName('admin_audit_log') . "` ORDER BY `id` DESC LIMIT " . $limit);
   $rows->execute();
