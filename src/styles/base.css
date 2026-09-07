@@ -58,11 +58,17 @@
     z-index:20;
   }
   .brand{display:flex; align-items:center; gap:10px;}
+  /* Doppelte Marke: die Icon-Sidebar trägt links schon das AC-Zeichen
+     (.icon-sidebar-mark), zwei Stempel nebeneinander sind einer zu viel.
+     Nicht gelöscht, sondern nur ausgeblendet, solange die Sidebar
+     sichtbar ist — unter 700px verschwindet die Sidebar (siehe dort), und
+     dann ist diese Marke die einzige, die bleibt. */
   .brand-mark{
+    display:none;
     width:34px; height:34px; border-radius:50%;
     background:var(--stamp);
     border:2px solid var(--chalk);
-    display:flex; align-items:center; justify-content:center;
+    align-items:center; justify-content:center;
     font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px;
     transform:rotate(-6deg);
     flex-shrink:0;
@@ -1668,6 +1674,7 @@
       display:block; max-width:52vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }
     .icon-sidebar{display:none;}
+    .brand-mark{display:flex;} /* einzige verbleibende Marke, sobald die Sidebar weg ist */
     .bottom-nav{
       display:flex; flex-shrink:0; background:var(--asphalt-2); border-top:1px solid var(--asphalt-3);
       padding-bottom:env(safe-area-inset-bottom, 0);
