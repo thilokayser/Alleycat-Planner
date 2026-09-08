@@ -26,6 +26,7 @@ let state = {
   adminSession: null,   // {token, role, username, displayName} — siehe auth.js currentUserRole()
   adminUsersList: null, // gecachte ?a=users-Antwort für die Benutzerverwaltung
   adminUsersError: '',
+  smtpSettings: null,  // gecachter config:smtpSettings-Wert (SysAdmin-only)
   adminUsersEditingId: null,
   adminAssignEditingId: null,
   inviteList: null,    // gecachte ?a=invite-list-Antwort
@@ -1288,6 +1289,78 @@ async function submitRiderAppUrl(){
   showToast({message: ok ? t('featureRegistry.riderAppUrlSaved') : t('featureRegistry.riderAppUrlSaveFailed')});
   renderSettings();
 }
+/* SMTP-Konfiguration für Fahrer-Passwort-Reset-Mails. Instanzweit wie
+   config:riderAppUrl (siehe api.php $instanceWideKeys), deshalb SysAdmin-
+   only — ein Editor einer einzigen Org dürfte sonst instanzweit fremde
+   SMTP-Zugangsdaten verändern.
+
+   renderSmtpSettingsSection() ist bewusst synchron: storageGet() ist async,
+   deshalb folgt die Sektion demselben Cache-dann-Re-Render-Muster wie
+   state.adminUsersList/loadAdminUsersIfNeeded() weiter oben — render liest
+   nur aus state.smtpSettings, das Laden passiert fire-and-forget aus
+   renderSettings() heraus und stößt bei Erfolg selbst ein renderSettings()
+   an. */
+async function loadSmtpSettingsIfNeeded(force){
+  if(state.smtpSettings && !force) return;
+  const raw = await storageGet('config:smtpSettings');
+  let cfg = {};
+  if(raw){
+    try{ cfg = JSON.parse(raw.value) || {}; }catch(e){ cfg = {}; }
+  }
+  state.smtpSettings = cfg;
+  if(state.settingsSection === 'users') renderSettings();
+}
+function renderSmtpSettingsSection(){
+  if(!hasAdminRoles() || !currentUserIsSysAdmin()) return '';
+  const cfg = state.smtpSettings || {};
+  return `
+    <div class="settings-section">
+      <h3>${t('auth.smtpHeading')}</h3>
+      <div class="settings-section-desc">${t('auth.smtpDesc')}</div>
+      <div class="rider-field"><label>${t('auth.smtpHostLabel')}</label>
+        <input type="text" id="smtp-host" value="${escapeHtml(cfg.host || '')}"></div>
+      <div class="rider-field"><label>${t('auth.smtpPortLabel')}</label>
+        <input type="number" id="smtp-port" value="${escapeHtml(String(cfg.port || 587))}"></div>
+      <div class="rider-field"><label>${t('auth.smtpUsernameLabel')}</label>
+        <input type="text" id="smtp-username" value="${escapeHtml(cfg.username || '')}"></div>
+      <div class="rider-field"><label>${t('auth.smtpPasswordLabel')}</label>
+        <input type="password" id="smtp-password" value="${escapeHtml(cfg.password || '')}"></div>
+      <div class="rider-field"><label>${t('auth.smtpFromAddressLabel')}</label>
+        <input type="email" id="smtp-from-address" value="${escapeHtml(cfg.fromAddress || '')}"></div>
+      <div class="rider-field"><label>${t('auth.smtpFromNameLabel')}</label>
+        <input type="text" id="smtp-from-name" value="${escapeHtml(cfg.fromName || '')}"></div>
+      <button class="btn btn-primary" onclick="submitSmtpSettings()">${t('auth.usersSaveButton')}</button>
+      <div class="rider-field" style="margin-top:12px;"><label>${t('auth.smtpTestEmailLabel')}</label>
+        <input type="email" id="smtp-test-email"></div>
+      <button class="btn btn-ghost" onclick="submitSmtpTest()">${t('auth.smtpTestButton')}</button>
+    </div>
+  `;
+}
+async function submitSmtpSettings(){
+  const cfg = {
+    host: document.getElementById('smtp-host').value.trim(),
+    port: parseInt(document.getElementById('smtp-port').value, 10) || 587,
+    username: document.getElementById('smtp-username').value.trim(),
+    password: document.getElementById('smtp-password').value,
+    fromAddress: document.getElementById('smtp-from-address').value.trim(),
+    fromName: document.getElementById('smtp-from-name').value.trim()
+  };
+  const ok = await storageSet('config:smtpSettings', JSON.stringify(cfg));
+  showToast({message: ok ? t('auth.smtpSaved') : t('auth.smtpSaveFailed')});
+  if(ok){
+    state.smtpSettings = cfg;
+    renderSettings();
+  }
+}
+async function submitSmtpTest(){
+  const toEmail = document.getElementById('smtp-test-email').value.trim();
+  /* authRequest()s zweiter Parameter ist der volle Query-String (siehe
+     adminBootstrap() weiter oben: 'a=bootstrap'), nicht nur der Action-
+     Name — und im Fehlerfall liegt der Code direkt unter res.error
+     (siehe authRequest() in storage-server.js), es gibt kein res.data. */
+  const res = await authRequest('POST', 'a=smtp-test', {toEmail});
+  showToast({message: res.ok ? t('auth.smtpTestOk') : t('auth.smtpTestFailed', {error: res.error || ''})});
+}
 function renderSettingsSectionUsers(){
   if(!hasAdminRoles()){
     return `<div class="settings-section"><h3>${t('auth.usersHeading')}</h3><div class="settings-section-desc">${t('auth.usersDesc')}</div></div>`;
@@ -1387,6 +1460,7 @@ function renderSettingsSectionUsers(){
       <div class="feature-row-list">${renderFeatureRegistryGroupRows('users')}</div>
     </div>
     ${renderRiderAppUrlSection()}
+    ${renderSmtpSettingsSection()}
     <div class="settings-section">
       <h3>${t('auth.usersHeading')}</h3>
       <div class="settings-section-desc">${t('auth.usersDesc')}</div>
@@ -1620,6 +1694,7 @@ function renderSettings(){
   }
   if(state.settingsSection === 'users' && hasAdminRoles()){
     loadAdminUsersIfNeeded();
+    if(currentUserIsSysAdmin()) loadSmtpSettingsIfNeeded();
     if(currentUserCan('manageUsers')){
       loadInviteCodesIfNeeded();
       if(isFeatureEnabled('user_audit_log')) loadAuditLogIfNeeded();

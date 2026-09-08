@@ -1245,11 +1245,11 @@ const translations = {
       acctEmailLabel: 'E-Mail',
       acctPasswordLabel: 'Passwort',
       acctLoginSubmit: 'Anmelden',
-      acctGoRegister: 'Konto anlegen',
+      acctGoRegister: 'Noch kein Konto? Registrieren',
       acctGoForgot: 'Passwort vergessen?',
       acctRegisterTitle: 'Konto anlegen',
       acctDisplayNameLabel: 'Anzeigename',
-      acctPasswordHint: 'Mindestens 8 Zeichen.',
+      acctPasswordHint: 'Mindestens 12 Zeichen.',
       acctRegisterSubmit: 'Konto anlegen',
       acctGoLogin: 'Schon ein Konto? Anmelden',
       acctForgotTitle: 'Passwort vergessen',
@@ -1432,7 +1432,25 @@ const translations = {
       usersCsvExportButton: 'Als CSV exportieren',
       auditLogHeading: 'Audit-Log',
       auditLogDesc: 'Login, Rollenänderungen und Passwort-Resets der letzten Zeit — installationsweit, nicht an ein Event gebunden.',
-      auditLogEmpty: 'Noch keine Einträge.'
+      auditLogEmpty: 'Noch keine Einträge.',
+
+      /* SMTP-Konfiguration für Fahrer-Passwort-Reset-Mails — instanzweit
+         wie die Fahrer-App-Adresse, deshalb SysAdmin-only (siehe
+         renderSmtpSettingsSection() in ui-headquarter.js). */
+      smtpHeading: 'SMTP (Fahrer-Passwort-Reset)',
+      smtpDesc: 'Zugangsdaten für den Mailversand, wenn Fahrer:innen ihr Passwort zurücksetzen. Gilt für die ganze Installation, nicht nur diese Organisation.',
+      smtpHostLabel: 'SMTP-Server',
+      smtpPortLabel: 'Port',
+      smtpUsernameLabel: 'Benutzername',
+      smtpPasswordLabel: 'Passwort',
+      smtpFromAddressLabel: 'Absender-Adresse',
+      smtpFromNameLabel: 'Absender-Name',
+      smtpTestEmailLabel: 'Test-Mail an',
+      smtpTestButton: 'Testmail senden',
+      smtpSaved: 'SMTP-Einstellungen gespeichert.',
+      smtpSaveFailed: 'SMTP-Einstellungen konnten nicht gespeichert werden.',
+      smtpTestOk: 'Testmail verschickt.',
+      smtpTestFailed: 'Testmail fehlgeschlagen: {error}'
     },
     /* Multi-Tenancy: Workspace-Dropdown in der Topbar (Org-Wechsel) und
        das SysAdmin-Instanzpanel (installationsweite Org-Verwaltung) —

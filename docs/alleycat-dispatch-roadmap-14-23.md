@@ -38,6 +38,7 @@ Die beiden Übergabedokumente wurden nacheinander geschrieben und nummerieren di
 | **15** | **Rider-App — Teilprojekt 2: Fahrer-App** | nicht Teil der Übergabe-Doks | L | ✅ abgeschlossen (26.08.2026) — Gerätetest beim Nutzer offen |
 | 16 | Rider-App — Teilprojekt 3: Beamer-Ping + Online-Vorab-Registrierung | nicht Teil der Übergabe-Doks | M | ✅ abgeschlossen (28.08.2026) — beide Hälften fertig, `claim`-Endpunkt real gegen lokale MariaDB getestet (`php-backend/COMPATIBILITY.md`) |
 | 17 | Saisons, Teams & Liga-System | nicht Teil der Übergabe-Doks | L | ✅ abgeschlossen (30.08.2026) — Ad-hoc-Nutzerwunsch, Team-/Fahrer-Register (org-weit, event-übergreifend) + Saison-CRUD + platzierungsbasierte Liga-Wertung |
+| **24** | Spokecard-Claiming-Flow | Persistente, instanzweite Fahrer-Konten (E-Mail+Passwort), Claim per Slot-Token-Nachweis (vor/nach dem Rennen), Cross-Event-Historie, SMTP-Passwort-Reset | ✅ 08.09.2026 |
 | — | *Idee, zurückgestellt:* Offline-Gerätesync (früher Paket 8) | Phase 22 komplett | L (unsicher) | ⚠️ Kamera/QR-Grundlage (jsQR) bereits vorhanden, Stream-Protokoll komplett offen — **kein aktives Arbeitspaket**, wandert zu den "vertagten Ideen" wie Kopfgeld-Modus/Service-Worker in der ursprünglichen Übergabe |
 
 Aufwand-Skala: S = klein (wenige, isolierte Änderungen), M = mittel (ein neues Modul oder mehrere verteilte Änderungen), L = groß (neues Modul + Umbau bestehender Kernlogik), XL = sehr groß (mehrere neue Module + Migration bestehender, produktiver Daten).

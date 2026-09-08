@@ -149,6 +149,28 @@ Lebendiges Dokument (14.4 im Planungsdokument): wächst mit jeder Installation, 
 
 **Am Rande festgehalten, aus der Plan-Review, kein Blocker:** `apiHasEventDelegation()` (`bootstrap.php`) prüft nicht selbst, ob das delegierte Event tatsächlich zur im Request aufgelösten Org gehört — nachvollzogen als aktuell nicht ausnutzbar, weil `api.php`s Queries `org_id` und `id` immer gemeinsam filtern (siehe Zeilen 69-70 in `api.php`), aber eine künftige Härtung wert. Außerdem ruft das Frontend an manchen Stellen noch `events:index` statt durchgängig die neue `?a=events`-Aktion für die Dashboard-Liste — funktional unbedenklich (weiterhin org-isoliert), möglicher Aufräum-Follow-up.
 
+## Spokecard-Claiming-Flow (Fahrer-Konten)
+
+Migration 11 (`rider_user`/`rider_session`/`rider_claim`/`rider_password_reset`),
+`rider-register`/`rider-login`/`rider-forgot`/`rider-reset`/`rider-claim`/
+`rider-history` in `rider.php`, SMTP-Client (`smtp.php`), `smtp-test` in
+`auth.php`: **noch nicht gegen eine echte MySQL-/PHP-Dev-Server-Installation
+verifiziert** — anders als die übrigen Rider-App-Teilprojekte (siehe die
+Einträge oben zu Teilprojekt 1/3 und zum Admin-Rollensystem) gibt es für
+dieses Paket noch keinen `curl`-Durchlauf gegen eine frische Datenbank. Nur
+gegen die Unit-/Logik-Ebene und manuell im Code geprüft. Vor einem echten
+Einsatz sollte derselbe Ablauf wie bei den früheren Paketen nachgeholt
+werden: frische Scratch-DB, `install.php` per HTTP-POST, dann Registrierung,
+Login, Passwort-Reset-Anfrage, Reset mit Token, Claim eines Slots über
+Token-Nachweis und Cross-Event-Historie je per `curl` durchspielen.
+
+Echter SMTP-Versand ist zusätzlich komplett ungetestet — weder gegen eine
+Test-Sandbox (Mailtrap/Mailhog) noch gegen einen echten Mailserver. Die
+neue SysAdmin-Oberfläche unter Einstellungen (`renderSmtpSettingsSection()`
+in `src/core/ui-headquarter.js`) speichert Zugangsdaten in `config:smtpSettings`
+und bietet einen Testmail-Button (`?a=smtp-test`), der genau diese Lücke vor
+dem produktiven Einsatz schließen soll.
+
 ### `hasencore.de` — noch offen
 
 Der im Planungsdokument (14.7) vorgesehene erste praktische Durchlauf auf einem echten Hoster steht noch aus — dafür wird Zugriff auf den dortigen Webspace benötigt (nur der Nutzer hat diesen Zugriff). Sobald durchgeführt: PHP-/MySQL-Version per `phpinfo()` bzw. `SELECT VERSION();` ermitteln (danach `phpinfo.php` sofort wieder löschen — zeigt sicherheitsrelevante Details), Pre-Flight-Check-Ausgabe hier dokumentieren, danach diesen Eintrag ergänzen.
