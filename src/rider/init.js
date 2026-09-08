@@ -27,6 +27,14 @@ async function initRider(){
   startRiderQueueWatch();
   startRiderWakeLock();
 
+  /* Das Konto ist unabhängig von der Slot-Session (riderState.session) —
+     ein Fahrer kann eingeloggt sein ohne aktive Startnummer und
+     umgekehrt. Muss deshalb hier, unabhängig von der Session-Wiederher-
+     stellung unten, aus localStorage zurückgeholt werden — sonst verliert
+     ein eingeloggter Fahrer sein Konto bei jedem Neustart der App, obwohl
+     ein gültiger Token gespeichert ist. */
+  riderState.account = riderLoadAccount();
+
   const fromUrl = parseRiderQrPayload(location.hash);
   /* Selbstregistrierung ist der einzige Einstieg ganz ohne Session — der
      Besucher hat weder eine Startnummer noch einen Token, das ist ja

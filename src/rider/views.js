@@ -27,6 +27,13 @@ function renderRider(){
     case 'profile':         el.innerHTML = riderViewProfile(); break;
     default:         el.innerHTML = riderViewLoading();
   }
+  /* Ein Notice-Toast gilt für genau EINEN Render-Durchlauf — die View
+     oben hat ihn (falls gesetzt) schon in ihr HTML eingebaut. Ohne dieses
+     Zurücksetzen würde er in jeden späteren, unabhängigen Bildschirm
+     durchsickern (z. B. nach riderGoHome() bis zum nächsten Checkpoint-
+     Scan), weil nur die neuen riderGoAccount*()-Funktionen ihn selbst
+     leeren, aber riderGoHome() und andere Übergänge das nicht tun. */
+  riderState.notice = '';
 }
 
 function riderViewLoading(){
