@@ -32,6 +32,15 @@
        POST ?a=register    Wildcard-Slot belegen
      Kein Token (Online-Vorab-Registrierung, nur bei Selbstregistrierung)
        POST ?a=claim       Freie Startnummer ohne bekannten Token belegen
+     Kein Token, Fahrer-Konto (Spokecard-Claiming)
+       POST ?a=rider-register  neues Fahrer-Konto (E-Mail+Passwort)
+       POST ?a=rider-login     Login -> Session-Bearer
+       POST ?a=rider-forgot    Passwort-Reset-Mail anfordern
+       POST ?a=rider-reset     Passwort mit Reset-Token setzen
+     Session-Bearer (X-Rider-Auth-Token)
+       POST ?a=rider-claim     Startnummer dem eigenen Konto zuordnen
+                               (zusätzlich X-Rider-Token/X-Rider-Code nötig)
+       GET  ?a=rider-history   eigene Teilnahmehistorie über alle Events
    ------------------------------------------------------------------ */
 
 require __DIR__ . '/bootstrap.php';
@@ -379,6 +388,149 @@ if($action === 'freebibs'){
   }
   /* Nur Nummern, keine Namen — auch nicht für belegte Slots. */
   riderOut(['ok' => true, 'free' => $free]);
+}
+
+/* Gleiche Policy wie authPasswordValid() in auth.php — dort nicht
+   importierbar, ohne rider.php an auth.php zu koppeln (die beiden
+   Endpunkte bleiben bewusst unabhängig ladbar). Bei Änderung an einer
+   Stelle: die andere mitziehen. */
+function riderUserPasswordValid($password){
+  return strlen((string)$password) >= 12;
+}
+
+require __DIR__ . '/smtp.php';
+
+if($action === 'rider-register'){
+  riderRequirePost();
+  riderCheckRateLimit($pdo);
+  $body = riderJsonBody();
+  $email = strtolower(trim((string)($body['email'] ?? '')));
+  $password = (string)($body['password'] ?? '');
+  $displayName = trim((string)($body['displayName'] ?? ''));
+
+  if(!riderEmailValid($email) || !riderUserPasswordValid($password)){
+    riderRejectAuth($pdo, 'invalid_input');
+  }
+
+  $userTable = riderTableName('user');
+  try{
+    $pdo->prepare("INSERT INTO `{$userTable}` (`email`,`password_hash`,`display_name`) VALUES (?,?,?)")
+        ->execute([$email, password_hash($password, PASSWORD_DEFAULT), $displayName]);
+  }catch(PDOException $e){
+    if($e->getCode() === '23000') riderRejectAuth($pdo, 'email_taken');
+    throw $e;
+  }
+  $userId = (int)$pdo->lastInsertId();
+
+  $token = riderUserGenerateToken();
+  $pdo->prepare("INSERT INTO `" . riderTableName('session') . "` (`token_hash`,`rider_user_id`) VALUES (?,?)")
+      ->execute([riderHashToken($token), $userId]);
+
+  riderClearFailures($pdo);
+  riderOut(['ok' => true, 'authToken' => $token, 'displayName' => $displayName]);
+}
+
+if($action === 'rider-login'){
+  riderRequirePost();
+  riderCheckRateLimit($pdo);
+  $body = riderJsonBody();
+  $email = strtolower(trim((string)($body['email'] ?? '')));
+  $password = (string)($body['password'] ?? '');
+
+  $userTable = riderTableName('user');
+  $stmt = $pdo->prepare("SELECT * FROM `{$userTable}` WHERE `email` = ?");
+  $stmt->execute([$email]);
+  $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+  /* Generische Fehlermeldung: kein Unterschied zwischen "E-Mail
+     unbekannt" und "Passwort falsch" (Enumeration-Schutz). */
+  if(!$user || $user['status'] !== 'active' || !password_verify($password, $user['password_hash'])){
+    riderRejectAuth($pdo, 'invalid_credentials');
+  }
+  riderClearFailures($pdo);
+
+  $token = riderUserGenerateToken();
+  $pdo->prepare("INSERT INTO `" . riderTableName('session') . "` (`token_hash`,`rider_user_id`) VALUES (?,?)")
+      ->execute([riderHashToken($token), (int)$user['id']]);
+
+  riderOut(['ok' => true, 'authToken' => $token, 'displayName' => $user['display_name']]);
+}
+
+if($action === 'rider-forgot'){
+  riderRequirePost();
+  riderCheckRateLimit($pdo);
+  $body = riderJsonBody();
+  $email = strtolower(trim((string)($body['email'] ?? '')));
+
+  if(riderEmailValid($email)){
+    $userTable = riderTableName('user');
+    $stmt = $pdo->prepare("SELECT `id` FROM `{$userTable}` WHERE `email` = ? AND `status` = 'active'");
+    $stmt->execute([$email]);
+    $userId = $stmt->fetchColumn();
+
+    if($userId){
+      $token = riderUserGenerateToken();
+      $pdo->prepare("INSERT INTO `" . riderTableName('password_reset') . "` (`token_hash`,`rider_user_id`,`expires_at`) VALUES (?,?,?)")
+          ->execute([riderHashToken($token), (int)$userId, date('Y-m-d H:i:s', time() + 30 * 60)]);
+
+      $resetUrl = riderAppResetUrl($token);
+      /* Versandfehler dürfen die Antwort nicht verändern (sonst wäre
+         "Mailserver down" von außen von "E-Mail existiert nicht" zu
+         unterscheiden) — geloggt, nicht durchgereicht. Siehe Spec §5. */
+      try{
+        smtpSendMail($pdo, $email, 'Alleycat Dispatch — Passwort zurücksetzen',
+          "Klicke auf den folgenden Link, um dein Passwort zurückzusetzen (30 Minuten gültig):\n\n{$resetUrl}\n\nWenn du das nicht warst, ignoriere diese E-Mail.");
+      }catch(Exception $e){
+        error_log('[alleycat smtp] rider-forgot: ' . $e->getMessage());
+      }
+    }
+  }
+  /* IMMER dieselbe Antwort, ob E-Mail existiert/gültig war oder nicht. */
+  riderOut(['ok' => true]);
+}
+
+/* Baut die Reset-URL aus derselben riderAppUrl-Konfiguration, die auch
+   ?a=discover in auth.php kennt — direkter KV-Zugriff, weil rider.php
+   kein Storage-Seam-Objekt hat wie das JS-Frontend. */
+function riderAppResetUrl($token){
+  global $pdo;
+  $stmt = $pdo->prepare("SELECT `value` FROM `" . ALLEYCAT_TABLE . "` WHERE `key` = 'config:riderAppUrl' AND `org_id` = 0");
+  $stmt->execute();
+  $baseUrl = rtrim((string)$stmt->fetchColumn(), '/');
+  return $baseUrl . '/#pw.' . $token;
+}
+
+if($action === 'rider-reset'){
+  riderRequirePost();
+  riderCheckRateLimit($pdo);
+  $body = riderJsonBody();
+  $token = (string)($body['token'] ?? '');
+  $newPassword = (string)($body['newPassword'] ?? '');
+
+  if($token === '' || !riderUserPasswordValid($newPassword)){
+    riderRejectAuth($pdo, 'invalid_input');
+  }
+
+  $resetTable = riderTableName('password_reset');
+  $stmt = $pdo->prepare("SELECT * FROM `{$resetTable}` WHERE `token_hash` = ?");
+  $stmt->execute([riderHashToken($token)]);
+  $reset = $stmt->fetch(PDO::FETCH_ASSOC);
+
+  if(!$reset || strtotime($reset['expires_at']) <= time()){
+    riderRejectAuth($pdo, 'reset_invalid');
+  }
+  riderClearFailures($pdo);
+
+  $pdo->prepare("UPDATE `" . riderTableName('user') . "` SET `password_hash` = ? WHERE `id` = ?")
+      ->execute([password_hash($newPassword, PASSWORD_DEFAULT), (int)$reset['rider_user_id']]);
+  /* Einmal verwendet, sofort löschen statt used_at zu setzen — anders als
+     beim Admin-Reset-Code gibt es hier keinen Grund, verbrauchte Zeilen
+     aufzuheben (kein Audit-Log für Fahrer-Konten). */
+  $pdo->prepare("DELETE FROM `{$resetTable}` WHERE `token_hash` = ?")->execute([riderHashToken($token)]);
+  $pdo->prepare("DELETE FROM `" . riderTableName('session') . "` WHERE `rider_user_id` = ?")
+      ->execute([(int)$reset['rider_user_id']]);
+
+  riderOut(['ok' => true]);
 }
 
 if($action === 'claim'){
