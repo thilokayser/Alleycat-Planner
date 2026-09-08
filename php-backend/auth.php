@@ -29,6 +29,8 @@
      POST ?a=reset-password  Passwort mit Reset-Code setzen (kein Token)
      POST ?a=users/logout-all  alle Sessions eines Benutzers invalidieren (nur SysAdmin)
      GET  ?a=audit-log      jüngste Audit-Log-Einträge (nur SysAdmin)
+     POST ?a=smtp-test      Testmail über die gespeicherte SMTP-Konfiguration
+                            verschicken (nur SysAdmin)
 
    Instanzweit vs. org-weit: alles unter ?a=users*, ?a=invite* und
    ?a=audit-log betrifft die GESAMTE Instanz und verlangt deshalb
@@ -909,6 +911,27 @@ if($action === 'audit-log'){
       'detail' => $r['detail']
     ];
   }, $rows->fetchAll(PDO::FETCH_ASSOC))]);
+}
+
+require __DIR__ . '/smtp.php';
+
+if($action === 'smtp-test'){
+  authRequirePost();
+  $access = apiVerifyAccess($pdo, 'captain');
+  authRequireSysAdmin($access);
+  $body = authJsonBody();
+  $toEmail = (string)($body['toEmail'] ?? '');
+  if(!riderEmailValid($toEmail)) apiSendJsonError(400, 'invalid_input');
+
+  try{
+    smtpSendMail($pdo, $toEmail, 'Alleycat Dispatch — SMTP-Test', 'Wenn du das liest, funktioniert der SMTP-Versand.');
+    authOut(['ok' => true]);
+  }catch(Exception $e){
+    /* Anders als rider-forgot: hier DARF der echte Fehler durch, das
+       ist genau der Zweck des Buttons (siehe Spec §5) — nur SysAdmin
+       sieht diese Antwort, kein Enumeration-Risiko. */
+    apiSendJsonError(502, 'smtp_failed', $e->getMessage());
+  }
 }
 
 apiSendJsonError(400, 'unknown_action');
