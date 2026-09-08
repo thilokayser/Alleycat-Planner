@@ -16,6 +16,33 @@
    Komplexität.
    ------------------------------------------------------------------ */
 
+/* RFC 2047 "B"-Encoded-Word, mit Zeilenfaltung: ein Encoded-Word darf laut
+   RFC 2047 §2 höchstens 75 Zeichen lang sein (inkl. "=?UTF-8?B?"/"?=") und
+   dabei nie ein Mehrbyte-Zeichen mittendrin zerschneiden — reines
+   Abschneiden des fertigen Base64-Strings würde beides verletzen. Deshalb
+   zeichenweise (nicht byteweise) in Häppchen packen, jedes einzeln
+   base64-kodieren, mehrere Encoded-Words per CRLF+Space (Folding-
+   Whitespace, RFC 5322 §2.2.3) verbinden. Aktuell sendet dieses Feature
+   nur zwei kurze, einwortige Betreffe (beide unter dem Limit) — die
+   Faltung greift erst, falls das je nicht mehr stimmt. */
+function smtpEncodeHeaderWord($text){
+  if(mb_check_encoding($text, 'ASCII')) return $text;
+  $words = [];
+  $chunk = '';
+  foreach(mb_str_split($text) as $char){
+    $candidate = $chunk . $char;
+    // 60 Base64-Zeichen + "=?UTF-8?B?" (10) + "?=" (2) = 72, sicher unter 75.
+    if($chunk !== '' && strlen(base64_encode($candidate)) > 60){
+      $words[] = '=?UTF-8?B?' . base64_encode($chunk) . '?=';
+      $chunk = $char;
+    } else {
+      $chunk = $candidate;
+    }
+  }
+  if($chunk !== '') $words[] = '=?UTF-8?B?' . base64_encode($chunk) . '?=';
+  return implode("\r\n ", $words);
+}
+
 function smtpLoadSettings(PDO $pdo){
   /* Instanzweite Config liegt in der Basis-KV-Tabelle (org_id=0-
      Sentinel), gleiches Muster wie config:riderAppUrl — siehe api.php
@@ -110,10 +137,9 @@ function smtpSendMail(PDO $pdo, $toEmail, $subject, $bodyText){
   /* RFC 2047 encoded-word: rohes UTF-8 (z. B. das Em-Dash "—" in jedem
      Betreff dieses Features) in einem unkodierten Subject:-Header kann
      von strikten/älteren Mailservern/-clients abgelehnt oder falsch
-     dargestellt werden — dieser Client verhandelt kein SMTPUTF8. */
-  $encodedSubject = mb_check_encoding($subject, 'ASCII')
-    ? $subject
-    : '=?UTF-8?B?' . base64_encode($subject) . '?=';
+     dargestellt werden — dieser Client verhandelt kein SMTPUTF8.
+     smtpEncodeHeaderWord() faltet außerdem lange Betreffe korrekt. */
+  $encodedSubject = smtpEncodeHeaderWord($subject);
   $headers = "From: {$fromHeader}\r\nTo: {$toEmail}\r\nSubject: {$encodedSubject}\r\nContent-Type: text/plain; charset=UTF-8\r\n";
   /* RFC 5321 §2.3.7 verlangt CRLF auf der Leitung. Aufrufer übergeben hier
      typischerweise \n-only PHP-Strings — erst auf \n normalisieren (falls

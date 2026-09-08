@@ -1315,8 +1315,12 @@ function renderSmtpSettingsSection(){
   const cfg = state.smtpSettings || {};
   /* Gleiche Bedingung wie smtpLoadSettings() im PHP-Backend (php-backend/
      smtp.php): fehlt host ODER fromAddress, gilt SMTP als "nicht
-     konfiguriert" und rider-forgot/smtp-test funktionieren nicht. */
-  const notConfigured = !cfg.host || !cfg.fromAddress;
+     konfiguriert" und rider-forgot/smtp-test funktionieren nicht.
+     Zusätzlich an state.smtpSettings selbst geprüft (nicht nur cfg), damit
+     die Warnung nicht kurz aufblitzt, bevor loadSmtpSettingsIfNeeded()
+     überhaupt fertig geladen hat — "noch unbekannt" ist etwas anderes als
+     "geladen und leer". */
+  const notConfigured = !!state.smtpSettings && (!cfg.host || !cfg.fromAddress);
   return `
     <div class="settings-section">
       <h3>${t('auth.smtpHeading')}</h3>
