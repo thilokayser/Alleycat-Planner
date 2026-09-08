@@ -1,6 +1,17 @@
 # Vom install.php-Installer erzeugt — enthält DB-Zugangsdaten + API-Key im Klartext.
 php-backend/config.php
 
+# Von install.php automatisch erzeugte Pretty-URL-Konfiguration fürs Web-
+# Root eines echten Deployments (siehe CLAUDE.md) — kein Repo-Inhalt.
+# Ausschließlich im Repo-Root ignoriert, nicht rekursiv: php-backend/.htaccess
+# ist ein bewusst versionierter Schutz für config.php und bleibt getrackt.
+/.htaccess
+
+# Export der Auto-Backup-Funktion (data-safety.js/storage-server.js/
+# storage-local.js) — Werkzeug-Ausgabe aus manuellem Testen, kein Repo-Inhalt.
+alleycat-autobackup-*.json
+alleycat-autobackup-*.sqlite
+
 # macOS Finder
 .DS_Store
 
