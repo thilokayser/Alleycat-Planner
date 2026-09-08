@@ -3055,6 +3055,8 @@ async function runAlleycatTestSuite(){
     check('parseRiderQrPayload() weist eine zu kurze publicId ab', parseRiderQrPayload(`#r.kurz.${rTok}`) === null);
     check('parseRiderQrPayload() weist ein zu kurzes Token ab', parseRiderQrPayload(`#r.${pid}.abc`) === null);
     check('parseRiderQrPayload() weist Leerstring ab', parseRiderQrPayload('') === null);
+    checkEqual('parseRiderQrPayload erkennt Reset-Fragment', parseRiderQrPayload('https://x.tld/app.html#pw.' + 'a'.repeat(64)).kind, 'resetPassword');
+    checkEqual('parseRiderQrPayload lehnt zu kurzes Reset-Token ab', parseRiderQrPayload('#pw.abc'), null);
 
     /* Slot-Status */
     checkEqual('slotStatusToDb() bildet "" auf "free" ab', slotStatusToDb(''), 'free');

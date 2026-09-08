@@ -6,6 +6,7 @@
    liest Event-IDs, sie erzeugt keine.                                    */
 const RIDER_PUBLIC_ID_RE = /^[a-z0-9]{12}$/;
 const RIDER_TOKEN_RE = /^[a-z0-9]{32}$/;
+const RIDER_RESET_TOKEN_RE = /^[a-f0-9]{64}$/; // bin2hex(random_bytes(32)), siehe riderUserGenerateToken()
 /* ---------------- QR-Nutzlast ----------------
    Drei Formate, alle als URL, damit ein Scan mit der System-Kamera in der
    App landet statt in einer Fehlermeldung:
@@ -50,6 +51,11 @@ function parseRiderQrPayload(text){
     if(!RIDER_PUBLIC_ID_RE.test(publicId)) return null;
     return {kind: 'selfRegister', publicId};
   }
+  if(parts[0] === 'pw' && parts.length === 2){
+    const [, resetToken] = parts;
+    if(!RIDER_RESET_TOKEN_RE.test(resetToken)) return null;
+    return {kind: 'resetPassword', resetToken};
+  }
   return null;
 }
 
@@ -61,4 +67,7 @@ function buildCheckpointQrPayload(baseUrl, evt, cp){
 }
 function buildSelfRegisterQrPayload(baseUrl, evt){
   return `${baseUrl}#g.${evt.publicId}`;
+}
+function buildResetPasswordUrl(baseUrl, token){
+  return `${baseUrl}#pw.${token}`;
 }
