@@ -106,9 +106,17 @@ function riderErrorMessage(res){
    Datei ist bereits mit der Selbstregistrierung (Aktion `claim`, Task 3)
    belegt — anderer Zweck, andere Signatur. Diese Kontofunktion heißt
    deshalb `riderApiClaimAccount`, nicht `riderApiClaim`, um die
-   bestehende Funktion nicht zu überschreiben. */
+   bestehende Funktion nicht zu überschreiben.
 
-function riderApiRegister(email, password, displayName){
+   Gleiche Kollision besteht bei `riderApiRegister`: Zeile 68 oben ist
+   die Selbstregistrierung fürs Rennen (Aktion `register`, ein
+   Payload-Objekt). Eine zweite Funktion gleichen Namens hier hätte sie
+   per Funktions-Hoisting stillschweigend überschrieben und
+   riderSubmitRegistration() (init.js) kaputt gemacht — das ist beim
+   Review dieses Tasks aufgefallen, nicht Teil der ursprünglichen
+   Planung. Deshalb `riderApiAccountRegister`, nicht `riderApiRegister`. */
+
+function riderApiAccountRegister(email, password, displayName){
   return riderRequest('POST', 'rider-register', {}, {email, password, displayName}, null);
 }
 function riderApiLogin(email, password){

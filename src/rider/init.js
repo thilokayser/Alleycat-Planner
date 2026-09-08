@@ -39,6 +39,18 @@ async function initRider(){
     riderStartSelfRegister(fromUrl.publicId);
     return;
   }
+  if(fromUrl && fromUrl.kind === 'resetPassword'){
+    /* Passwort-Reset-Link (#pw.<token>) aus der Reset-Mail — muss vor
+       jeder Session-Prüfung abzweigen, genau wie 'selfRegister' oben,
+       sonst würde eine gespeicherte Slot-Session diesen Einstieg
+       verschlucken und der Fahrer landete auf 'home' statt auf der
+       Reset-Ansicht. */
+    riderState.resetToken = fromUrl.resetToken;
+    riderState.view = 'accountReset';
+    try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+    renderRider();
+    return;
+  }
   if(fromUrl && fromUrl.kind === 'rider'){
     riderState.session = {publicId: fromUrl.publicId, riderToken: fromUrl.riderToken, bib: null};
     riderSaveSession(riderState.session);
@@ -428,6 +440,171 @@ function riderTryGetPosition(){
       );
     }catch(e){ finish(null); }
   });
+}
+
+/* ---------------- Fahrer-Konten: Routing + Submit-Handler ----------------
+   Getrennt vom Slot-Login oben (riderGoLogin() usw.): ein Konto ist eine
+   zweite, unabhängige Anmeldung (E-Mail/Passwort statt Spokecard-Token),
+   siehe riderState.account in state.js. */
+
+/* Minimaler Ersatz für eine Toast-Funktion: die Fahrer-App hat (anders
+   als der Organizer mit showToast()) noch keine eigene. riderState.notice
+   wird analog zu riderState.error gerendert (rider-note-ok statt
+   rider-note-error) und muss beim nächsten Go-Wechsel selbst geleert
+   werden, siehe die riderGoAccount*()-Funktionen unten. */
+function showRiderToast(msg){ riderState.notice = msg; }
+
+function riderGoAccountLogin(){ riderState.error = ''; riderState.notice = ''; riderState.view = 'accountLogin'; renderRider(); }
+function riderGoAccountRegister(){ riderState.error = ''; riderState.notice = ''; riderState.view = 'accountRegister'; renderRider(); }
+function riderGoAccountForgot(){ riderState.error = ''; riderState.notice = ''; riderState.view = 'accountForgot'; renderRider(); }
+function riderGoProfile(){
+  riderState.error = '';
+  riderState.notice = '';
+  riderState.view = 'profile';
+  renderRider();
+  riderLoadHistory();
+}
+
+async function riderLoadHistory(){
+  if(!riderState.account) return;
+  const res = await riderApiHistory(riderState.account.authToken);
+  if(res.ok){
+    riderState.history = res.data.entries || [];
+    renderRider();
+  }
+}
+
+function riderReadField(id){
+  const el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+async function riderSubmitAccountLogin(){
+  const email = riderReadField('rider-acct-email');
+  const password = riderReadField('rider-acct-password');
+  /* Getippte Werte VOR dem ersten renderRider() zurück in
+     riderState.accountForm schreiben — sonst löscht ein fehlgeschlagener
+     Versuch die Eingabe beim Neu-Rendern (gleiche Falle wie bei
+     riderSubmitRegistration() oben). Das Passwort bleibt bewusst außen
+     vor, es gehört nicht in riderState. */
+  riderState.accountForm.email = email;
+  riderState.busy = true; renderRider();
+  const res = await riderApiLogin(email, password);
+  riderState.busy = false;
+  if(!res.ok){
+    riderState.error = t('riderScan.errAcctLoginFailed');
+    renderRider();
+    return;
+  }
+  riderState.account = {authToken: res.data.authToken, displayName: res.data.displayName};
+  riderSaveAccount(riderState.account);
+  if(riderState.pendingClaimAfterLogin){
+    riderState.pendingClaimAfterLogin = false;
+    await riderSubmitAccountClaim();
+  } else {
+    riderGoHome();
+  }
+}
+
+async function riderSubmitAccountRegister(){
+  const displayName = riderReadField('rider-acct-displayname');
+  const email = riderReadField('rider-acct-email');
+  const password = riderReadField('rider-acct-password');
+  riderState.accountForm.email = email;
+  riderState.accountForm.displayName = displayName;
+  riderState.busy = true; renderRider();
+  const res = await riderApiAccountRegister(email, password, displayName);
+  riderState.busy = false;
+  if(!res.ok){
+    riderState.error = res.data && res.data.error === 'email_taken'
+      ? t('riderScan.errAcctEmailTaken') : t('riderScan.errAcctRegisterFailed');
+    renderRider();
+    return;
+  }
+  riderState.account = {authToken: res.data.authToken, displayName: res.data.displayName};
+  riderSaveAccount(riderState.account);
+  if(riderState.pendingClaimAfterLogin){
+    riderState.pendingClaimAfterLogin = false;
+    await riderSubmitAccountClaim();
+  } else {
+    riderGoHome();
+  }
+}
+
+async function riderSubmitAccountForgot(){
+  const email = riderReadField('rider-acct-email');
+  riderState.busy = true; renderRider();
+  await riderApiForgot(email); // immer ok:true, siehe Backend-Kommentar
+  riderState.busy = false;
+  riderState.error = '';
+  riderState.view = 'accountLogin';
+  showRiderToast(t('riderScan.acctForgotSent'));
+  renderRider();
+}
+
+async function riderSubmitAccountReset(){
+  const newPassword = riderReadField('rider-acct-newpassword');
+  riderState.busy = true; renderRider();
+  const res = await riderApiReset(riderState.resetToken, newPassword);
+  riderState.busy = false;
+  if(!res.ok){
+    riderState.error = t('riderScan.errAcctResetFailed');
+    renderRider();
+    return;
+  }
+  riderState.resetToken = null;
+  riderState.view = 'accountLogin';
+  showRiderToast(t('riderScan.acctResetDone'));
+  renderRider();
+}
+
+function riderLogoutAccount(){
+  riderState.account = null;
+  riderState.history = [];
+  riderClearAccount();
+  riderGoHome();
+}
+
+/* Claim-Button auf dem Home-Screen: eingeloggt -> sofort claimen mit der
+   aktiven Slot-Session; ausgeloggt -> erst zum Login, danach automatisch
+   claimen (dieselbe Funktion wird nach erfolgreichem Login/Register
+   erneut aufgerufen, siehe riderState.pendingClaimAfterLogin oben). */
+function riderStartClaim(){
+  if(!riderState.session){
+    riderState.error = t('riderScan.errClaimNoSlot');
+    renderRider();
+    return;
+  }
+  if(!riderState.account){
+    riderState.pendingClaimAfterLogin = true;
+    riderGoAccountLogin();
+    return;
+  }
+  riderSubmitAccountClaim();
+}
+
+/* Hinweis zur Benennung: es gibt bereits ein `riderSubmitClaim()` weiter
+   oben in dieser Datei — das ist der Absende-Handler der
+   Selbstregistrierung (Teilprojekt 3, claimt eine freie Startnummer ohne
+   Konto). Andere Funktion, anderer Zweck; ein zweites `riderSubmitClaim`
+   hier hätte das per Funktions-Hoisting überschrieben und die
+   Selbstregistrierung kaputt gemacht. Deshalb `riderSubmitAccountClaim`. */
+async function riderSubmitAccountClaim(){
+  riderState.busy = true; renderRider();
+  const res = await riderApiClaimAccount(
+    riderState.account.authToken,
+    riderState.session.publicId,
+    riderState.session.riderToken,
+    riderState.session.code
+  );
+  riderState.busy = false;
+  if(!res.ok){
+    riderState.error = t('riderScan.errClaimFailed');
+    renderRider();
+    return;
+  }
+  showRiderToast(t('riderScan.claimDone'));
+  riderGoHome();
 }
 
 function riderUuid(){

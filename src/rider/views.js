@@ -20,6 +20,11 @@ function renderRider(){
     case 'checkpointCode': el.innerHTML = riderViewCheckpointCode(); break;
     case 'selfRegisterList': el.innerHTML = riderViewSelfRegisterList(); break;
     case 'selfRegisterForm': el.innerHTML = riderViewSelfRegisterForm(); break;
+    case 'accountLogin':    el.innerHTML = riderViewAccountLogin(); break;
+    case 'accountRegister': el.innerHTML = riderViewAccountRegister(); break;
+    case 'accountForgot':   el.innerHTML = riderViewAccountForgot(); break;
+    case 'accountReset':    el.innerHTML = riderViewAccountReset(); break;
+    case 'profile':         el.innerHTML = riderViewProfile(); break;
     default:         el.innerHTML = riderViewLoading();
   }
 }
@@ -218,12 +223,15 @@ function riderViewHome(){
     ${riderHead()}
     <div class="rider-body">
       ${riderState.offlineSince ? `<div class="rider-note rider-note-warn">${escapeHtml(t('riderScan.homeOfflineBanner', {time: riderShortTime(riderState.offlineSince)}))}</div>` : ''}
+      ${riderState.notice ? `<div class="rider-note rider-note-ok">${escapeHtml(riderState.notice)}</div>` : ''}
       ${riderState.error ? `<div class="rider-note rider-note-error">${escapeHtml(riderState.error)}</div>` : ''}
       ${queued ? `<div class="rider-note rider-note-warn"><span class="rider-queue-badge">⏳ ${escapeHtml(queued === 1 ? t('riderScan.homeQueueWaiting', {count: queued}) : t('riderScan.homeQueueWaitingPlural', {count: queued}))}</span></div>` : ''}
       ${showProgress ? `<div class="rider-cp-list">${rows}</div>` : ''}
     </div>
     <div class="rider-actions">
       <button type="button" class="rider-btn rider-btn-primary" onclick="riderStartCheckpointScan()">${t('riderScan.homeScanButton')}</button>
+      <button type="button" class="rider-btn rider-btn-ghost" onclick="riderStartClaim()">${riderState.account ? t('riderScan.claimButton') : t('riderScan.claimButtonLoggedOut')}</button>
+      ${riderState.account ? `<button type="button" class="rider-btn rider-btn-ghost" onclick="riderGoProfile()">${t('riderScan.profileLink')}</button>` : ''}
     </div>
   `;
 }
@@ -287,6 +295,112 @@ function riderViewCheckpointCode(){
     <div class="rider-actions">
       <button type="button" class="rider-btn rider-btn-primary" onclick="riderSubmitCheckpointCode()">${t('riderScan.cpCodeSubmit')}</button>
       <button type="button" class="rider-btn rider-btn-ghost" onclick="riderGoHome()">${t('riderScan.cpCodeCancel')}</button>
+    </div>
+  `;
+}
+
+/* ---------------- Fahrer-Konten: Login/Register/Reset/Profil ----------------
+   Eigenes riderState.accountForm hält Email/Anzeigename über einen
+   fehlgeschlagenen Absende-Versuch hinweg am Leben (renderRider() ersetzt
+   das gesamte innerHTML und würde sonst getippte Werte löschen) — das
+   Passwort selbst wandert NIE in riderState, siehe riderSubmitAccountLogin()/
+   riderSubmitAccountRegister() in init.js.
+
+   riderState.notice ist der minimale Ersatz für eine Toast-Funktion: die
+   Fahrer-App kennt (anders als der Organizer mit showToast()) noch keine
+   eigene, also ein neues Feld analog zu riderState.error, hier grün statt
+   rot gerendert (rider-note-ok, in rider.css bereits vorhanden). */
+function riderViewAccountLogin(){
+  return `
+    ${riderHead()}
+    <div class="rider-body">
+      <div class="rider-title">${t('riderScan.acctLoginTitle')}</div>
+      ${riderState.notice ? `<div class="rider-note rider-note-ok">${escapeHtml(riderState.notice)}</div>` : ''}
+      ${riderState.error ? `<div class="rider-note rider-note-error">${escapeHtml(riderState.error)}</div>` : ''}
+      <div class="rider-field"><label>${t('riderScan.acctEmailLabel')}</label>
+        <input type="email" id="rider-acct-email" value="${escapeHtml(riderState.accountForm.email)}"></div>
+      <div class="rider-field"><label>${t('riderScan.acctPasswordLabel')}</label>
+        <input type="password" id="rider-acct-password"></div>
+    </div>
+    <div class="rider-actions">
+      <button type="button" class="rider-btn rider-btn-primary" onclick="riderSubmitAccountLogin()">${t('riderScan.acctLoginSubmit')}</button>
+      <button type="button" class="rider-btn rider-btn-ghost" onclick="riderGoAccountRegister()">${t('riderScan.acctGoRegister')}</button>
+      <button type="button" class="rider-btn rider-btn-ghost" onclick="riderGoAccountForgot()">${t('riderScan.acctGoForgot')}</button>
+    </div>
+  `;
+}
+
+function riderViewAccountRegister(){
+  return `
+    ${riderHead()}
+    <div class="rider-body">
+      <div class="rider-title">${t('riderScan.acctRegisterTitle')}</div>
+      ${riderState.error ? `<div class="rider-note rider-note-error">${escapeHtml(riderState.error)}</div>` : ''}
+      <div class="rider-field"><label>${t('riderScan.acctDisplayNameLabel')}</label>
+        <input type="text" id="rider-acct-displayname" value="${escapeHtml(riderState.accountForm.displayName)}"></div>
+      <div class="rider-field"><label>${t('riderScan.acctEmailLabel')}</label>
+        <input type="email" id="rider-acct-email" value="${escapeHtml(riderState.accountForm.email)}"></div>
+      <div class="rider-field"><label>${t('riderScan.acctPasswordLabel')}</label>
+        <input type="password" id="rider-acct-password"></div>
+      <div class="rider-note">${t('riderScan.acctPasswordHint')}</div>
+    </div>
+    <div class="rider-actions">
+      <button type="button" class="rider-btn rider-btn-primary" onclick="riderSubmitAccountRegister()">${t('riderScan.acctRegisterSubmit')}</button>
+      <button type="button" class="rider-btn rider-btn-ghost" onclick="riderGoAccountLogin()">${t('riderScan.acctGoLogin')}</button>
+    </div>
+  `;
+}
+
+function riderViewAccountForgot(){
+  return `
+    ${riderHead()}
+    <div class="rider-body">
+      <div class="rider-title">${t('riderScan.acctForgotTitle')}</div>
+      <div class="rider-lead">${t('riderScan.acctForgotLead')}</div>
+      ${riderState.error ? `<div class="rider-note rider-note-error">${escapeHtml(riderState.error)}</div>` : ''}
+      <div class="rider-field"><label>${t('riderScan.acctEmailLabel')}</label>
+        <input type="email" id="rider-acct-email" value="${escapeHtml(riderState.accountForm.email)}"></div>
+    </div>
+    <div class="rider-actions">
+      <button type="button" class="rider-btn rider-btn-primary" onclick="riderSubmitAccountForgot()">${t('riderScan.acctForgotSubmit')}</button>
+      <button type="button" class="rider-btn rider-btn-ghost" onclick="riderGoAccountLogin()">${t('riderScan.acctGoLogin')}</button>
+    </div>
+  `;
+}
+
+function riderViewAccountReset(){
+  return `
+    ${riderHead()}
+    <div class="rider-body">
+      <div class="rider-title">${t('riderScan.acctResetTitle')}</div>
+      ${riderState.error ? `<div class="rider-note rider-note-error">${escapeHtml(riderState.error)}</div>` : ''}
+      <div class="rider-field"><label>${t('riderScan.acctResetPasswordLabel')}</label>
+        <input type="password" id="rider-acct-newpassword"></div>
+    </div>
+    <div class="rider-actions">
+      <button type="button" class="rider-btn rider-btn-primary" onclick="riderSubmitAccountReset()">${t('riderScan.acctResetSubmit')}</button>
+    </div>
+  `;
+}
+
+function riderViewProfile(){
+  const rows = riderState.history.map(h => `
+    <div class="rider-cp done">
+      <div class="rider-cp-main">
+        <div class="rider-cp-name">${escapeHtml(h.eventName)}</div>
+        <div class="rider-cp-hint">${escapeHtml(t('riderScan.profileBib', {bib: h.bib}))} · ${escapeHtml(t('riderScan.profileCheckpointsDone', {count: h.checkpointsDone}))}</div>
+      </div>
+    </div>
+  `).join('');
+  return `
+    ${riderHead()}
+    <div class="rider-body">
+      <div class="rider-title">${t('riderScan.profileTitle', {name: riderState.account ? riderState.account.displayName : ''})}</div>
+      ${riderState.history.length ? `<div class="rider-cp-list">${rows}</div>` : `<div class="rider-lead">${t('riderScan.profileEmpty')}</div>`}
+    </div>
+    <div class="rider-actions">
+      <button type="button" class="rider-btn rider-btn-ghost" onclick="riderLogoutAccount()">${t('riderScan.acctLogout')}</button>
+      <button type="button" class="rider-btn rider-btn-ghost" onclick="riderGoHome()">${t('riderScan.profileBack')}</button>
     </div>
   `;
 }

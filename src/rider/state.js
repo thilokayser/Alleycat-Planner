@@ -16,7 +16,7 @@ const RIDER_LS_CACHE = 'alleycat-rider:cache';
 const RIDER_LS_ACCOUNT = 'alleycat-rider:account';
 
 const riderState = {
-  view: 'loading',      // loading | login | code | register | pending | home | scanner | confirm | error | selfRegisterList | selfRegisterForm
+  view: 'loading',      // loading | login | code | register | pending | home | scanner | confirm | error | selfRegisterList | selfRegisterForm | accountLogin | accountRegister | accountForgot | accountReset | profile
   session: null,        // {publicId, riderToken, bib}
   event: null,          // {name, status}
   settings: {},
@@ -42,7 +42,14 @@ const riderState = {
   account: null,          // {authToken, displayName} | null
   history: [],            // ?a=rider-history Antwort-Einträge
   accountForm: {email: '', password: '', displayName: ''},
-  resetToken: null        // aus #pw.<token>, für die Reset-Ansicht zwischengeparkt
+  resetToken: null,       // aus #pw.<token>, für die Reset-Ansicht zwischengeparkt
+  /* Claim-Button auf dem Home-Screen: gedrückt, ohne dass ein Konto
+     eingeloggt ist -> erst zum Login, danach den Claim automatisch
+     nachholen. Siehe riderStartClaim()/riderSubmitAccountLogin() in
+     init.js. */
+  pendingClaimAfterLogin: false,
+  notice: ''              // grüner Hinweis (Erfolg), Pendant zu error — es gibt noch
+                           // keine eigene Toast-Funktion in der Fahrer-App
 };
 
 function riderLoadJson(key){

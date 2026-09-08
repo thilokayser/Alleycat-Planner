@@ -186,6 +186,17 @@ async function runRiderTestSuite(){
     checkEqual('rider-claim: riderToken im Body', sentBody.riderToken, TOK);
   }
 
+  // --- Claim-Button-Routing ---
+  {
+    resetAll();
+    riderState.session = {publicId: PID, riderToken: TOK, bib: 7};
+    riderState.account = null;
+    riderState.pendingClaimAfterLogin = false;
+    riderStartClaim();
+    checkEqual('Claim ohne Login führt zu Login-Screen', riderState.view, 'accountLogin');
+    checkEqual('Claim-Wunsch wird gemerkt', riderState.pendingClaimAfterLogin, true);
+  }
+
   /* ---------------- 5) Kein Netz: Abbruch statt Reihenversagen ------ */
   {
     resetAll();
