@@ -599,6 +599,9 @@ function riderStartClaim(){
    Selbstregistrierung kaputt gemacht. Deshalb `riderSubmitAccountClaim`. */
 async function riderSubmitAccountClaim(){
   riderState.busy = true; renderRider();
+  /* riderToken ist gesetzt, wenn die Session per QR-Scan/#r.-Link entstand,
+     code, wenn per Code-Eingabe (Zeile ~208 oben) — nie beide gleichzeitig.
+     riderApiClaimAccount() reicht ohnehin nur das nicht-leere Feld weiter. */
   const res = await riderApiClaimAccount(
     riderState.account.authToken,
     riderState.session.publicId,

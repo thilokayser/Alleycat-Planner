@@ -1443,6 +1443,7 @@ const translations = {
       smtpPortLabel: 'Port',
       smtpUsernameLabel: 'Benutzername',
       smtpPasswordLabel: 'Passwort',
+      smtpPasswordKeepPlaceholder: '(unverändert lassen)',
       smtpFromAddressLabel: 'Absender-Adresse',
       smtpFromNameLabel: 'Absender-Name',
       smtpTestEmailLabel: 'Test-Mail an',

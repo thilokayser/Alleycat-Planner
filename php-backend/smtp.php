@@ -65,11 +65,13 @@ function smtpLoadSettings(PDO $pdo){
 }
 
 /* Liest eine oder mehrere SMTP-Antwortzeilen ("250-..." Fortsetzung,
-   "250 " Ende) und gibt den letzten Code als int zurück. */
+   "250 " Ende) und gibt den letzten Code als int zurück. 4096 statt der
+   RFC-Mindestlänge, damit eine ungewöhnlich lange EHLO-Fähigkeitenzeile
+   (viele Extensions in einer Zeile) nicht fehlgeschnitten geparst wird. */
 function smtpReadResponse($sock){
   $code = 0;
   while(!feof($sock)){
-    $line = fgets($sock, 512);
+    $line = fgets($sock, 4096);
     if($line === false) break;
     $code = (int)substr($line, 0, 3);
     if(substr($line, 3, 1) !== '-') break; // Leerzeichen statt Bindestrich = letzte Zeile
@@ -101,6 +103,19 @@ function smtpSendMail(PDO $pdo, $toEmail, $subject, $bodyText){
   $sock = @stream_socket_client($transport . $cfg['host'] . ':' . $cfg['port'], $errno, $errstr, 10);
   if(!$sock) throw new Exception("Verbindung zu {$cfg['host']}:{$cfg['port']} fehlgeschlagen: {$errstr}");
 
+  /* try/finally statt PHPs Refcounting-Cleanup zu vertrauen: schließt den
+     Socket auch dann garantiert, wenn irgendein smtpSendCommand() dazwischen
+     wirft (abgelehnte Auth, abgelehnter Empfänger, Timeout) — nicht nur im
+     Erfolgsfall am Ende der Funktion. */
+  try{
+    smtpSendMailOverSocket($sock, $cfg, $toEmail, $subject, $bodyText, $useImplicitTls);
+  }finally{
+    fclose($sock);
+  }
+  return true;
+}
+
+function smtpSendMailOverSocket($sock, $cfg, $toEmail, $subject, $bodyText, $useImplicitTls){
   stream_set_timeout($sock, 10);
   $greeting = smtpReadResponse($sock); // Server-Banner, kein Befehl
   if($greeting !== 220) throw new Exception("SMTP: kein gültiges Banner (Code {$greeting})");
@@ -158,6 +173,4 @@ function smtpSendMail(PDO $pdo, $toEmail, $subject, $bodyText){
   if($code !== 250) throw new Exception("SMTP: Zustellung abgelehnt (Code {$code})");
 
   fwrite($sock, "QUIT\r\n");
-  fclose($sock);
-  return true;
 }

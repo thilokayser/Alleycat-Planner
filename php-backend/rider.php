@@ -393,9 +393,14 @@ if($action === 'freebibs'){
 /* Gleiche Policy wie authPasswordValid() in auth.php — dort nicht
    importierbar, ohne rider.php an auth.php zu koppeln (die beiden
    Endpunkte bleiben bewusst unabhängig ladbar). Bei Änderung an einer
-   Stelle: die andere mitziehen. */
+   Stelle: die andere mitziehen. Obergrenze 72 Bytes: password_hash()
+   (bcrypt) schneidet dort stillschweigend ab — ohne diese Prüfung würde
+   ein Fahrer mit einem längeren Passwort ein Konto bekommen, dessen
+   tatsächlich wirksames Passwort ein unsichtbar gekürzter Teil seiner
+   Eingabe ist. */
 function riderUserPasswordValid($password){
-  return strlen((string)$password) >= 12;
+  $len = strlen((string)$password);
+  return $len >= 12 && $len <= 72;
 }
 
 require __DIR__ . '/smtp.php';
@@ -638,7 +643,7 @@ if($action === 'claim'){
 
 if($action === 'rider-claim'){
   riderRequirePost();
-  riderCheckRateLimit($pdo);
+  // riderCheckRateLimit() läuft bereits unconditional für jede Action weiter oben.
   $session = riderUserRequireSession($pdo);
   $body = riderJsonBody();
   $publicId = (string)($body['publicId'] ?? '');
@@ -680,22 +685,44 @@ if($action === 'rider-history'){
   $stmt->execute([$session['id']]);
   $claims = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+  /* Gleiche Freigabe wie ?a=me: Fortschritt nur zeigen, wenn der Organizer
+     dieses konkreten Events sie per settings.progress eingeschaltet hat —
+     sonst bliebe die Fortschrittsanzeige über die Fahrer-App umgehbar,
+     indem man einfach die Cross-Event-Historie statt ?a=me abfragt.
+     Ein Rider mit vielen Teilnahmen löste hier vorher eine eigene
+     SELECT COUNT(*) pro Zeile aus (N+1) — stattdessen einmalig alle
+     Paare sammeln, für die Fortschritt überhaupt sichtbar sein darf, und
+     mit einem einzigen gruppierten Query abfragen. */
+  $progressPairs = [];
+  foreach($claims as $i => $claim){
+    $claimSettings = json_decode($claim['settings'], true) ?: [];
+    $enabled = !empty($claimSettings['progress']);
+    $claims[$i]['progressEnabled'] = $enabled;
+    if($enabled) $progressPairs[] = [$claim['public_id'], (int)$claim['bib']];
+  }
+
+  $checkpointCounts = [];
+  if($progressPairs){
+    $placeholders = implode(',', array_fill(0, count($progressPairs), '(?,?)'));
+    $params = [];
+    foreach($progressPairs as [$pid, $bib]){ $params[] = $pid; $params[] = $bib; }
+    $cStmt = $pdo->prepare(
+      "SELECT `public_id`, `bib`, COUNT(*) AS cnt FROM `" . riderTableName('log') . "`
+       WHERE `type` = 'checkin' AND `cp_id` IS NOT NULL AND (`public_id`,`bib`) IN ({$placeholders})
+       GROUP BY `public_id`, `bib`"
+    );
+    $cStmt->execute($params);
+    foreach($cStmt->fetchAll(PDO::FETCH_ASSOC) as $row){
+      $checkpointCounts[$row['public_id'] . '#' . $row['bib']] = (int)$row['cnt'];
+    }
+  }
+
   $entries = [];
   foreach($claims as $claim){
-    /* Gleiche Freigabe wie ?a=me: Fortschritt nur zeigen, wenn der
-       Organizer dieses konkreten Events sie per settings.progress
-       eingeschaltet hat — sonst bliebe die Fortschrittsanzeige über die
-       Fahrer-App umgehbar, indem man einfach die Cross-Event-Historie
-       statt ?a=me abfragt. */
-    $claimSettings = json_decode($claim['settings'], true) ?: [];
     $checkpointsDone = null;
-    if(!empty($claimSettings['progress'])){
-      $pStmt = $pdo->prepare(
-        "SELECT COUNT(*) FROM `" . riderTableName('log') . "`
-         WHERE `public_id` = ? AND `bib` = ? AND `type` = 'checkin' AND `cp_id` IS NOT NULL"
-      );
-      $pStmt->execute([$claim['public_id'], $claim['bib']]);
-      $checkpointsDone = (int)$pStmt->fetchColumn();
+    if($claim['progressEnabled']){
+      $key = $claim['public_id'] . '#' . $claim['bib'];
+      $checkpointsDone = $checkpointCounts[$key] ?? 0;
     }
     $entries[] = [
       'publicId' => $claim['public_id'],

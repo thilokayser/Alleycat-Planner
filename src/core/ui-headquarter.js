@@ -1333,7 +1333,7 @@ function renderSmtpSettingsSection(){
       <div class="rider-field"><label>${t('auth.smtpUsernameLabel')}</label>
         <input type="text" id="smtp-username" value="${escapeHtml(cfg.username || '')}"></div>
       <div class="rider-field"><label>${t('auth.smtpPasswordLabel')}</label>
-        <input type="password" id="smtp-password" value="${escapeHtml(cfg.password || '')}"></div>
+        <input type="password" id="smtp-password" value="" placeholder="${cfg.password ? escapeHtml(t('auth.smtpPasswordKeepPlaceholder')) : ''}"></div>
       <div class="rider-field"><label>${t('auth.smtpFromAddressLabel')}</label>
         <input type="email" id="smtp-from-address" value="${escapeHtml(cfg.fromAddress || '')}"></div>
       <div class="rider-field"><label>${t('auth.smtpFromNameLabel')}</label>
@@ -1346,11 +1346,15 @@ function renderSmtpSettingsSection(){
   `;
 }
 async function submitSmtpSettings(){
+  /* Passwortfeld startet leer (siehe renderSmtpSettingsSection) statt das
+     gespeicherte Passwort im Klartext ins DOM zu spiegeln — leer lassen
+     heißt "unverändert", ein getipptes Passwort ersetzt das gespeicherte. */
+  const typedPassword = document.getElementById('smtp-password').value;
   const cfg = {
     host: document.getElementById('smtp-host').value.trim(),
     port: parseInt(document.getElementById('smtp-port').value, 10) || 587,
     username: document.getElementById('smtp-username').value.trim(),
-    password: document.getElementById('smtp-password').value,
+    password: typedPassword !== '' ? typedPassword : ((state.smtpSettings && state.smtpSettings.password) || ''),
     fromAddress: document.getElementById('smtp-from-address').value.trim(),
     fromName: document.getElementById('smtp-from-name').value.trim()
   };
