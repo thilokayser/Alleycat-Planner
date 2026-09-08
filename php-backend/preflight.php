@@ -35,13 +35,13 @@ function preflightCheckPhpVersion(){
   ];
 }
 
-function preflightCheckExtension($ext, $label){
+function preflightCheckExtension($ext, $label, $reason = 'wird für den Datenbankzugriff benötigt'){
   $ok = extension_loaded($ext);
   return [
     'id' => 'ext_' . $ext,
     'label' => $ok ? "{$label} vorhanden" : "{$label} fehlt",
     'level' => $ok ? 'ok' : 'error',
-    'detail' => $ok ? '' : "Die PHP-Extension \"{$ext}\" wird für den Datenbankzugriff benötigt — beim Hoster aktivieren oder Support kontaktieren."
+    'detail' => $ok ? '' : "Die PHP-Extension \"{$ext}\" {$reason} — beim Hoster aktivieren oder Support kontaktieren."
   ];
 }
 
@@ -97,6 +97,7 @@ function runPreflightChecks($dir){
     preflightCheckPhpVersion(),
     preflightCheckExtension('pdo_mysql', 'PDO MySQL Extension'),
     preflightCheckExtension('json', 'JSON Extension'),
+    preflightCheckExtension('mbstring', 'Multibyte String Extension', 'wird für Fahrer-Konten (E-Mail/Passwort-Länge) und den SMTP-Versand benötigt'),
     preflightCheckWritable($dir),
     preflightCheckMaxExecutionTime(),
     preflightCheckMemoryLimit(),
