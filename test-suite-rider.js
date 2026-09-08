@@ -48,7 +48,7 @@ async function runRiderTestSuite(){
   let calls = [];
   const stubFetch = () => {
     window.fetch = async (url, opts) => {
-      calls.push({url: String(url), body: opts && opts.body ? JSON.parse(opts.body) : null});
+      calls.push({url: String(url), body: opts && opts.body ? JSON.parse(opts.body) : null, headers: (opts && opts.headers) || {}});
       const next = plan.shift();
       if(!next || next.network === false) throw new TypeError('Failed to fetch');
       return {
@@ -159,6 +159,31 @@ async function runRiderTestSuite(){
     riderQueueRemove('u-1');
     checkEqual('Einzelner Eintrag lässt sich streichen', riderQueueLength(), 1);
     checkEqual('Es bleibt der richtige übrig', riderQueueLoad()[0].clientUuid, 'u-2');
+  }
+
+  // --- Fahrer-Konto: Persistenz ---
+  {
+    riderClearAccount();
+    checkEqual('Ohne gespeichertes Konto: riderLoadAccount() liefert null', riderLoadAccount(), null);
+    riderSaveAccount({authToken: 'tok123', displayName: 'Test Fahrer'});
+    const loaded = riderLoadAccount();
+    checkEqual('Gespeichertes Konto: authToken', loaded.authToken, 'tok123');
+    checkEqual('Gespeichertes Konto: displayName', loaded.displayName, 'Test Fahrer');
+    riderClearAccount();
+    checkEqual('Nach riderClearAccount(): wieder null', riderLoadAccount(), null);
+  }
+
+  // --- Fahrer-Konto: riderApiClaimAccount() sendet beide Nachweise ---
+  {
+    resetAll();
+    stubFetch();
+    plan.push({status: 200, body: {ok: true}});
+    await riderApiClaimAccount('authtok', PID, TOK, '');
+    checkEqual('rider-claim: Action in der Query', calls[0].url.includes('a=rider-claim'), true);
+    checkEqual('rider-claim: Auth-Header gesetzt', calls[0].headers['X-Rider-Auth-Token'], 'authtok');
+    const sentBody = calls[0].body;
+    checkEqual('rider-claim: publicId im Body', sentBody.publicId, PID);
+    checkEqual('rider-claim: riderToken im Body', sentBody.riderToken, TOK);
   }
 
   /* ---------------- 5) Kein Netz: Abbruch statt Reihenversagen ------ */

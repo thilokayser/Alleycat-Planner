@@ -13,6 +13,7 @@
 
 const RIDER_LS_SESSION = 'alleycat-rider:session';
 const RIDER_LS_CACHE = 'alleycat-rider:cache';
+const RIDER_LS_ACCOUNT = 'alleycat-rider:account';
 
 const riderState = {
   view: 'loading',      // loading | login | code | register | pending | home | scanner | confirm | error | selfRegisterList | selfRegisterForm
@@ -34,7 +35,14 @@ const riderState = {
      merkt sich die Wahl zwischen Listen- und Formular-Ansicht. */
   selfRegisterPublicId: null,
   selfRegisterFreeBibs: [],
-  selfRegisterBib: null
+  selfRegisterBib: null,
+  /* Fahrer-Konto, unabhängig von riderState.session (Slot). Ein Fahrer
+     kann eingeloggt sein, ohne gerade eine Startnummer aktiv zu haben,
+     und umgekehrt — beide Zustände sind unabhängig persistiert. */
+  account: null,          // {authToken, displayName} | null
+  history: [],            // ?a=rider-history Antwort-Einträge
+  accountForm: {email: '', password: '', displayName: ''},
+  resetToken: null        // aus #pw.<token>, für die Reset-Ansicht zwischengeparkt
 };
 
 function riderLoadJson(key){
@@ -52,6 +60,12 @@ function riderLoadSession(){ return riderLoadJson(RIDER_LS_SESSION); }
 function riderSaveSession(s){ riderSaveJson(RIDER_LS_SESSION, s); }
 function riderClearSession(){
   try{ localStorage.removeItem(RIDER_LS_SESSION); }catch(e){}
+}
+
+function riderLoadAccount(){ return riderLoadJson(RIDER_LS_ACCOUNT); }
+function riderSaveAccount(a){ riderSaveJson(RIDER_LS_ACCOUNT, a); }
+function riderClearAccount(){
+  try{ localStorage.removeItem(RIDER_LS_ACCOUNT); }catch(e){}
 }
 
 function riderSaveCache(payload){

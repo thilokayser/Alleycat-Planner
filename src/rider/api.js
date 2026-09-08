@@ -29,6 +29,7 @@ async function riderRequest(method, action, params, body, auth){
   if(body) headers['Content-Type'] = 'application/json';
   if(auth && auth.token) headers['X-Rider-Token'] = auth.token;
   if(auth && auth.code) headers['X-Rider-Code'] = auth.code;
+  if(auth && auth.authToken) headers['X-Rider-Auth-Token'] = auth.authToken;
 
   let res;
   try{
@@ -94,4 +95,34 @@ function riderErrorMessage(res){
     case 'bib_not_found':        return t('riderScan.errSelfRegisterBibTaken');
     default:                     return t('riderScan.errGeneric');
   }
+}
+
+/* ---------------- Fahrer-Konten (Spokecard-Claiming) ----------------
+   Eigener Header (X-Rider-Auth-Token), getrennt vom Slot-Token/Code —
+   ein Konto beweist nur "ich bin eingeloggt", nie "diese Startnummer
+   gehört mir". Claim braucht deshalb IMMER beide.
+
+   Hinweis zur Benennung: `riderApiClaim(payload)` weiter oben in dieser
+   Datei ist bereits mit der Selbstregistrierung (Aktion `claim`, Task 3)
+   belegt — anderer Zweck, andere Signatur. Diese Kontofunktion heißt
+   deshalb `riderApiClaimAccount`, nicht `riderApiClaim`, um die
+   bestehende Funktion nicht zu überschreiben. */
+
+function riderApiRegister(email, password, displayName){
+  return riderRequest('POST', 'rider-register', {}, {email, password, displayName}, null);
+}
+function riderApiLogin(email, password){
+  return riderRequest('POST', 'rider-login', {}, {email, password}, null);
+}
+function riderApiForgot(email){
+  return riderRequest('POST', 'rider-forgot', {}, {email}, null);
+}
+function riderApiReset(token, newPassword){
+  return riderRequest('POST', 'rider-reset', {}, {token, newPassword}, null);
+}
+function riderApiClaimAccount(authToken, publicId, riderToken, riderCode){
+  return riderRequest('POST', 'rider-claim', {}, {publicId, riderToken, riderCode}, {authToken});
+}
+function riderApiHistory(authToken){
+  return riderRequest('GET', 'rider-history', {}, null, {authToken});
 }
