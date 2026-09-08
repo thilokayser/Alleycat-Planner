@@ -615,6 +615,70 @@ if($action === 'claim'){
   riderOut(['ok' => true, 'bib' => $bib, 'riderToken' => $newToken]);
 }
 
+if($action === 'rider-claim'){
+  riderRequirePost();
+  riderCheckRateLimit($pdo);
+  $session = riderUserRequireSession($pdo);
+  $body = riderJsonBody();
+  $publicId = (string)($body['publicId'] ?? '');
+  $token = (string)($body['riderToken'] ?? '');
+  $code = (string)($body['riderCode'] ?? '');
+
+  /* Derselbe Nachweis wie ?a=me: bloßes Eingeloggtsein reicht nie, um
+     eine fremde Startnummer zu beanspruchen. */
+  $slot = $token !== '' ? riderResolveSlot($pdo, $publicId, $token) : null;
+  if(!$slot && $code !== '') $slot = riderResolveSlotByCode($pdo, $publicId, $code);
+  if(!$slot) riderRejectAuth($pdo, 'invalid_rider');
+  riderClearFailures($pdo);
+
+  /* Überschreiben statt ablehnen: wer den Token/Code kennt, hat dieselbe
+     Autorität wie ein vorheriger Claimer (z. B. Startnummer weitergegeben). */
+  $pdo->prepare("INSERT INTO `" . riderTableName('claim') . "` (`public_id`,`bib`,`rider_user_id`,`claimed_at`)
+                 VALUES (?,?,?,UTC_TIMESTAMP())
+                 ON DUPLICATE KEY UPDATE `rider_user_id` = VALUES(`rider_user_id`), `claimed_at` = VALUES(`claimed_at`)")
+      ->execute([$publicId, (int)$slot['bib'], $session['id']]);
+
+  riderOut(['ok' => true]);
+}
+
+if($action === 'rider-history'){
+  riderRequireGet();
+  $session = riderUserRequireSession($pdo);
+
+  /* Gleiche Sichtbarkeitsregel wie ?a=me: nur was der Organizer bereits
+     per ?a=sync veröffentlicht hat (rider_event/rider_log), nichts
+     Organizer-Internes. Historie ist bewusst Org-übergreifend (siehe
+     Spec §7) — das ist die eigene, selbst-geclaimte Info des Fahrers. */
+  $stmt = $pdo->prepare(
+    "SELECT c.`public_id`, c.`bib`, c.`claimed_at`, e.`name`, e.`status`
+     FROM `" . riderTableName('claim') . "` c
+     JOIN `" . riderTableName('event') . "` e ON e.`public_id` = c.`public_id`
+     WHERE c.`rider_user_id` = ?
+     ORDER BY c.`claimed_at` DESC"
+  );
+  $stmt->execute([$session['id']]);
+  $claims = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+  $entries = [];
+  foreach($claims as $claim){
+    $pStmt = $pdo->prepare(
+      "SELECT COUNT(*) FROM `" . riderTableName('log') . "`
+       WHERE `public_id` = ? AND `bib` = ? AND `type` = 'checkin' AND `cp_id` IS NOT NULL"
+    );
+    $pStmt->execute([$claim['public_id'], $claim['bib']]);
+    $entries[] = [
+      'publicId' => $claim['public_id'],
+      'bib' => (int)$claim['bib'],
+      'eventName' => $claim['name'],
+      'eventStatus' => $claim['status'],
+      'claimedAt' => $claim['claimed_at'],
+      'checkpointsDone' => (int)$pStmt->fetchColumn()
+    ];
+  }
+
+  riderOut(['ok' => true, 'displayName' => $session['displayName'], 'entries' => $entries]);
+}
+
 if($action === 'checkin'){
   riderRequirePost();
   $body = riderJsonBody();
