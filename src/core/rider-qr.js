@@ -68,6 +68,3 @@ function buildCheckpointQrPayload(baseUrl, evt, cp){
 function buildSelfRegisterQrPayload(baseUrl, evt){
   return `${baseUrl}#g.${evt.publicId}`;
 }
-function buildResetPasswordUrl(baseUrl, token){
-  return `${baseUrl}#pw.${token}`;
-}

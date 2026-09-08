@@ -1313,10 +1313,15 @@ async function loadSmtpSettingsIfNeeded(force){
 function renderSmtpSettingsSection(){
   if(!hasAdminRoles() || !currentUserIsSysAdmin()) return '';
   const cfg = state.smtpSettings || {};
+  /* Gleiche Bedingung wie smtpLoadSettings() im PHP-Backend (php-backend/
+     smtp.php): fehlt host ODER fromAddress, gilt SMTP als "nicht
+     konfiguriert" und rider-forgot/smtp-test funktionieren nicht. */
+  const notConfigured = !cfg.host || !cfg.fromAddress;
   return `
     <div class="settings-section">
       <h3>${t('auth.smtpHeading')}</h3>
       <div class="settings-section-desc">${t('auth.smtpDesc')}</div>
+      ${notConfigured ? `<div class="data-safety-warning">${t('auth.smtpNotConfiguredWarning')}</div>` : ''}
       <div class="rider-field"><label>${t('auth.smtpHostLabel')}</label>
         <input type="text" id="smtp-host" value="${escapeHtml(cfg.host || '')}"></div>
       <div class="rider-field"><label>${t('auth.smtpPortLabel')}</label>
@@ -1357,9 +1362,12 @@ async function submitSmtpTest(){
   /* authRequest()s zweiter Parameter ist der volle Query-String (siehe
      adminBootstrap() weiter oben: 'a=bootstrap'), nicht nur der Action-
      Name — und im Fehlerfall liegt der Code direkt unter res.error
-     (siehe authRequest() in storage-server.js), es gibt kein res.data. */
+     (siehe authRequest() in storage-server.js), es gibt kein res.data.
+     Bei smtp-test liefert der Server zusätzlich res.detail — die echte
+     SMTP-Fehlermeldung (falscher Host, Auth abgelehnt, TLS-Handshake
+     fehlgeschlagen, ...), siehe auth.php a=smtp-test. */
   const res = await authRequest('POST', 'a=smtp-test', {toEmail});
-  showToast({message: res.ok ? t('auth.smtpTestOk') : t('auth.smtpTestFailed', {error: res.error || ''})});
+  showToast({message: res.ok ? t('auth.smtpTestOk') : t('auth.smtpTestFailed', {error: res.detail || res.error || ''})});
 }
 function renderSettingsSectionUsers(){
   if(!hasAdminRoles()){

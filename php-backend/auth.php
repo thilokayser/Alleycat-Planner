@@ -927,10 +927,14 @@ if($action === 'smtp-test'){
     smtpSendMail($pdo, $toEmail, 'Alleycat Dispatch — SMTP-Test', 'Wenn du das liest, funktioniert der SMTP-Versand.');
     authOut(['ok' => true]);
   }catch(Exception $e){
-    /* Anders als rider-forgot: hier DARF der echte Fehler durch, das
-       ist genau der Zweck des Buttons (siehe Spec §5) — nur SysAdmin
-       sieht diese Antwort, kein Enumeration-Risiko. */
-    apiSendJsonError(502, 'smtp_failed', $e->getMessage());
+    /* Anders als rider-forgot: hier DARF der echte Fehler durch, das ist
+       genau der Zweck des Buttons (siehe Spec §5) — nur SysAdmin sieht
+       diese Antwort, kein Enumeration-Risiko. apiSendJsonError() loggt
+       $e->getMessage() nur serverseitig (error_log), die JSON-Antwort
+       enthält davon nichts — für den "Testmail senden"-Button reicht das
+       nicht, hier muss die echte Meldung im Response-Body landen. */
+    http_response_code(502);
+    authOut(['ok' => false, 'error' => 'smtp_failed', 'detail' => $e->getMessage()]);
   }
 }
 

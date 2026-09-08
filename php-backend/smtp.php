@@ -78,7 +78,12 @@ function smtpSendMail(PDO $pdo, $toEmail, $subject, $bodyText){
   $greeting = smtpReadResponse($sock); // Server-Banner, kein Befehl
   if($greeting !== 220) throw new Exception("SMTP: kein gültiges Banner (Code {$greeting})");
 
-  $localHost = parse_url($cfg['fromAddress'], PHP_URL_HOST) ?: 'localhost';
+  /* parse_url() erwartet eine URL, keine bloße E-Mail-Adresse — auf
+     "noreply@example.com" liefert PHP_URL_HOST immer null, der Fallback
+     'localhost' würde also IMMER greifen. Host stattdessen direkt hinter
+     dem letzten '@' abschneiden. */
+  $atPos = strrpos($cfg['fromAddress'], '@');
+  $localHost = $atPos !== false ? substr($cfg['fromAddress'], $atPos + 1) : 'localhost';
   smtpSendCommand($sock, "EHLO {$localHost}", 250);
 
   if(!$useImplicitTls){
@@ -102,7 +107,14 @@ function smtpSendMail(PDO $pdo, $toEmail, $subject, $bodyText){
   $fromHeader = $cfg['fromName'] !== ''
     ? "{$cfg['fromName']} <{$cfg['fromAddress']}>"
     : $cfg['fromAddress'];
-  $headers = "From: {$fromHeader}\r\nTo: {$toEmail}\r\nSubject: {$subject}\r\nContent-Type: text/plain; charset=UTF-8\r\n";
+  /* RFC 2047 encoded-word: rohes UTF-8 (z. B. das Em-Dash "—" in jedem
+     Betreff dieses Features) in einem unkodierten Subject:-Header kann
+     von strikten/älteren Mailservern/-clients abgelehnt oder falsch
+     dargestellt werden — dieser Client verhandelt kein SMTPUTF8. */
+  $encodedSubject = mb_check_encoding($subject, 'ASCII')
+    ? $subject
+    : '=?UTF-8?B?' . base64_encode($subject) . '?=';
+  $headers = "From: {$fromHeader}\r\nTo: {$toEmail}\r\nSubject: {$encodedSubject}\r\nContent-Type: text/plain; charset=UTF-8\r\n";
   /* RFC 5321 §2.3.7 verlangt CRLF auf der Leitung. Aufrufer übergeben hier
      typischerweise \n-only PHP-Strings — erst auf \n normalisieren (falls
      schon \r\n oder einzelne \r drinstecken), dann Dot-Stuffing auf den

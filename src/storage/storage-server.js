@@ -75,7 +75,7 @@ async function authRequest(method, query, body){
   handleAuthResponseStatus(res.status);
   let data = null;
   try{ data = await res.json(); }catch(e){}
-  if(!res.ok) return {ok: false, status: res.status, error: (data && data.error) || 'http_' + res.status};
+  if(!res.ok) return {ok: false, status: res.status, error: (data && data.error) || 'http_' + res.status, detail: data && data.detail};
   return Object.assign({ok: true}, data);
 }
 

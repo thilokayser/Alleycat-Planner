@@ -391,14 +391,20 @@ function riderViewAccountReset(){
 }
 
 function riderViewProfile(){
-  const rows = riderState.history.map(h => `
+  const rows = riderState.history.map(h => {
+    const bibPart = t('riderScan.profileBib', {bib: h.bib});
+    const hint = h.checkpointsDone !== null
+      ? `${bibPart} · ${t('riderScan.profileCheckpointsDone', {count: h.checkpointsDone})}`
+      : bibPart;
+    return `
     <div class="rider-cp done">
       <div class="rider-cp-main">
         <div class="rider-cp-name">${escapeHtml(h.eventName)}</div>
-        <div class="rider-cp-hint">${escapeHtml(t('riderScan.profileBib', {bib: h.bib}))} · ${escapeHtml(t('riderScan.profileCheckpointsDone', {count: h.checkpointsDone}))}</div>
+        <div class="rider-cp-hint">${escapeHtml(hint)}</div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
   return `
     ${riderHead()}
     <div class="rider-body">

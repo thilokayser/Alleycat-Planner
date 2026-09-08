@@ -1450,7 +1450,8 @@ const translations = {
       smtpSaved: 'SMTP-Einstellungen gespeichert.',
       smtpSaveFailed: 'SMTP-Einstellungen konnten nicht gespeichert werden.',
       smtpTestOk: 'Testmail verschickt.',
-      smtpTestFailed: 'Testmail fehlgeschlagen: {error}'
+      smtpTestFailed: 'Testmail fehlgeschlagen: {error}',
+      smtpNotConfiguredWarning: 'SMTP ist noch nicht konfiguriert — Fahrer:innen können ihr Passwort aktuell nicht per Mail zurücksetzen.'
     },
     /* Multi-Tenancy: Workspace-Dropdown in der Topbar (Org-Wechsel) und
        das SysAdmin-Instanzpanel (installationsweite Org-Verwaltung) —

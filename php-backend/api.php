@@ -109,18 +109,27 @@ if($isEventKey){
 }
 
 /* Nicht-Event-Keys: weiterhin generischer KV-Store, jetzt org-gescoped.
-   Instanzweite Keys (config:riderAppUrl, i18n:customPacks) liegen mit
-   org_id=0 (der reservierte Sentinel-Wert, siehe Migration 7 — die
-   Spalte ist NOT NULL, es gibt kein echtes NULL mehr) und werden hier
+   Instanzweite Keys (config:riderAppUrl, i18n:customPacks, config:smtpSettings)
+   liegen mit org_id=0 (der reservierte Sentinel-Wert, siehe Migration 7 —
+   die Spalte ist NOT NULL, es gibt kein echtes NULL mehr) und werden hier
    bewusst NICHT über den Org-Filter erreicht -> eigener Zweig. */
 $instanceWideKeys = ['config:riderAppUrl', 'i18n:customPacks'];
-$isInstanceWide = in_array($key, $instanceWideKeys, true);
+/* Wie $instanceWideKeys (org_id=0-Sentinel), aber zusätzlich auch beim
+   LESEN SysAdmin-only: config:smtpSettings enthält ein Klartext-SMTP-
+   Passwort. config:riderAppUrl/i18n:customPacks sind bewusst für jede
+   Org GET-offen (jeder Organizer braucht die Fahrer-App-URL) — dieselbe
+   Offenheit wäre hier ein Credential-Leak an jeden eingeloggten Editor/
+   Viewer, nicht nur an den SysAdmin. */
+$instanceWideKeysAdminOnlyRead = ['config:smtpSettings'];
+$isInstanceWide = in_array($key, $instanceWideKeys, true) || in_array($key, $instanceWideKeysAdminOnlyRead, true);
+$isAdminOnlyRead = in_array($key, $instanceWideKeysAdminOnlyRead, true);
 
 /* Lesen darf jede Org (die Fahrer-App-URL braucht jeder Organizer),
    SCHREIBEN nur der SysAdmin: config:riderAppUrl bestimmt, wohin die
    Fahrer JEDER Org geschickt werden — ein Editor einer einzigen Org
-   könnte damit sonst instanzweit umleiten. */
-if($isInstanceWide && $method !== 'GET'){
+   könnte damit sonst instanzweit umleiten. config:smtpSettings verlangt
+   den SysAdmin-Gate zusätzlich auch beim GET, siehe oben. */
+if($isInstanceWide && ($method !== 'GET' || $isAdminOnlyRead)){
   apiRequireSysAdmin($access);
 }
 

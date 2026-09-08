@@ -408,7 +408,12 @@ if($action === 'rider-register'){
   $password = (string)($body['password'] ?? '');
   $displayName = trim((string)($body['displayName'] ?? ''));
 
-  if(!riderEmailValid($email) || !riderUserPasswordValid($password)){
+  /* display_name ist VARCHAR(191) in der DB — auf strict-mode MySQL/
+     MariaDB (heutiger Default) wirft ein zu langer Wert SQLSTATE 22001
+     (Data Truncation), nicht 23000 (Unique-Verletzung, siehe catch unten)
+     und würde sonst unbehandelt als 500 durchschlagen. Deshalb hier
+     genauso wie E-Mail/Passwort validieren statt der DB überlassen. */
+  if(!riderEmailValid($email) || !riderUserPasswordValid($password) || mb_strlen($displayName) > 191){
     riderRejectAuth($pdo, 'invalid_input');
   }
 
@@ -426,7 +431,12 @@ if($action === 'rider-register'){
   $pdo->prepare("INSERT INTO `" . riderTableName('session') . "` (`token_hash`,`rider_user_id`) VALUES (?,?)")
       ->execute([riderHashToken($token), $userId]);
 
-  riderClearFailures($pdo);
+  /* KEIN riderClearFailures() hier: Registrierung beweist nichts über den
+     Aufrufer (kein Slot-Token, kein bestehendes Konto) — anders als
+     Login/Reset, wo ein korrektes Passwort bzw. ein gültiges Reset-Token
+     tatsächlich einen Nachweis darstellt. Ein Reset hier gäbe einem
+     Angreifer, der ?a=rider-claim/?a=me brute-forced, einen kostenlosen
+     Rate-Limit-Reset über einen zwischengeschobenen rider-register-Call. */
   riderOut(['ok' => true, 'authToken' => $token, 'displayName' => $displayName]);
 }
 
@@ -474,14 +484,20 @@ if($action === 'rider-forgot'){
           ->execute([riderHashToken($token), (int)$userId, date('Y-m-d H:i:s', time() + 30 * 60)]);
 
       $resetUrl = riderAppResetUrl($token);
-      /* Versandfehler dürfen die Antwort nicht verändern (sonst wäre
-         "Mailserver down" von außen von "E-Mail existiert nicht" zu
-         unterscheiden) — geloggt, nicht durchgereicht. Siehe Spec §5. */
-      try{
-        smtpSendMail($pdo, $email, 'Alleycat Dispatch — Passwort zurücksetzen',
-          "Klicke auf den folgenden Link, um dein Passwort zurückzusetzen (30 Minuten gültig):\n\n{$resetUrl}\n\nWenn du das nicht warst, ignoriere diese E-Mail.");
-      }catch(Exception $e){
-        error_log('[alleycat smtp] rider-forgot: ' . $e->getMessage());
+      /* Ohne konfigurierte riderAppUrl wäre der Link kaputt (keine Basis-
+         URL zum Anhängen) — dann lieber gar keine Mail verschicken statt
+         einer, die garantiert ins Leere führt. Antwort bleibt trotzdem
+         {ok:true} (Enumeration-Schutz, siehe unten). */
+      if($resetUrl !== ''){
+        /* Versandfehler dürfen die Antwort nicht verändern (sonst wäre
+           "Mailserver down" von außen von "E-Mail existiert nicht" zu
+           unterscheiden) — geloggt, nicht durchgereicht. Siehe Spec §5. */
+        try{
+          smtpSendMail($pdo, $email, 'Alleycat Dispatch — Passwort zurücksetzen',
+            "Klicke auf den folgenden Link, um dein Passwort zurückzusetzen (30 Minuten gültig):\n\n{$resetUrl}\n\nWenn du das nicht warst, ignoriere diese E-Mail.");
+        }catch(Exception $e){
+          error_log('[alleycat smtp] rider-forgot: ' . $e->getMessage());
+        }
       }
     }
   }
@@ -496,8 +512,13 @@ function riderAppResetUrl($token){
   global $pdo;
   $stmt = $pdo->prepare("SELECT `value` FROM `" . ALLEYCAT_TABLE . "` WHERE `key` = 'config:riderAppUrl' AND `org_id` = 0");
   $stmt->execute();
-  $baseUrl = rtrim((string)$stmt->fetchColumn(), '/');
-  return $baseUrl . '/#pw.' . $token;
+  $baseUrl = (string)$stmt->fetchColumn();
+  if($baseUrl === '') return '';
+  /* Keine rtrim()/eingefügter Slash: riderAppUrl ist eine volle Datei-URL
+     (z. B. https://deinedomain.tld/alleycat-rider.html), kein Verzeichnis
+     — gleiche Konvention wie buildSelfRegisterQrPayload()/
+     buildCheckpointQrPayload() in rider-qr.js. */
+  return $baseUrl . '#pw.' . $token;
 }
 
 if($action === 'rider-reset'){
