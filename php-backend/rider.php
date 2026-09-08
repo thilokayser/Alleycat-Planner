@@ -650,7 +650,7 @@ if($action === 'rider-history'){
      Organizer-Internes. Historie ist bewusst Org-übergreifend (siehe
      Spec §7) — das ist die eigene, selbst-geclaimte Info des Fahrers. */
   $stmt = $pdo->prepare(
-    "SELECT c.`public_id`, c.`bib`, c.`claimed_at`, e.`name`, e.`status`
+    "SELECT c.`public_id`, c.`bib`, c.`claimed_at`, e.`name`, e.`status`, e.`settings`
      FROM `" . riderTableName('claim') . "` c
      JOIN `" . riderTableName('event') . "` e ON e.`public_id` = c.`public_id`
      WHERE c.`rider_user_id` = ?
@@ -661,18 +661,28 @@ if($action === 'rider-history'){
 
   $entries = [];
   foreach($claims as $claim){
-    $pStmt = $pdo->prepare(
-      "SELECT COUNT(*) FROM `" . riderTableName('log') . "`
-       WHERE `public_id` = ? AND `bib` = ? AND `type` = 'checkin' AND `cp_id` IS NOT NULL"
-    );
-    $pStmt->execute([$claim['public_id'], $claim['bib']]);
+    /* Gleiche Freigabe wie ?a=me: Fortschritt nur zeigen, wenn der
+       Organizer dieses konkreten Events sie per settings.progress
+       eingeschaltet hat — sonst bliebe die Fortschrittsanzeige über die
+       Fahrer-App umgehbar, indem man einfach die Cross-Event-Historie
+       statt ?a=me abfragt. */
+    $claimSettings = json_decode($claim['settings'], true) ?: [];
+    $checkpointsDone = null;
+    if(!empty($claimSettings['progress'])){
+      $pStmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM `" . riderTableName('log') . "`
+         WHERE `public_id` = ? AND `bib` = ? AND `type` = 'checkin' AND `cp_id` IS NOT NULL"
+      );
+      $pStmt->execute([$claim['public_id'], $claim['bib']]);
+      $checkpointsDone = (int)$pStmt->fetchColumn();
+    }
     $entries[] = [
       'publicId' => $claim['public_id'],
       'bib' => (int)$claim['bib'],
       'eventName' => $claim['name'],
       'eventStatus' => $claim['status'],
       'claimedAt' => $claim['claimed_at'],
-      'checkpointsDone' => (int)$pStmt->fetchColumn()
+      'checkpointsDone' => $checkpointsDone
     ];
   }
 
