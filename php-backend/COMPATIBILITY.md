@@ -151,25 +151,49 @@ Lebendiges Dokument (14.4 im Planungsdokument): wächst mit jeder Installation, 
 
 ## Spokecard-Claiming-Flow (Fahrer-Konten)
 
-Migration 11 (`rider_user`/`rider_session`/`rider_claim`/`rider_password_reset`),
-`rider-register`/`rider-login`/`rider-forgot`/`rider-reset`/`rider-claim`/
-`rider-history` in `rider.php`, SMTP-Client (`smtp.php`), `smtp-test` in
-`auth.php`: **noch nicht gegen eine echte MySQL-/PHP-Dev-Server-Installation
-verifiziert** — anders als die übrigen Rider-App-Teilprojekte (siehe die
-Einträge oben zu Teilprojekt 1/3 und zum Admin-Rollensystem) gibt es für
-dieses Paket noch keinen `curl`-Durchlauf gegen eine frische Datenbank. Nur
-gegen die Unit-/Logik-Ebene und manuell im Code geprüft. Vor einem echten
-Einsatz sollte derselbe Ablauf wie bei den früheren Paketen nachgeholt
-werden: frische Scratch-DB, `install.php` per HTTP-POST, dann Registrierung,
-Login, Passwort-Reset-Anfrage, Reset mit Token, Claim eines Slots über
-Token-Nachweis und Cross-Event-Historie je per `curl` durchspielen.
+Migration 11 (`rider_user`/`rider_session`/`rider_claim`/`rider_password_reset`)
+und `rider-register`/`rider-login`/`rider-forgot`/`rider-reset` in `rider.php`
+sind **live gegen eine echte Scratch-MariaDB-Instanz verifiziert**: frische
+Scratch-DB, `install.php` per HTTP-POST (inkl. Migration 11), danach per
+`curl` durchgespielt — Registrierung, Login, Passwort-Reset-Anfrage und
+Reset mit Token als Happy-Path, plus Duplicate-Email (`email_taken`, 403),
+zu kurzes Passwort, falsches Passwort beim Login, ungültiges/abgelaufenes
+Reset-Token und Session-Invalidierung nach einem erfolgreichen Reset (alte
+Session wird ungültig). Scratch-DB und -User wurden danach wieder gelöscht.
 
-Echter SMTP-Versand ist zusätzlich komplett ungetestet — weder gegen eine
-Test-Sandbox (Mailtrap/Mailhog) noch gegen einen echten Mailserver. Die
-neue SysAdmin-Oberfläche unter Einstellungen (`renderSmtpSettingsSection()`
-in `src/core/ui-headquarter.js`) speichert Zugangsdaten in `config:smtpSettings`
-und bietet einen Testmail-Button (`?a=smtp-test`), der genau diese Lücke vor
-dem produktiven Einsatz schließen soll.
+`rider-claim`/`rider-history` in `rider.php` wurden **separat live gegen
+eine frische Scratch-MariaDB-Instanz verifiziert**: Claim eines Slots per
+Token-Nachweis, Claim per Code-Nachweis, Overwrite-on-Reclaim (ein zweiter
+Rider-Account beansprucht denselben Slot — die DB-Zeile zeigt danach den
+zweiten Account als Inhaber, per Design ist der Token-/Code-Nachweis die
+Autorität, nicht "wer zuerst kam"), Cross-Account-Isolation der Historie
+(der erste Account sieht die überschriebene Claim nicht mehr in seiner
+`rider-history`) und die Method-Guards (`rider-claim` per GET → 405,
+`rider-history` per POST → 405).
+
+Der SMTP-Client selbst (`smtp.php`, das Protokoll-Handling in `smtpSendMail()`)
+wurde **live gegen einen echten disponiblen lokalen SMTP-Testserver verifiziert**
+(`aiosmtpd` mit STARTTLS + `AUTH LOGIN`, selbstsigniertes Zertifikat):
+erfolgreicher Versand inkl. Dot-Stuffing/CRLF-Normalisierung, UTF-8-Betreff
+und korrekte Fehlermeldung bei falschen Zugangsdaten (SMTP 535). Die
+Implicit-TLS-Variante (Port 465) wurde nur über die zugrunde liegende
+`ssl://`-Verbindung isoliert geprüft, nicht end-to-end durch `smtpSendMail()`
+(privilegierter Port ließ sich im Testsetup nicht binden) — kleine,
+risikoarme Lücke, da dieselbe umgebende Logik über STARTTLS auf 587 bereits
+vollständig verifiziert ist.
+
+Die `smtp-test`-Action in `auth.php` (SysAdmin-Testmail-Button) selbst
+**wurde in diesem Durchgang nicht live getestet** — nur `php -l` als
+Syntaxcheck plus manueller Code-Trace, der bestätigt, dass alle
+Abhängigkeiten (Sysadmin-Check, `smtpLoadSettings()`, `smtpSendMail()`,
+Fehlerpfade) korrekt verdrahtet sind. Ein `curl`-Durchlauf gegen eine echte
+DB mit `admin_user.is_sysadmin=1` und einer echten SMTP-Konfiguration steht
+noch aus.
+
+Was für dieses Paket wie für alle anderen Einträge in dieser Datei
+weiterhin ungetestet bleibt: Verhalten auf echtem Shared Hosting
+(PHP-FPM/Apache statt PHP-Dev-Server) und Versand über ein echtes
+(Nicht-Scratch-)SMTP-Relay bzw. ein echtes Postfach.
 
 ### `hasencore.de` — noch offen
 
