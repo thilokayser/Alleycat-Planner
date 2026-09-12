@@ -40,6 +40,53 @@
   ::selection{background:var(--hivis); color:var(--ink);}
   :focus-visible{outline:2px solid var(--hivis); outline-offset:2px;}
 
+  /* ---------- Formular-Grundschicht ----------
+     Eine Regel für alle Texteingaben, Auswahlfelder und Textbereiche, damit
+     ein neuer Bildschirm nichts mitbringen muss, um richtig auszusehen.
+     Vorher hing das Aussehen an rund 50 komponenteneigenen Regeln; wo keine
+     existierte, erschienen Browser-Voreinstellungen (siehe Spec §1).
+
+     Typenliste statt Ausschlussliste: checkbox, radio, color, file und range
+     haben bewusst eigene Behandlung und dürfen hier nicht hineinrutschen.
+     Die Liste ist von Open Props UI übernommen (text-field.css). */
+  input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  select, textarea{
+    width:100%;
+    font-family:'Barlow',sans-serif; font-size:13px;
+    border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk);
+    border-radius:2px; padding:7px 9px;
+  }
+  textarea{resize:vertical; min-height:44px;}
+
+  /* Die Seitenleiste fährt die Papier-Palette (siehe .sidebar). Hier nur die
+     drei Farbwerte umbiegen — Schrift, Polsterung und Radius erbt sie. */
+  .sidebar input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  .sidebar select, .sidebar textarea{
+    border-color:var(--paper-line); background:var(--paper-2); color:var(--ink);
+  }
+
+  /* Zustände. Der Fokusring kommt vom globalen :focus-visible oben.
+     :read-only bewusst ohne select — ein select ist laut Spezifikation immer
+     :read-only, die Regel würde sonst jedes Auswahlfeld abdunkeln. */
+  input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]):hover:not(:disabled),
+  select:hover:not(:disabled), textarea:hover:not(:disabled){
+    border-color:var(--steel);
+  }
+  input:disabled, select:disabled, textarea:disabled{
+    opacity:0.5; cursor:not-allowed;
+  }
+  input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]):read-only, textarea:read-only{
+    background:var(--asphalt-2); color:var(--steel); cursor:default;
+  }
+  .sidebar input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]):read-only, .sidebar textarea:read-only{
+    background:var(--paper); color:var(--paper-muted);
+  }
+  /* :user-invalid statt :invalid — meldet erst nach einer Eingabe, nicht
+     schon beim Öffnen eines leeren Pflichtfelds. */
+  input:user-invalid, select:user-invalid, textarea:user-invalid{
+    border-color:var(--stamp);
+  }
+
   h1,h2,h3,.display{
     font-family:'Barlow', 'Barlow Condensed', sans-serif;
     text-transform:uppercase;
@@ -1815,9 +1862,8 @@
   :root[data-theme="outdoor"] body{font-size:15px;}
   :root[data-theme="outdoor"] .btn{font-size:14.5px; padding:13px 20px; min-height:48px; border-width:2px;}
   :root[data-theme="outdoor"] .topbar{border-bottom-width:5px;}
-  :root[data-theme="outdoor"] input[type=text], :root[data-theme="outdoor"] input[type=number],
-  :root[data-theme="outdoor"] input[type=date], :root[data-theme="outdoor"] input[type=datetime-local],
-  :root[data-theme="outdoor"] input[type=tel], :root[data-theme="outdoor"] select,
+  :root[data-theme="outdoor"] input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  :root[data-theme="outdoor"] select,
   :root[data-theme="outdoor"] textarea{font-size:14.5px; min-height:44px; border-width:2px;}
   :root[data-theme="outdoor"] .cp-icon-btn, :root[data-theme="outdoor"] .cp-order-btns button,
   :root[data-theme="outdoor"] .bottom-nav-item{min-width:44px; min-height:44px;}
