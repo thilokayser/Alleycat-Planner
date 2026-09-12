@@ -17,6 +17,31 @@
     --tile-underway-bg:#5a4334;
     --tile-finished-bg:#36433a;
     --tile-alert-bg:#4b3230;
+
+    /* Strukturelle Skala (Spacing/Radius/Schatten/Schriftgröße), nicht
+       Farbe. Referenziert Open Props (nur in den Organizer-Templates per
+       CDN geladen, siehe templates/local+server.template.html) mit
+       Fallback-Werten — Fahrer-/Checkpoint-App (bewusst ohne externe
+       Verweise, siehe deren Templates) und ein scheiterndes CDN landen
+       dadurch auf denselben Zahlen statt auf nichts. Komponenten-Regeln
+       referenzieren ab hier --space-*/--radius-*/--font-*, nie --size-N/
+       --radius-N direkt — ein künftiges Re-Scale trifft nur diesen Block. */
+    --space-2xs: var(--size-1, 2px);
+    --space-xs: var(--size-2, 4px);
+    --space-sm: var(--size-3, 6px);
+    --space-md: var(--size-4, 8px);
+    --space-lg: var(--size-6, 12px);
+    --space-xl: var(--size-7, 16px);
+    --radius-xs: var(--radius-1, 2px);
+    --radius-sm: var(--radius-2, 3px);
+    --radius-md: var(--radius-3, 4px);
+    --radius-lg: var(--radius-4, 6px);
+    --radius-pill: var(--radius-round, 10px);
+    --shadow-card: var(--shadow-2, 0 2px 8px rgba(0,0,0,.18));
+    --font-2xs: var(--font-size-00, 9px);
+    --font-xs: var(--font-size-0, 10px);
+    --font-sm: var(--font-size-1, 11px);
+    --font-md: var(--font-size-2, 13px);
   }
   :root[data-theme="hell"]{
     --asphalt:#f4f1ea; --asphalt-2:#ffffff; --asphalt-3:#e3ddc9;
