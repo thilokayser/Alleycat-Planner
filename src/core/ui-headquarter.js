@@ -1287,7 +1287,6 @@ function renderRiderAppUrlSection(){
       <div class="settings-section-desc">${t('phpSetup.riderAppUrlHint')}</div>
       <div class="settings-form">
         <div>
-          <label>${t('phpSetup.riderAppUrlLabel')}</label>
           <input type="url" id="settings-rider-app-url" value="${escapeHtml(riderAppBaseUrl())}" placeholder="${escapeHtml(t('phpSetup.riderAppUrlPlaceholder'))}">
         </div>
         <div class="form-actions">
