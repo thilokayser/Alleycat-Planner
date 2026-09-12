@@ -14,26 +14,7 @@
 
 require __DIR__ . '/preflight.php';
 require __DIR__ . '/migrations.php';
-
-function installWriteHtaccessBlock($dir){
-  $marker = '# BEGIN alleycat-pretty-urls';
-  $endMarker = '# END alleycat-pretty-urls';
-  /* Die beiden zusätzlichen Bedingungen halten das Backend-Verzeichnis und
-     alle .php-Aufrufe aus dem Rewrite heraus: fehlende Backend-Dateien
-     (z. B. install.php nach der Selbstsperre) müssen einen echten 404
-     liefern statt der kompletten Organizer-App mit HTTP 200. */
-  $backendDir = str_replace(['\\', '.', '+', '*', '?', '[', ']', '^', '$', '(', ')', '{', '}', '|'], ['\\\\', '\\.', '\\+', '\\*', '\\?', '\\[', '\\]', '\\^', '\\$', '\\(', '\\)', '\\{', '\\}', '\\|'], basename(__DIR__));
-  $block = "{$marker}\n<IfModule mod_rewrite.c>\nRewriteEngine On\nRewriteCond %{REQUEST_URI} !/{$backendDir}/\nRewriteCond %{REQUEST_URI} !\\.php$\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteRule ^([a-z0-9-]+)/(.*)$ alleycat-dispatch-server.html [L]\n</IfModule>\n{$endMarker}\n";
-  $path = rtrim($dir, '/') . '/.htaccess';
-  $existing = file_exists($path) ? file_get_contents($path) : '';
-  if(strpos($existing, $marker) !== false){
-    $existing = preg_replace('/' . preg_quote($marker, '/') . '.*?' . preg_quote($endMarker, '/') . "\n?/s", $block, $existing);
-  } else {
-    $existing = rtrim($existing) . "\n\n" . $block;
-  }
-  $ok = @file_put_contents($path, ltrim($existing));
-  return $ok !== false;
-}
+require __DIR__ . '/htaccess.php';
 
 $configPath = __DIR__ . '/config.php';
 $alreadyInstalled = file_exists($configPath);
@@ -136,7 +117,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyInstalled){
         }
         @chmod($configPath, 0600);
 
-        $htaccessOk = installWriteHtaccessBlock(__DIR__ . '/..');
+        $htaccessOk = writePrettyUrlHtaccess(__DIR__ . '/..');
 
         $scriptDir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';

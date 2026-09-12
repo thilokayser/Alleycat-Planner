@@ -98,6 +98,18 @@ Nur nötig, wenn Fahrer an Checkpoints per QR-Code selbst einchecken sollen. Ohn
 
 ---
 
+### Später aktualisieren
+
+Hast du eine neuere Version der `php-backend`-Dateien auf den Server geladen, holst du den Rest mit **einem** `POST` auf `migrate.php` nach — der API-Key aus Schritt 5 dient dabei als Zugang. Das bringt sowohl neue Schema-Migrationen als auch die korrigierte Rewrite-Regel in der `.htaccess` auf den aktuellen Stand; `install.php` hat sich nach der Erstinstallation gelöscht und kann das nicht mehr tun. Der Aufruf ist beliebig oft wiederholbar:
+
+```
+curl -X POST -H "X-Api-Key: <dein-key>" https://deinedomain.tld/php-backend/migrate.php
+```
+
+Die Antwort nennt die angewendeten Migrationen, die aktuelle Schema-Version und mit `"htaccess": true`, ob der Rewrite-Block geschrieben werden konnte.
+
+---
+
 ## Fertig
 
 Ab jetzt teilen sich alle Geräte, die die Server-Variante mit denselben Zugangsdaten öffnen, dieselben Events — Organizer und Marshals sehen denselben Stand.

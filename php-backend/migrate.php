@@ -7,11 +7,20 @@
    mehr existiert, siehe dessen Selbstsperre). API-Key-geschützt,
    POST-only (verändert Zustand).
 
-     POST migrate.php   -> {"ok": true, "applied": [2, 3], "currentVersion": 3}
+     POST migrate.php   -> {"ok": true, "applied": [2, 3], "currentVersion": 3,
+                             "htaccess": true}
+
+   Schreibt außerdem den Pretty-URL-Block der .htaccess neu (siehe
+   htaccess.php). Grund: install.php löscht sich nach der Erstinstallation
+   selbst, eine später korrigierte Rewrite-Regel erreicht bestehende
+   Installationen also über keinen anderen Weg. Ersetzt nur den Bereich
+   zwischen den Markern; wer den Block bewusst entfernt hat, bekommt ihn
+   hier zurück.
    ------------------------------------------------------------------ */
 
 require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/migrations.php';
+require __DIR__ . '/htaccess.php';
 
 apiLoadConfig();
 apiSendCorsHeaders();
@@ -44,8 +53,17 @@ $charset = defined('ALLEYCAT_CHARSET') ? ALLEYCAT_CHARSET : 'utf8mb4';
 $pdo = apiConnectDb();
 
 $applied = runMigrations($pdo, ALLEYCAT_TABLE, ALLEYCAT_META_TABLE, $charset);
+
+/* Nach den Schema-Migrationen, nicht davor: scheitert das Schreiben an
+   fehlenden Rechten im Web-Root, ist das kein Grund, die Migration selbst
+   als gescheitert zu melden — die Pretty-URLs sind Komfort, die App läuft
+   auch ohne sie über die Hash-URL. Das Ergebnis steht deshalb als eigenes
+   Feld in der Antwort. */
+$htaccessOk = writePrettyUrlHtaccess(__DIR__ . '/..');
+
 echo json_encode([
   'ok' => true,
   'applied' => $applied,
-  'currentVersion' => getSchemaVersion($pdo, ALLEYCAT_META_TABLE)
+  'currentVersion' => getSchemaVersion($pdo, ALLEYCAT_META_TABLE),
+  'htaccess' => $htaccessOk
 ]);

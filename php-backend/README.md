@@ -30,10 +30,11 @@ Danach liegen `config.php` (Zugangsdaten + API-Key-Hash, per `.htaccess` vor Web
 - `install.php` — einmaliger Web-Installer: Pre-Flight-Check, Formular, Schema-Migration, `config.php`-Erzeugung, Selbstlöschung nach Erfolg.
 - `preflight.php` — Umgebungscheck (PHP-Version, Extensions, Schreibrechte, `max_execution_time`/`memory_limit`, `utf8mb4`-Verfügbarkeit, MySQL-Version) — von `install.php` genutzt.
 - `migrations.php` — kleiner Schema-Migrations-Runner (`db_meta`-Tabelle mit `schema_version`), idempotent formuliert. Genutzt von `install.php` und `migrate.php`.
+- `htaccess.php` — schreibt bzw. aktualisiert den Pretty-URL-Rewrite-Block in der `.htaccess` des Web-Roots (zwischen festen Markern, also wiederholbar). Genutzt von `install.php` und `migrate.php`.
 - `bootstrap.php` — gemeinsame Grundlage für alle laufenden Endpunkte: lädt `config.php`, prüft den API-Key (unterstützt sowohl den neuen Hash als auch ältere Klartext-Konfigurationen), öffnet die DB-Verbindung, fängt Fehler serverseitig ab (nie Rohdetails im Response-Body, siehe [COMPATIBILITY.md](COMPATIBILITY.md)).
 - `api.php` — REST-Endpunkt (`GET`/`POST`/`DELETE` über `?key=...`, Auth per `X-Api-Key`-Header) — der von der App tatsächlich genutzte Storage-Endpunkt.
 - `backup.php` — API-Key-geschützter `GET`-Endpunkt, lädt den gesamten Tabelleninhalt als JSON-Datei herunter (Server-seitiges Backup ohne CLI-/phpMyAdmin-Zugriff).
-- `migrate.php` — API-Key-geschützter `POST`-Endpunkt, holt neue Schema-Migrationen nach (für bereits installierte Backends nach einem App-Update, ohne `install.php` erneut auszuführen).
+- `migrate.php` — API-Key-geschützter `POST`-Endpunkt, holt neue Schema-Migrationen nach (für bereits installierte Backends nach einem App-Update, ohne `install.php` erneut auszuführen) und schreibt bei jedem Lauf zusätzlich den Pretty-URL-Block der `.htaccess` neu (Ergebnis im Response-Feld `htaccess`). Nötig, weil sich `install.php` nach der Erstinstallation selbst löscht — korrigierte Rewrite-Regeln erreichen bestehende Installationen sonst nie.
 - `.htaccess` — sperrt Direktzugriff auf `config.php`.
 - `config.php` — wird von `install.php` erzeugt, enthält DB-Zugangsdaten + API-Key-**Hash**. Nicht committen/teilen.
 - `COMPATIBILITY.md` — wachsende Liste tatsächlicher Installationen (Hoster, PHP-/MySQL-Version, Besonderheiten).
