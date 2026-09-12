@@ -95,7 +95,25 @@ Vier Gruppen mit Entscheidung:
 | `rider-note` / `rider-note-error` | 4 + 4 | Umbenennen in `.inline-note` / `.inline-note-error`, in `base.css` definieren — der Name „rider" ist im Organizer irreführend |
 | `orga-pin-row` | 1 | Klasse behalten (JS-Hook **und** in `test-suite.js` referenziert), nur Layout-Regel ergänzen |
 
-**Prüfliste ohne Vorentscheidung** (keine Eingabeflächen, je eine Minute Sichtung: Überbleibsel entfernen oder Regel nachziehen): `overview-widget-body`, `beamer-lb-name`, `beamer-lb-time`, `beamer-lb-progress`, `beamer-points-table`, `category-group-row`, `documentation-section`, `event-settings-drawer`, `feature-registry-section`, `game-modes-panel`, `geo-import-row`, `overview-cp-load-name`.
+**Messergebnis (nach Bildschirm-Sichtung, 2026-09-12):** Alle 13 Klassen sind wirkungslose Marker ohne sichtbaren Defekt. Keine braucht eine Regel, keine wird entfernt.
+
+| Klasse | Grund |
+|---|---|
+| `orga-pin-row` | Markup ist `class="zone-row orga-pin-row"`; `.zone-row` liefert das Layout. Die geplante Regel wäre Fehler gewesen (Konkurrenz mit `.zone-row`). Klasse bleibt: JS-Hook in `src/core/map.js:399`, Test-Referenz. |
+| `geo-import-row` | sitzt auf `.zone-row` |
+| `category-group-row` | sitzt auf `.type-row` |
+| `beamer-points-table` | sitzt auf `.beamer-lb-table` |
+| `documentation-section` | sitzt auf `.settings-section` |
+| `event-settings-drawer` | sitzt auf `.settings-section` |
+| `feature-registry-section` | sitzt auf `.settings-section` |
+| `game-modes-panel` | sitzt auf `.settings-section` |
+| `beamer-lb-name`, `beamer-lb-time`, `beamer-lb-progress` | `<td>`-Zellen in `.beamer-lb-table`; `td` ist generisch formatiert (Polsterung, 18px, `--chalk`), Nachbarn wie `.beamer-lb-rank` haben bewusst eigene Regeln, diese drei nicht. |
+| `overview-widget-body` | Struktur-Wrapper in `.overview-widget` |
+| `overview-cp-load-name` | Struktur-Wrapper in `.overview-cp-load-row`; Optik kommt von Nachbarn (`.overview-cp-load-count`) und Header (`h3`). |
+
+Zwölf der dreizehn Klassen haben null JS- oder Test-Hooks; nur `orga-pin-row` wird abgefragt. Entfernen wäre Änderungsrauschen in sechs Dateien ohne sichtbare Wirkung, deshalb bleiben die Namen als lesbare Marker stehen.
+
+**Anmerkung zu Step 3:** Die in der Anforderung geplante CSS-Regel für `orga-pin-row` wurde bewusst nicht hinzugefügt. Das Element trägt bereits das korrektes Layout von `.zone-row`; die geplante Regel hätte konkurriert und die Kartenleiste verändert (Defekt statt Markierung).
 
 **Unangetastet**, weil reine JS-Hooks ohne Optik: `admin-assign-cp`, `newcatgroup-option-input`, `leaderboard-search-input`.
 
