@@ -246,7 +246,8 @@
   .settings-form .icon-input{width:72px; text-align:center; font-size:18px;}
   .settings-form .checkbox-row{display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--steel);}
   .settings-form .form-actions{display:flex; gap:8px; margin-top:2px;}
-  .settings-form input, .settings-form select, .settings-form textarea{width:100%;}
+  .settings-form input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  .settings-form select, .settings-form textarea{width:100%;}
 
   /* ---------- Main area ---------- */
   #main{flex:1; min-height:0; position:relative;}
