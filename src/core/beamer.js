@@ -477,7 +477,7 @@ function initBeamerLiveMap(evt){
   if(!orderedCps.length) return;
   const prefs = beamerMapPrefs();
   beamerLiveMap = L.map(container, {zoomControl: false, attributionControl: true, dragging: true, scrollWheelZoom: false, doubleClickZoom: false, keyboard: false});
-  createOfflineTileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {subdomains: 'abc', maxZoom: 19}).addTo(beamerLiveMap);
+  createOfflineTileLayer(OFFLINE_TILE_URL_TEMPLATE, {maxZoom: 19}).addTo(beamerLiveMap);
   const cpLayer = L.layerGroup();
   const radiusLayer = L.layerGroup();
   const riderLayer = L.layerGroup();

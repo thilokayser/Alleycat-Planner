@@ -4,9 +4,8 @@ function initMap(){
   if(!container) return;
   if(!map){
     map = L.map('map', {zoomControl:true}).setView([50.1109, 8.6821], 13);
-    createOfflineTileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    createOfflineTileLayer(OFFLINE_TILE_URL_TEMPLATE, {
       attribution: '&copy; OpenStreetMap contributors',
-      subdomains: 'abc',
       maxZoom: 19
     }).addTo(map);
     markersLayer = L.layerGroup().addTo(map);

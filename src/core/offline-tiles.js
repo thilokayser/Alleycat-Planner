@@ -8,7 +8,7 @@
    Zeitstempel (`evt.tileCacheUpdatedAt`) ist pro Event. */
 const TILES_IDB_DB = 'alleycat-tiles';
 const TILES_IDB_STORE = 'tiles';
-const OFFLINE_TILE_URL_TEMPLATE = 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OFFLINE_TILE_URL_TEMPLATE = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OFFLINE_TILE_ZOOM_MIN = 13;
 const OFFLINE_TILE_ZOOM_MAX = 17;
 const OFFLINE_TILE_BUFFER_METERS = 500;
@@ -102,27 +102,29 @@ function tilesForEvent(evt){
   return tilesInBounds(bounds, OFFLINE_TILE_ZOOM_MIN, OFFLINE_TILE_ZOOM_MAX);
 }
 
-/* ---------------- download orchestration ---------------- */
+/* ---------------- download orchestration ----------------
+   OSM-Tile-Nutzungsrichtlinie verbietet Bulk-Downloads ausdrücklich und
+   nennt max. ~2 Anfragen/Sekunde als Richtwert für Skript-Zugriffe. Ein
+   einzelner Worker mit fester Pause zwischen den Requests hält das ein,
+   statt mit mehreren parallelen Workern die IP in den 403-Block zu
+   schicken (genau das ist am 2026-09-12 in der Planneransicht passiert). */
+const OFFLINE_TILE_REQUEST_DELAY_MS = 500;
 async function cacheTileList(tiles, onProgress){
   let done = 0, failed = 0;
-  let idx = 0;
-  async function worker(){
-    while(idx < tiles.length){
-      const tile = tiles[idx++];
-      const key = tileCacheKey(tile.z, tile.x, tile.y);
-      try{
-        const existing = await getTileFromCache(key);
-        if(!existing){
-          const res = await fetch(tileUrl(tile.z, tile.x, tile.y));
-          if(!res.ok) throw new Error('HTTP ' + res.status);
-          await putTileInCache(key, await res.blob());
-        }
-      }catch(e){ failed++; }
-      done++;
-      if(onProgress) onProgress({done, total: tiles.length, failed});
-    }
+  for(const tile of tiles){
+    const key = tileCacheKey(tile.z, tile.x, tile.y);
+    try{
+      const existing = await getTileFromCache(key);
+      if(!existing){
+        const res = await fetch(tileUrl(tile.z, tile.x, tile.y));
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        await putTileInCache(key, await res.blob());
+        await new Promise(resolve => setTimeout(resolve, OFFLINE_TILE_REQUEST_DELAY_MS));
+      }
+    }catch(e){ failed++; }
+    done++;
+    if(onProgress) onProgress({done, total: tiles.length, failed});
   }
-  await Promise.all(Array.from({length: Math.min(6, tiles.length)}, worker));
   return {done, failed};
 }
 
