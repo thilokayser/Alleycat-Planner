@@ -933,9 +933,6 @@
     background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:4px;
     padding:14px 16px; margin-bottom:22px; max-width:680px;
   }
-    display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em;
-    color:var(--steel); margin-bottom:8px;
-  }
   .spokecard-design-row{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
   .spokecard-design-row input[type=file]{color:var(--chalk); font-family:'Barlow',sans-serif; font-size:12px; max-width:220px;}
   .spokecard-design-preview{
