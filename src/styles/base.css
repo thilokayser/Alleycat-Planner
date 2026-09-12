@@ -513,7 +513,6 @@
   .addmode-hint{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-muted); margin-top:6px; line-height:1.4;}
   .cp-order-mode-row{display:flex; align-items:center; gap:8px; padding:10px 18px 0; flex-shrink:0;}
   .cp-order-mode-row label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-muted);}
-  .cp-order-mode-row select{font-family:'Barlow',sans-serif; font-size:12.5px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:4px 6px;}
   .cp-total-distance{
     padding:8px 18px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-muted); flex-shrink:0;
     display:flex; align-items:center; gap:8px; flex-wrap:wrap;
@@ -533,11 +532,10 @@
   .settings-toggle:hover{color:var(--stamp);}
   .settings-body{padding:2px 18px 14px; display:flex; flex-direction:column; gap:8px;}
   .settings-body label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-muted); display:block; margin-bottom:3px;}
-  .settings-body select, .settings-body input[type=datetime-local], .settings-body input[type=text], .settings-body input[type=date]{
-    width:100%; font-family:'Barlow',sans-serif; font-size:12.5px;
-    border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink);
-    border-radius:2px; padding:6px 8px;
-  }
+  .settings-body input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  .settings-body select, .settings-body textarea,
+  .cp-edit input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  .cp-edit select, .cp-edit textarea{width:100%;}
   .settings-row2{display:flex; gap:8px;}
   .settings-row2 > div{flex:1;}
   .settings-hint{font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--paper-muted); line-height:1.4;}
@@ -557,7 +555,6 @@
     padding:10px 18px; border-bottom:1px solid var(--paper-line); background:var(--paper-2);
   }
   .cp-bulk-count{font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; color:var(--ink); margin-right:2px;}
-  .cp-bulk-bar select{font-family:'Barlow',sans-serif; font-size:12px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:5px 6px;}
   /* Dragged row doubles as its own drop-slot placeholder (dashed outline,
      dimmed content) rather than a separate ghost element — it already sits
      exactly where it would land (onCpDragMove moves it live), so a second
@@ -620,12 +617,6 @@
 
   .cp-edit{margin-top:10px; display:flex; flex-direction:column; gap:8px;}
   .cp-edit label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-muted); display:block; margin-bottom:3px;}
-  .cp-edit input[type=text], .cp-edit input[type=number], .cp-edit input[type=tel], .cp-edit textarea, .cp-edit select{
-    width:100%; font-family:'Barlow',sans-serif; font-size:13px;
-    border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink);
-    border-radius:2px; padding:6px 8px;
-  }
-  .cp-edit textarea{resize:vertical; min-height:44px;}
   .cp-edit .row2{display:flex; gap:8px;}
   .cp-edit .row2 > div{flex:1;}
   .cp-edit .checkbox-row{display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-muted);}
@@ -676,12 +667,8 @@
   .zone-row-meta{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   .zone-row-meta-text{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-muted);}
   .zone-radius-field{display:flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-muted);}
-  .zone-radius-field input{
-    width:60px; font-family:'IBM Plex Mono',monospace; font-size:11px;
-    border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:3px 5px;
-  }
+  .zone-radius-field input{width:60px; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 5px;}
   .zone-shrink-config{display:flex; flex-direction:column; gap:6px; margin-left:4px; padding-left:8px; border-left:2px solid var(--paper-line);}
-  .zone-shrink-config select{font-family:'Barlow',sans-serif; font-size:12px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:4px 6px;}
   .zone-visibility-row{display:flex; flex-direction:column; gap:2px; margin-top:2px;}
   .legend-zone-swatch{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:3px; vertical-align:middle;}
 
@@ -717,7 +704,6 @@
 
   .cp-group-by-row{display:flex; align-items:center; gap:8px; padding:10px 18px 0; flex-shrink:0;}
   .cp-group-by-row label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-muted);}
-  .cp-group-by-row select{font-family:'Barlow',sans-serif; font-size:12.5px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:4px 6px;}
   .cp-group-heading{
     padding:10px 18px 4px; font-family:'Barlow Condensed',sans-serif; font-size:11.5px; text-transform:uppercase;
     letter-spacing:0.05em; color:var(--paper-muted); display:flex; align-items:center; gap:6px;
