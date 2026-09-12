@@ -1199,13 +1199,24 @@ function renderInviteCodesSection(){
   ` : '';
   const createForm = state.inviteFormOpen ? `
     <div class="admin-user-row spacious">
-      <div class="rider-field"><label>${t('auth.usersRoleLabel')}</label>
-        <select id="newinvite-role">${ADMIN_ROLE_OPTIONS.map(r => `<option value="${r}">${escapeHtml(adminRoleLabel(r))}</option>`).join('')}</select>
+      <div class="settings-form">
+        <div class="row2">
+          <div><label>${t('auth.usersRoleLabel')}</label>
+            <select id="newinvite-role">${ADMIN_ROLE_OPTIONS.map(r => `<option value="${r}">${escapeHtml(adminRoleLabel(r))}</option>`).join('')}</select>
+          </div>
+          <div><label>${t('auth.inviteExpiresLabel')}</label>
+            <input type="datetime-local" id="newinvite-expires" value="${isFeatureEnabled('invite_default_expiry') ? toLocalDateTimeInputValue(new Date(Date.now() + 7 * 86400000)) : ''}"></div>
+        </div>
+        <div class="row2">
+          <div><label>${t('auth.inviteCountLabel')}</label>
+            <input type="number" id="newinvite-count" value="1" min="1" max="50"></div>
+          <div><label>${t('auth.inviteNoteLabel')}</label>
+            <input type="text" id="newinvite-note" placeholder="${t('auth.inviteNotePlaceholder')}"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="submitCreateInviteCode()">${t('auth.inviteCreateButton')}</button>
+        </div>
       </div>
-      <div class="rider-field"><label>${t('auth.inviteExpiresLabel')}</label><input type="datetime-local" id="newinvite-expires" value="${isFeatureEnabled('invite_default_expiry') ? toLocalDateTimeInputValue(new Date(Date.now() + 7 * 86400000)) : ''}"></div>
-      <div class="rider-field"><label>${t('auth.inviteCountLabel')}</label><input type="number" id="newinvite-count" value="1" min="1" max="50"></div>
-      <div class="rider-field"><label>${t('auth.inviteNoteLabel')}</label><input type="text" id="newinvite-note" placeholder="${t('auth.inviteNotePlaceholder')}"></div>
-      <button class="btn btn-primary" onclick="submitCreateInviteCode()">${t('auth.inviteCreateButton')}</button>
     </div>
   ` : '';
   const rows = invites.map(i => `
@@ -1274,10 +1285,15 @@ function renderRiderAppUrlSection(){
     <div class="settings-section">
       <h3>${t('phpSetup.riderAppUrlLabel')}</h3>
       <div class="settings-section-desc">${t('phpSetup.riderAppUrlHint')}</div>
-      <div class="rider-field">
-        <input type="text" id="settings-rider-app-url" value="${escapeHtml(riderAppBaseUrl())}" placeholder="${escapeHtml(t('phpSetup.riderAppUrlPlaceholder'))}">
+      <div class="settings-form">
+        <div>
+          <label>${t('phpSetup.riderAppUrlLabel')}</label>
+          <input type="url" id="settings-rider-app-url" value="${escapeHtml(riderAppBaseUrl())}" placeholder="${escapeHtml(t('phpSetup.riderAppUrlPlaceholder'))}">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="submitRiderAppUrl()">${t('auth.usersSaveButton')}</button>
+        </div>
       </div>
-      <button class="btn btn-primary" onclick="submitRiderAppUrl()">${t('auth.usersSaveButton')}</button>
     </div>
   `;
 }
@@ -1326,22 +1342,36 @@ function renderSmtpSettingsSection(){
       <h3>${t('auth.smtpHeading')}</h3>
       <div class="settings-section-desc">${t('auth.smtpDesc')}</div>
       ${notConfigured ? `<div class="data-safety-warning">${t('auth.smtpNotConfiguredWarning')}</div>` : ''}
-      <div class="rider-field"><label>${t('auth.smtpHostLabel')}</label>
-        <input type="text" id="smtp-host" value="${escapeHtml(cfg.host || '')}"></div>
-      <div class="rider-field"><label>${t('auth.smtpPortLabel')}</label>
-        <input type="number" id="smtp-port" value="${escapeHtml(String(cfg.port || 587))}"></div>
-      <div class="rider-field"><label>${t('auth.smtpUsernameLabel')}</label>
-        <input type="text" id="smtp-username" value="${escapeHtml(cfg.username || '')}"></div>
-      <div class="rider-field"><label>${t('auth.smtpPasswordLabel')}</label>
-        <input type="password" id="smtp-password" value="" placeholder="${cfg.password ? escapeHtml(t('auth.smtpPasswordKeepPlaceholder')) : ''}"></div>
-      <div class="rider-field"><label>${t('auth.smtpFromAddressLabel')}</label>
-        <input type="email" id="smtp-from-address" value="${escapeHtml(cfg.fromAddress || '')}"></div>
-      <div class="rider-field"><label>${t('auth.smtpFromNameLabel')}</label>
-        <input type="text" id="smtp-from-name" value="${escapeHtml(cfg.fromName || '')}"></div>
-      <button class="btn btn-primary" onclick="submitSmtpSettings()">${t('auth.usersSaveButton')}</button>
-      <div class="rider-field" style="margin-top:12px;"><label>${t('auth.smtpTestEmailLabel')}</label>
-        <input type="email" id="smtp-test-email"></div>
-      <button class="btn btn-ghost" onclick="submitSmtpTest()">${t('auth.smtpTestButton')}</button>
+      <div class="settings-form">
+        <div class="row2">
+          <div><label>${t('auth.smtpHostLabel')}</label>
+            <input type="text" id="smtp-host" value="${escapeHtml(cfg.host || '')}"></div>
+          <div><label>${t('auth.smtpPortLabel')}</label>
+            <input type="number" id="smtp-port" value="${escapeHtml(String(cfg.port || 587))}"></div>
+        </div>
+        <div class="row2">
+          <div><label>${t('auth.smtpUsernameLabel')}</label>
+            <input type="text" id="smtp-username" value="${escapeHtml(cfg.username || '')}"></div>
+          <div><label>${t('auth.smtpPasswordLabel')}</label>
+            <input type="password" id="smtp-password" value="" placeholder="${cfg.password ? escapeHtml(t('auth.smtpPasswordKeepPlaceholder')) : ''}"></div>
+        </div>
+        <div class="row2">
+          <div><label>${t('auth.smtpFromAddressLabel')}</label>
+            <input type="email" id="smtp-from-address" value="${escapeHtml(cfg.fromAddress || '')}"></div>
+          <div><label>${t('auth.smtpFromNameLabel')}</label>
+            <input type="text" id="smtp-from-name" value="${escapeHtml(cfg.fromName || '')}"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="submitSmtpSettings()">${t('auth.usersSaveButton')}</button>
+        </div>
+      </div>
+      <div class="settings-form">
+        <div><label>${t('auth.smtpTestEmailLabel')}</label>
+          <input type="email" id="smtp-test-email"></div>
+        <div class="form-actions">
+          <button class="btn btn-ghost" onclick="submitSmtpTest()">${t('auth.smtpTestButton')}</button>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -1436,13 +1466,21 @@ function renderSettingsSectionUsers(){
 
   const addForm = state.adminUsersEditingId === 'new' ? `
     <div class="admin-user-row spacious">
-      <div class="rider-field"><label>${t('auth.usersUsernameLabel')}</label><input type="text" id="newuser-username"></div>
-      <div class="rider-field"><label>${t('auth.usersPasswordLabel')}</label><input type="password" id="newuser-password"></div>
-      <div class="rider-field"><label>${t('auth.usersDisplayNameLabel')}</label><input type="text" id="newuser-displayname"></div>
-      <div class="rider-field"><label>${t('auth.usersRoleLabel')}</label>
-        <select id="newuser-role">${ADMIN_ROLE_OPTIONS.map(r => `<option value="${r}">${escapeHtml(adminRoleLabel(r))}</option>`).join('')}</select>
+      <div class="settings-form">
+        <div class="row2">
+          <div><label>${t('auth.usersUsernameLabel')}</label><input type="text" id="newuser-username"></div>
+          <div><label>${t('auth.usersPasswordLabel')}</label><input type="password" id="newuser-password"></div>
+        </div>
+        <div class="row2">
+          <div><label>${t('auth.usersDisplayNameLabel')}</label><input type="text" id="newuser-displayname"></div>
+          <div><label>${t('auth.usersRoleLabel')}</label>
+            <select id="newuser-role">${ADMIN_ROLE_OPTIONS.map(r => `<option value="${r}">${escapeHtml(adminRoleLabel(r))}</option>`).join('')}</select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="submitNewUser()">${t('auth.usersSaveButton')}</button>
+        </div>
       </div>
-      <button class="btn btn-primary" onclick="submitNewUser()">${t('auth.usersSaveButton')}</button>
     </div>
   ` : '';
 
@@ -1671,9 +1709,16 @@ function renderInstancePanel(){
     ${state.instanceOrgsError ? `<div class="inline-note inline-note-error">${escapeHtml(state.instanceOrgsError)}</div>` : ''}
     <div class="settings-section">
       <h3>${t('instance.createOrgHeading')}</h3>
-      <div class="rider-field"><label>${t('instance.orgSlugLabel')}</label><input type="text" id="instance-new-org-slug" placeholder="${escapeHtml(t('instance.orgSlugPlaceholder'))}"></div>
-      <div class="rider-field"><label>${t('instance.orgNameLabel')}</label><input type="text" id="instance-new-org-name"></div>
-      <button class="btn btn-primary" onclick="submitNewOrg()">${t('instance.createOrgButton')}</button>
+      <div class="settings-form">
+        <div class="row2">
+          <div><label>${t('instance.orgSlugLabel')}</label>
+            <input type="text" id="instance-new-org-slug" placeholder="${escapeHtml(t('instance.orgSlugPlaceholder'))}"></div>
+          <div><label>${t('instance.orgNameLabel')}</label><input type="text" id="instance-new-org-name"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="submitNewOrg()">${t('instance.createOrgButton')}</button>
+        </div>
+      </div>
     </div>
     <div class="settings-section">
       <h3>${t('instance.orgListHeading')}</h3>
