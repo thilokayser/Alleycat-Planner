@@ -112,7 +112,7 @@
   .manifest-settings-image label{margin-bottom:8px;}
   .checkin-timing label{margin-bottom:4px;}
   .checkin-timewindow label{font-size:9.5px; letter-spacing:0.05em; margin-bottom:4px;}
-  .rider-category-field label{font-size:8.5px; letter-spacing:0.04em;}
+  .rider-category-field label{font-size:8.5px; letter-spacing:0.04em; margin-bottom:0;}
   .bulk-import-mapping-grid label{letter-spacing:0.05em; margin-bottom:4px;}
   /* Inline-Reihen-Labels: kein display:block, kein margin-bottom */
   .cp-order-mode-row label, .cp-group-by-row label,
