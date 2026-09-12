@@ -1,0 +1,62 @@
+# Lokale Testumgebung fuers PHP-Backend. Aufruf aus diesem Verzeichnis:
+#   docker compose up -d --build
+# Organizer:  http://localhost:8083/alleycat-dispatch-server.html  (PHP 8.3)
+#             http://localhost:8074/alleycat-dispatch-server.html  (PHP 7.4)
+# Installer:  http://localhost:<port>/php-backend/install.php   (DB-Host: db)
+services:
+  db:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpass
+      MARIADB_DATABASE: alleycat83
+      MARIADB_USER: alleycat
+      MARIADB_PASSWORD: alleycatpass
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web83:
+    build:
+      context: .
+      args:
+        PHP_VERSION: "8.3"
+    ports:
+      - "8083:80"
+    volumes:
+      - ../php-backend:/srv/php-backend:ro
+      - ../dist:/srv/dist:ro
+      - web83backend:/var/www/html/php-backend
+    environment:
+      ALLEYCAT_KEEP_CONFIG: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web74:
+    build:
+      context: .
+      args:
+        PHP_VERSION: "7.4"
+    ports:
+      - "8074:80"
+    volumes:
+      - ../php-backend:/srv/php-backend:ro
+      - ../dist:/srv/dist:ro
+      - web74backend:/var/www/html/php-backend
+    environment:
+      ALLEYCAT_KEEP_CONFIG: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  dbdata:
+  web83backend:
+  web74backend:
