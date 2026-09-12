@@ -195,6 +195,32 @@ weiterhin ungetestet bleibt: Verhalten auf echtem Shared Hosting
 (PHP-FPM/Apache statt PHP-Dev-Server) und Versand über ein echtes
 (Nicht-Scratch-)SMTP-Relay bzw. ein echtes Postfach.
 
+### Docker: Apache + mod_php (PHP 8.3 und 7.4) + MariaDB 11 — 12.09.2026
+
+**Kontext:** Erster Durchlauf auf einem **echten Webserver** statt `php -S`, und erster Durchlauf auf der dokumentierten **Mindestversion PHP 7.4**. Setup liegt als wiederverwendbare Umgebung im Repo unter [`docker/`](../docker/): `docker compose up -d --build` startet MariaDB 11 plus zwei Apache-Container (PHP 8.3 auf Port 8083, PHP 7.4 auf 8074, je eigene Datenbank). `php-backend/` wird read-only gemountet und beim Start in eine Arbeitskopie kopiert — nötig, weil `install.php` sich selbst löscht und sonst die getrackte Repo-Datei träfe.
+
+| Punkt | PHP 8.3.33 | PHP 7.4.33 |
+|---|---|---|
+| Webserver | Apache 2.4.68 (Debian), mod_php | Apache 2.4.54 (Debian), mod_php |
+| Pre-Flight-Check | 7/7 grün (inkl. neuem `mbstring`-Check) | 7/7 grün |
+| `install.php` | läuft durch, Tabellen angelegt, Selbstlöschung erfolgreich, `config.php` enthält nur den Key-Hash | identisch (per `curl`-POST) |
+| `.htaccess`-Schutz für `config.php` | 403 (`AH01630: client denied by server configuration`) — greift auf echtem Apache | 403 |
+| `auth.php?a=discover` | liefert `apiUrl` + `riderAppUrl`, unauthentifiziert | identisch |
+| **`X-Admin-Token` durch mod_php** | **kommt an** — `?a=whoami` mit Token 200, ohne 401, mit Müll-Token 401 | **kommt an** |
+| Rollen auf `api.php` | Viewer GET 200 / POST 403 / DELETE 403, Editor POST 200, fremder Org-Slug 403, Master-Key 200 | Schreib-/Lesepfad stichprobenartig geprüft, identisch |
+| Migrationen | `migrate.php` (POST) zweimal: `applied:[]`, `currentVersion:11` — idempotent | identisch |
+| utf8mb4 | Eventname mit Umlauten **und** Emoji unverändert zurückgelesen | identisch |
+| PHP-Log (`error_reporting=E_ALL`) | **keine** Warnung, Notice oder Deprecation über den gesamten Durchlauf | **keine** |
+
+**Vollständiger Browser-Durchlauf (PHP 8.3):** Login mit dem beim Install angelegten Admin-Konto → Org-Auswahl → Event mit zwei Checkpoints → drei Startnummern generiert → Fahrer-App-Adresse gesetzt (landet über `setRiderAppBaseUrl()` auch im KV-Store, `?a=discover` liefert sie danach aus) → Publish → Selbstanmeldung in der Fahrer-App → Bestätigung im Organizer über das Log-Polling (5s-Takt, im Access-Log als exakt eine Anfrage pro 5 Sekunden nachgewiesen) → Checkpoint-App per Zugangscode freigeschaltet → **`checkpoint-checkin` gegen einen bestätigten Slot: 200** → zweiter Versuch derselben Startnummer: „Bereits eingecheckt" → Check-in erscheint im Leaderboard des Organizers. Damit ist der bis dahin offene Punkt „`checkpoint-checkin` gegen eine befüllte `rider_slot`-Zeile" abgedeckt.
+
+**Dabei gefunden:**
+
+1. **Fahrer- und Checkpoint-App funktionieren nur im selben Verzeichnis wie `rider.php`.** `riderEndpoint()` (`src/rider/api.js`, identisch in `src/checkpoint/api.js`) leitet den Endpunkt aus der *eigenen* Adresse ab. [`INSTALL.md`](INSTALL.md) sagte das Gegenteil („irgendwohin unter deine Domain hochladen … die App kennt `rider.php` aus der Konfiguration") und nannte als Beispiel genau die Web-Root-Ablage. Wer der Anleitung folgte und das Backend wie beschrieben unter `/php-backend/` betrieb, bekam auf jede Fahrer-Anfrage 404 und in der App nur „Etwas ist schiefgelaufen." — **Anleitung am selben Tag korrigiert** (beide Apps gehören neben `rider.php`); die Einschränkung selbst steht im Code noch. Sie im Code aufzuheben (Endpunkt aus dem QR-Payload oder per Discovery) ist als eigener Auftrag vorgemerkt.
+2. **Die von `install.php` erzeugte Pretty-URL-`.htaccess` verschluckte 404er in Unterverzeichnissen.** `RewriteCond %{REQUEST_FILENAME} !-f` + `RewriteRule ^([a-z0-9-]+)/(.*)$` traf auch `/php-backend/<irgendwas>`: Eine fehlende Datei dort lieferte **HTTP 200 und die komplette Organizer-HTML (≈ 928 KB)** statt eines 404. Sichtbar u. a. beim erneuten Aufruf von `install.php` nach dessen Selbstlöschung. — **Behoben und gegengeprüft** (12.09.2026): `installWriteHtaccessBlock()` schreibt jetzt zusätzlich `RewriteCond %{REQUEST_URI} !/<backend-dir>/` und `RewriteCond %{REQUEST_URI} !\.php$`, Verzeichnisname aus `basename(__DIR__)`. Neuinstallation auf dem PHP-7.4-Container: fehlende Backend-Datei und gelöschte `install.php` je 404, Org-Pretty-URL (`/testcrew/board`) weiterhin 200 mit der App, `auth.php?a=discover` unverändert erreichbar.
+
+**Weiterhin ungetestet:** echtes Shared Hosting (PHP-FPM statt mod_php), Last-/Nebenläufigkeitstests auf dieser Umgebung, SMTP-Versand, sowie der Claim-Fluss („Startnummer zu meinem Konto hinzufügen") der Fahrer-App.
+
 ### `hasencore.de` — noch offen
 
 Der im Planungsdokument (14.7) vorgesehene erste praktische Durchlauf auf einem echten Hoster steht noch aus — dafür wird Zugriff auf den dortigen Webspace benötigt (nur der Nutzer hat diesen Zugriff). Sobald durchgeführt: PHP-/MySQL-Version per `phpinfo()` bzw. `SELECT VERSION();` ermitteln (danach `phpinfo.php` sofort wieder löschen — zeigt sicherheitsrelevante Details), Pre-Flight-Check-Ausgabe hier dokumentieren, danach diesen Eintrag ergänzen.

@@ -18,7 +18,12 @@ require __DIR__ . '/migrations.php';
 function installWriteHtaccessBlock($dir){
   $marker = '# BEGIN alleycat-pretty-urls';
   $endMarker = '# END alleycat-pretty-urls';
-  $block = "{$marker}\n<IfModule mod_rewrite.c>\nRewriteEngine On\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteRule ^([a-z0-9-]+)/(.*)$ alleycat-dispatch-server.html [L]\n</IfModule>\n{$endMarker}\n";
+  /* Die beiden zusätzlichen Bedingungen halten das Backend-Verzeichnis und
+     alle .php-Aufrufe aus dem Rewrite heraus: fehlende Backend-Dateien
+     (z. B. install.php nach der Selbstsperre) müssen einen echten 404
+     liefern statt der kompletten Organizer-App mit HTTP 200. */
+  $backendDir = str_replace(['\\', '.', '+', '*', '?', '[', ']', '^', '$', '(', ')', '{', '}', '|'], ['\\\\', '\\.', '\\+', '\\*', '\\?', '\\[', '\\]', '\\^', '\\$', '\\(', '\\)', '\\{', '\\}', '\\|'], basename(__DIR__));
+  $block = "{$marker}\n<IfModule mod_rewrite.c>\nRewriteEngine On\nRewriteCond %{REQUEST_URI} !/{$backendDir}/\nRewriteCond %{REQUEST_URI} !\\.php$\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteRule ^([a-z0-9-]+)/(.*)$ alleycat-dispatch-server.html [L]\n</IfModule>\n{$endMarker}\n";
   $path = rtrim($dir, '/') . '/.htaccess';
   $existing = file_exists($path) ? file_get_contents($path) : '';
   if(strpos($existing, $marker) !== false){
