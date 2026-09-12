@@ -86,29 +86,45 @@
     border-color:var(--stamp);
   }
 
-  /* Feldbeschriftungen: 15 wortgleiche Regeln zusammengeführt. Unterschied
-     war allein die Farbe, und die folgt der Palette des Bereichs. */
-  .settings-form label, .riders-count-field label, .riders-search-sort-row label,
-  .team-scoring-mode-row label, .rider-category-field label, .spokecard-design label,
-  .manifest-settings-image label, .checkin-search label, .checkin-timing label,
-  .checkin-timewindow label, .bulk-import-mapping-grid label{
+  /* Feldbeschriftungen: 15 Regeln zusammengefasst in zwei Gruppen nach Farbe.
+     Basis-Eigenschaften gemeinsam (font-family, font-size, text-transform, letter-spacing,
+     display, margin-bottom); Farbe folgt dem Kontext (Asphalt vs. Papier).
+     Abweichungen (nicht-standard margin-bottom, font-size, letter-spacing, oder fehlende
+     display/margin bei Inline-Reihen) wandern in Folgeregeln. */
+  .settings-form label, .riders-count-field label, .team-scoring-mode-row label,
+  .spokecard-design label, .manifest-settings-image label, .checkin-search label,
+  .bulk-import-mapping-grid label, .riders-search-sort-row label{
     display:block; margin-bottom:3px;
     font-family:'IBM Plex Mono',monospace; font-size:10px;
     text-transform:uppercase; letter-spacing:0.06em; color:var(--steel);
   }
-  .settings-body label, .cp-edit label, .cp-order-mode-row label, .cp-group-by-row label{
+  .settings-body label, .cp-edit label, .cp-order-mode-row label, .cp-group-by-row label,
+  .checkin-timing label, .checkin-timewindow label, .rider-category-field label{
     display:block; margin-bottom:3px;
     font-family:'IBM Plex Mono',monospace; font-size:10px;
     text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-muted);
   }
 
+  /* Label follow-up rules: Abweichungen von den Gruppen-Werten */
+  .riders-count-field label{margin-bottom:4px;}
+  .checkin-search label{margin-bottom:5px;}
+  .spokecard-design label{margin-bottom:8px;}
+  .manifest-settings-image label{margin-bottom:8px;}
+  .checkin-timing label{margin-bottom:4px;}
+  .checkin-timewindow label{font-size:9.5px; letter-spacing:0.05em; margin-bottom:4px;}
+  .rider-category-field label{font-size:8.5px; letter-spacing:0.04em;}
+  .bulk-import-mapping-grid label{letter-spacing:0.05em; margin-bottom:4px;}
+  /* Inline-Reihen-Labels: kein display:block, kein margin-bottom */
+  .cp-order-mode-row label, .cp-group-by-row label,
+  .riders-search-sort-row label, .team-scoring-mode-row label{display:inline; margin-bottom:0;}
+
   /* Hilfetexte: neun Klassen mit vier verschiedenen Schriftgrößen und zwei
      Farben, inhaltlich dieselbe Rolle. Namen bleiben, damit kein Markup
-     angefasst werden muss. */
-  .riders-hint, .checkin-confirm-hint, .overview-settings-hint, .overview-beamer-hint{
+     angefasst werden muss. RULING 5: .checkin-confirm-hint moved to paper group. */
+  .riders-hint, .overview-settings-hint, .overview-beamer-hint{
     font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--steel); line-height:1.5;
   }
-  .settings-hint, .addmode-hint, .cp-bulk-hint, .cp-distance-hint{
+  .settings-hint, .addmode-hint, .cp-bulk-hint, .cp-distance-hint, .checkin-confirm-hint{
     font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-muted); line-height:1.4;
   }
 
