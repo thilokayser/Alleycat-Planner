@@ -1198,8 +1198,7 @@ function renderInviteCodesSection(){
     </div>
   ` : '';
   const createForm = state.inviteFormOpen ? `
-    <div class="admin-user-row spacious">
-      <div class="settings-form">
+      <div class="settings-form spacious">
         <div class="row2">
           <div><label>${t('auth.usersRoleLabel')}</label>
             <select id="newinvite-role">${ADMIN_ROLE_OPTIONS.map(r => `<option value="${r}">${escapeHtml(adminRoleLabel(r))}</option>`).join('')}</select>
@@ -1217,7 +1216,6 @@ function renderInviteCodesSection(){
           <button class="btn btn-primary" onclick="submitCreateInviteCode()">${t('auth.inviteCreateButton')}</button>
         </div>
       </div>
-    </div>
   ` : '';
   const rows = invites.map(i => `
     <div class="admin-user-row compact">
@@ -1464,8 +1462,7 @@ function renderSettingsSectionUsers(){
   }).join('');
 
   const addForm = state.adminUsersEditingId === 'new' ? `
-    <div class="admin-user-row spacious">
-      <div class="settings-form">
+      <div class="settings-form spacious">
         <div class="row2">
           <div><label>${t('auth.usersUsernameLabel')}</label><input type="text" id="newuser-username"></div>
           <div><label>${t('auth.usersPasswordLabel')}</label><input type="password" id="newuser-password"></div>
@@ -1480,7 +1477,6 @@ function renderSettingsSectionUsers(){
           <button class="btn btn-primary" onclick="submitNewUser()">${t('auth.usersSaveButton')}</button>
         </div>
       </div>
-    </div>
   ` : '';
 
   const listToolsBar = listToolsOn ? `
