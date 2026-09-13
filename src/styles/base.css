@@ -40,6 +40,103 @@
   ::selection{background:var(--hivis); color:var(--ink);}
   :focus-visible{outline:2px solid var(--hivis); outline-offset:2px;}
 
+  /* ---------- Formular-Grundschicht ----------
+     Eine Regel für alle Texteingaben, Auswahlfelder und Textbereiche, damit
+     ein neuer Bildschirm nichts mitbringen muss, um richtig auszusehen.
+     Vorher hing das Aussehen an rund 50 komponenteneigenen Regeln; wo keine
+     existierte, erschienen Browser-Voreinstellungen (siehe Spec §1).
+
+     Typenliste statt Ausschlussliste: checkbox, radio, color, file und range
+     haben bewusst eigene Behandlung und dürfen hier nicht hineinrutschen.
+     Die Liste ist von Open Props UI übernommen (text-field.css). */
+  input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  select, textarea{
+    font-family:'Barlow',sans-serif; font-size:13px;
+    border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk);
+    border-radius:2px; padding:7px 9px;
+  }
+  textarea{resize:vertical; min-height:44px;}
+
+  /* Die Seitenleiste fährt die Papier-Palette (siehe .sidebar). Hier nur die
+     drei Farbwerte umbiegen — Schrift, Polsterung und Radius erbt sie. */
+  .sidebar input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  .sidebar select, .sidebar textarea{
+    border-color:var(--paper-line); background:var(--paper-2); color:var(--ink);
+  }
+
+  /* Zustände. Der Fokusring kommt vom globalen :focus-visible oben.
+     :read-only bewusst ohne select — ein select ist laut Spezifikation immer
+     :read-only, die Regel würde sonst jedes Auswahlfeld abdunkeln. */
+  input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]):hover:not(:disabled),
+  select:hover:not(:disabled), textarea:hover:not(:disabled){
+    border-color:var(--steel);
+  }
+  input:disabled, select:disabled, textarea:disabled{
+    opacity:0.5; cursor:not-allowed;
+  }
+  input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]):read-only, textarea:read-only{
+    background:var(--asphalt-2); color:var(--steel); cursor:default;
+  }
+  .sidebar input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]):read-only, .sidebar textarea:read-only{
+    background:var(--paper); color:var(--paper-muted);
+  }
+  /* :user-invalid statt :invalid — meldet erst nach einer Eingabe, nicht
+     schon beim Öffnen eines leeren Pflichtfelds. */
+  input:user-invalid, select:user-invalid, textarea:user-invalid{
+    border-color:var(--stamp);
+  }
+
+  /* Feldbeschriftungen: 15 Regeln zusammengefasst in zwei Gruppen nach Farbe.
+     Basis-Eigenschaften gemeinsam (font-family, font-size, text-transform, letter-spacing,
+     display, margin-bottom); Farbe folgt dem Kontext (Asphalt vs. Papier).
+     Abweichungen (nicht-standard margin-bottom, font-size, letter-spacing, oder fehlende
+     display/margin bei Inline-Reihen) wandern in Folgeregeln. */
+  .settings-form label, .riders-count-field label, .team-scoring-mode-row label,
+  .spokecard-design label, .manifest-settings-image label, .checkin-search label,
+  .bulk-import-mapping-grid label, .riders-search-sort-row label{
+    display:block; margin-bottom:3px;
+    font-family:'IBM Plex Mono',monospace; font-size:10px;
+    text-transform:uppercase; letter-spacing:0.06em; color:var(--steel);
+  }
+  .settings-body label, .cp-edit label, .cp-order-mode-row label, .cp-group-by-row label,
+  .checkin-timing label, .checkin-timewindow label, .rider-category-field label{
+    display:block; margin-bottom:3px;
+    font-family:'IBM Plex Mono',monospace; font-size:10px;
+    text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-muted);
+  }
+
+  /* Label follow-up rules: Abweichungen von den Gruppen-Werten */
+  .riders-count-field label{margin-bottom:4px;}
+  .checkin-search label{margin-bottom:5px;}
+  .spokecard-design label{margin-bottom:8px;}
+  .manifest-settings-image label{margin-bottom:8px;}
+  .checkin-timing label{margin-bottom:4px;}
+  .checkin-timewindow label{font-size:9.5px; letter-spacing:0.05em; margin-bottom:4px;}
+  .rider-category-field label{font-size:8.5px; letter-spacing:0.04em; margin-bottom:0;}
+  .bulk-import-mapping-grid label{letter-spacing:0.05em; margin-bottom:4px;}
+  /* Inline-Reihen-Labels: kein display:block, kein margin-bottom */
+  .cp-order-mode-row label, .cp-group-by-row label,
+  .riders-search-sort-row label, .team-scoring-mode-row label{display:inline; margin-bottom:0;}
+
+  /* Hilfetexte: neun Klassen mit vier verschiedenen Schriftgrößen und zwei
+     Farben, inhaltlich dieselbe Rolle. Namen bleiben, damit kein Markup
+     angefasst werden muss. RULING 5: .checkin-confirm-hint moved to paper group. */
+  .riders-hint, .overview-settings-hint, .overview-beamer-hint{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--steel); line-height:1.5;
+  }
+  .settings-hint, .addmode-hint, .cp-bulk-hint, .cp-distance-hint, .checkin-confirm-hint{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-muted); line-height:1.4;
+  }
+
+  /* Follow-up rules for additional hint declarations */
+  .riders-hint{max-width:680px; margin:-6px 0 20px;}
+  .riders-hint.warn{color:var(--hivis); font-weight:700;}
+  .addmode-hint{margin-top:6px;}
+  .cp-bulk-hint{padding:6px 18px 10px;}
+  .cp-distance-hint{font-style:italic;}
+  .overview-settings-hint{margin-bottom:4px;}
+  .checkin-search-hint{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--steel); text-align:center; padding:30px 10px;}
+
   h1,h2,h3,.display{
     font-family:'Barlow', 'Barlow Condensed', sans-serif;
     text-transform:uppercase;
@@ -194,17 +291,36 @@
   .type-row .type-meta{font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--steel); margin-top:2px;}
   .type-row .type-badge{font-family:'IBM Plex Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.05em; color:var(--steel); border:1px solid var(--asphalt-3); border-radius:3px; padding:2px 6px; flex-shrink:0;}
   .settings-form{margin-top:4px; padding:16px; background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:4px; display:flex; flex-direction:column; gap:12px; max-width:520px;}
-  .settings-form label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); display:block; margin-bottom:3px;}
-  .settings-form input[type=text], .settings-form input[type=number]{
-    width:100%; font-family:'Barlow',sans-serif; font-size:13px;
-    border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk);
-    border-radius:2px; padding:7px 9px;
-  }
   .settings-form .row2{display:flex; gap:10px; flex-wrap:wrap;}
   .settings-form .row2 > div{flex:1; min-width:140px;}
-  .settings-form .icon-input{width:72px; text-align:center; font-size:18px;}
   .settings-form .checkbox-row{display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--steel);}
   .settings-form .form-actions{display:flex; gap:8px; margin-top:2px;}
+  .settings-form input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  .settings-form select, .settings-form textarea{width:100%;}
+  .settings-form input.icon-input{width:72px; text-align:center; font-size:18px;}
+  .settings-form.spacious{margin-bottom:14px;}
+
+  /* Zeilenkarte der Benutzer-, Einladungs- und Org-Listen. Stand bisher
+     ausschließlich in Inline-Styles, die Klasse war in keiner CSS-Datei
+     definiert. */
+  .admin-user-row{
+    border:1px solid var(--asphalt-3); border-radius:4px;
+    padding:12px 14px; margin-bottom:10px;
+  }
+  .admin-user-row.compact{padding:10px 14px; margin-bottom:8px;}
+  .admin-user-row.spacious{margin-bottom:14px;}
+  .admin-user-row-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .admin-user-row-sub{color:var(--steel); font-size:11px; margin-top:4px;}
+  .admin-user-row-meta{color:var(--steel); font-size:12px;}
+
+  /* Hinweiszeile über einem Formular. Hieß im Organizer bisher rider-note,
+     obwohl die Regel dazu nur in rider.css steht, die der Organizer nicht
+     mitbaut — die Zeile war damit unformatiert. */
+  .inline-note{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px;
+    color:var(--steel); margin-bottom:10px; line-height:1.4;
+  }
+  .inline-note-error{color:var(--stamp);}
 
   /* ---------- Main area ---------- */
   #main{flex:1; min-height:0; position:relative;}
@@ -467,15 +583,11 @@
 
   .addmode-row{padding:10px 18px; border-bottom:1px solid var(--paper-line); flex-shrink:0;}
   .addmode-row .btn{width:100%;}
-  .addmode-hint{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-muted); margin-top:6px; line-height:1.4;}
   .cp-order-mode-row{display:flex; align-items:center; gap:8px; padding:10px 18px 0; flex-shrink:0;}
-  .cp-order-mode-row label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-muted);}
-  .cp-order-mode-row select{font-family:'Barlow',sans-serif; font-size:12.5px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:4px 6px;}
   .cp-total-distance{
     padding:8px 18px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-muted); flex-shrink:0;
     display:flex; align-items:center; gap:8px; flex-wrap:wrap;
   }
-  .cp-distance-hint{font-size:9.5px; color:var(--paper-muted); font-style:italic;}
   .cp-leg-distance{
     text-align:center; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--paper-muted);
     padding:2px 0; margin:-2px 0;
@@ -489,15 +601,12 @@
   }
   .settings-toggle:hover{color:var(--stamp);}
   .settings-body{padding:2px 18px 14px; display:flex; flex-direction:column; gap:8px;}
-  .settings-body label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-muted); display:block; margin-bottom:3px;}
-  .settings-body select, .settings-body input[type=datetime-local], .settings-body input[type=text], .settings-body input[type=date]{
-    width:100%; font-family:'Barlow',sans-serif; font-size:12.5px;
-    border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink);
-    border-radius:2px; padding:6px 8px;
-  }
+  .settings-body input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  .settings-body select, .settings-body textarea,
+  .cp-edit input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  .cp-edit select, .cp-edit textarea{width:100%;}
   .settings-row2{display:flex; gap:8px;}
   .settings-row2 > div{flex:1;}
-  .settings-hint{font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--paper-muted); line-height:1.4;}
 
   .cp-list{padding:8px 0;}
   .cp-row{
@@ -508,13 +617,11 @@
   .cp-row:hover{background:rgba(0,0,0,0.04);}
   .cp-row.editing{background:color-mix(in srgb, var(--hivis) 14%, transparent);}
   .cp-row.bulk-selected{background:color-mix(in srgb, var(--hivis) 10%, transparent); box-shadow:inset 3px 0 0 var(--hivis);}
-  .cp-bulk-hint{padding:6px 18px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-muted); line-height:1.4;}
   .cp-bulk-bar{
     display:flex; align-items:center; gap:8px; flex-wrap:wrap;
     padding:10px 18px; border-bottom:1px solid var(--paper-line); background:var(--paper-2);
   }
   .cp-bulk-count{font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; color:var(--ink); margin-right:2px;}
-  .cp-bulk-bar select{font-family:'Barlow',sans-serif; font-size:12px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:5px 6px;}
   /* Dragged row doubles as its own drop-slot placeholder (dashed outline,
      dimmed content) rather than a separate ghost element — it already sits
      exactly where it would land (onCpDragMove moves it live), so a second
@@ -576,13 +683,6 @@
   .cp-quick-toggle input{accent-color:var(--stamp); cursor:pointer;}
 
   .cp-edit{margin-top:10px; display:flex; flex-direction:column; gap:8px;}
-  .cp-edit label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-muted); display:block; margin-bottom:3px;}
-  .cp-edit input[type=text], .cp-edit input[type=number], .cp-edit input[type=tel], .cp-edit textarea, .cp-edit select{
-    width:100%; font-family:'Barlow',sans-serif; font-size:13px;
-    border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink);
-    border-radius:2px; padding:6px 8px;
-  }
-  .cp-edit textarea{resize:vertical; min-height:44px;}
   .cp-edit .row2{display:flex; gap:8px;}
   .cp-edit .row2 > div{flex:1;}
   .cp-edit .checkbox-row{display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-muted);}
@@ -633,12 +733,8 @@
   .zone-row-meta{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   .zone-row-meta-text{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-muted);}
   .zone-radius-field{display:flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-muted);}
-  .zone-radius-field input{
-    width:60px; font-family:'IBM Plex Mono',monospace; font-size:11px;
-    border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:3px 5px;
-  }
+  .zone-radius-field input{width:60px; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 5px;}
   .zone-shrink-config{display:flex; flex-direction:column; gap:6px; margin-left:4px; padding-left:8px; border-left:2px solid var(--paper-line);}
-  .zone-shrink-config select{font-family:'Barlow',sans-serif; font-size:12px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:4px 6px;}
   .zone-visibility-row{display:flex; flex-direction:column; gap:2px; margin-top:2px;}
   .legend-zone-swatch{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:3px; vertical-align:middle;}
 
@@ -673,8 +769,6 @@
   .logistics-cluster-warning.danger{color:var(--stamp); background:rgba(178,58,46,0.08); border-color:var(--stamp);}
 
   .cp-group-by-row{display:flex; align-items:center; gap:8px; padding:10px 18px 0; flex-shrink:0;}
-  .cp-group-by-row label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-muted);}
-  .cp-group-by-row select{font-family:'Barlow',sans-serif; font-size:12.5px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:4px 6px;}
   .cp-group-heading{
     padding:10px 18px 4px; font-family:'Barlow Condensed',sans-serif; font-size:11.5px; text-transform:uppercase;
     letter-spacing:0.05em; color:var(--paper-muted); display:flex; align-items:center; gap:6px;
@@ -712,10 +806,6 @@
     text-transform:uppercase; letter-spacing:0.04em; color:var(--chalk); cursor:pointer;
   }
   .manifest-settings-cols input{accent-color:var(--hivis); cursor:pointer;}
-  .manifest-settings-image label{
-    display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em;
-    color:var(--steel); margin-bottom:8px;
-  }
   .manifest-settings-image input[type=file]{color:var(--chalk); font-family:'Barlow',sans-serif; font-size:12px; max-width:220px;}
   .manifest-image-preview{width:70px; height:44px; object-fit:cover; border-radius:3px; border:1px solid var(--asphalt-3);}
   .manifest-header-image{width:100%; border-radius:2px; margin-bottom:18px; display:block;}
@@ -736,14 +826,7 @@
   .pdf-block-targets{display:flex; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--steel);}
   .pdf-block-targets label{display:flex; align-items:center; gap:4px; cursor:pointer;}
   .pdf-block-editor{margin-top:10px; display:flex; flex-direction:column; gap:8px;}
-  .pdf-block-editor input[type=text]{
-    padding:7px 9px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt-2);
-    color:var(--chalk); font-family:'Barlow',sans-serif; font-size:12.5px;
-  }
-  .pdf-block-textarea{
-    width:100%; min-height:70px; padding:8px 10px; border-radius:3px; border:1px solid var(--asphalt-3);
-    background:var(--asphalt-2); color:var(--chalk); font-family:'Barlow',sans-serif; font-size:12.5px; resize:vertical;
-  }
+  .pdf-block-textarea{min-height:70px;}
   .pdf-block-sponsor-logos{display:flex; flex-wrap:wrap; gap:10px;}
   .pdf-block-sponsor-logo{display:flex; flex-direction:column; align-items:center; gap:4px;}
   .pdf-block-sponsor-logo img{width:90px; height:45px; object-fit:contain; background:var(--chalk); border-radius:3px;}
@@ -778,7 +861,7 @@
   }
   .game-mode-zone-stages{display:flex; flex-direction:column; gap:6px;}
   .game-mode-zone-stage-row{display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--chalk);}
-  .game-mode-zone-stage-row input{width:64px; padding:5px 7px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt-2); color:var(--chalk);}
+  .game-mode-zone-stage-row input{width:64px; padding:5px 7px; color:var(--chalk);}
   .game-mode-zone-status{display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--hivis-2);}
   .game-mode-zone-closed{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--stamp);}
 
@@ -789,7 +872,6 @@
   .cp-hidden-badge.cp-closed-badge{background:rgba(178,58,46,0.14); color:var(--stamp);}
 
   .checkin-joker-row{display:flex; align-items:center; gap:8px; margin-bottom:10px; font-family:'IBM Plex Mono',monospace; font-size:11.5px;}
-  .checkin-joker-row select{padding:6px 8px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk);}
   .checkin-joker-satisfied{font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--hivis-2);}
   .tag-bonus.danger{background:var(--stamp);}
 
@@ -855,23 +937,12 @@
   #view-riders{flex-direction:row; overflow:hidden; background:var(--asphalt); padding:0;}
   .riders-toolbar{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px; margin-bottom:22px;}
   .riders-count-field{display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap;}
-  .riders-count-field label{display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;}
   .riders-count-field input{
     width:90px; font-family:'IBM Plex Mono',monospace; font-size:14px; padding:8px 10px;
-    border:1px solid var(--asphalt-3); background:var(--asphalt-2); color:var(--chalk); border-radius:3px;
+    color:var(--chalk);
   }
-  .riders-hint{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--steel); line-height:1.5; max-width:680px; margin:-6px 0 20px;}
-  .riders-hint.warn{color:var(--hivis); font-weight:700;}
   .riders-search-sort-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;}
-  .riders-search-input{
-    flex:1; min-width:200px; max-width:320px; font-family:'Barlow',sans-serif; font-size:13px; padding:8px 10px;
-    border:1px solid var(--asphalt-3); background:var(--asphalt-2); color:var(--chalk); border-radius:3px;
-  }
-  .riders-search-sort-row label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel);}
-  .riders-search-sort-row select{
-    font-family:'Barlow',sans-serif; font-size:13px; padding:7px 9px;
-    border:1px solid var(--asphalt-3); background:var(--asphalt-2); color:var(--chalk); border-radius:3px;
-  }
+  .riders-search-input{flex:1; min-width:200px; max-width:320px;}
   .rider-group-heading{
     font-family:'Barlow Condensed',sans-serif; text-transform:uppercase; letter-spacing:0.03em; font-size:13px;
     color:var(--chalk); display:flex; align-items:center; gap:8px; margin:20px 0 10px;
@@ -884,10 +955,6 @@
   .spokecard-design{
     background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:4px;
     padding:14px 16px; margin-bottom:22px; max-width:680px;
-  }
-  .spokecard-design label{
-    display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em;
-    color:var(--steel); margin-bottom:8px;
   }
   .spokecard-design-row{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
   .spokecard-design-row input[type=file]{color:var(--chalk); font-family:'Barlow',sans-serif; font-size:12px; max-width:220px;}
@@ -910,12 +977,12 @@
   .rider-delete-btn:hover{background:#8a3a30; color:#fff;}
   .rider-qr{width:84px; height:84px; display:flex; align-items:center; justify-content:center;}
   .rider-bib{font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:15px;}
-  .rider-name-input{
+  input.rider-name-input{
     width:100%; text-align:center; font-family:'Barlow',sans-serif; font-size:12px;
     border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink);
     border-radius:2px; padding:5px 6px;
   }
-  .rider-emergency-input{
+  input.rider-emergency-input{
     width:100%; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
     border:1px dashed var(--stamp); background:#faf6ea; color:#8a3a30;
     border-radius:2px; padding:4px 6px;
@@ -931,17 +998,11 @@
   .team-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0; display:inline-block;}
   .rider-categories-row{width:100%; display:flex; flex-wrap:wrap; gap:6px; justify-content:center;}
   .rider-category-field{display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-width:90px;}
-  .rider-category-field label{font-family:'IBM Plex Mono',monospace; font-size:8.5px; text-transform:uppercase; letter-spacing:0.04em; color:var(--paper-muted);}
   .rider-category-field select{
     font-family:'Barlow',sans-serif; font-size:11px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink);
     border-radius:2px; padding:3px 5px; width:100%;
   }
   .team-scoring-mode-row{display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap;}
-  .team-scoring-mode-row label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel);}
-  .team-scoring-mode-row select{
-    font-family:'Barlow',sans-serif; font-size:12.5px; background:var(--asphalt); color:var(--chalk);
-    border:1px solid var(--asphalt-3); border-radius:3px; padding:5px 8px;
-  }
   .category-options-list{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
   .category-option-chip{
     display:inline-flex; align-items:center; gap:4px; background:var(--asphalt); border:1px solid var(--asphalt-3);
@@ -970,7 +1031,7 @@
   }
   .checkin-card .team-badge{color:var(--ink); opacity:0.7;}
   .team-color-input{width:30px; height:30px; padding:0; border:1px solid var(--asphalt-3); border-radius:3px; background:none; cursor:pointer; flex-shrink:0;}
-  .team-name-input{
+  input.team-name-input{
     width:100%; font-family:'Barlow Condensed',sans-serif; text-transform:uppercase; font-weight:600; font-size:13px;
     background:var(--asphalt); color:var(--chalk); border:1px solid var(--asphalt-3); border-radius:3px; padding:5px 8px;
   }
@@ -992,13 +1053,11 @@
   .checkin-side-count{color:var(--hivis-2); font-weight:700;}
   .checkin-side-empty{color:var(--steel); font-family:'IBM Plex Mono',monospace; font-size:11.5px; line-height:1.6; padding:20px 4px;}
   .checkin-search{background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:4px; padding:16px 18px;}
-  .checkin-search label{display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:5px;}
   .checkin-search-row{display:flex; gap:8px;}
   .checkin-search-row input{
     flex:1; min-width:0; font-family:'IBM Plex Mono',monospace; font-size:18px; padding:9px 10px;
-    border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); border-radius:3px;
+    border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk);
   }
-  .checkin-search-hint{color:var(--steel); font-family:'IBM Plex Mono',monospace; font-size:12px; text-align:center; padding:30px 10px;}
   .checkin-card{background:var(--paper); color:var(--ink); border-radius:14px; padding:20px 22px; box-shadow:0 12px 40px rgba(0,0,0,.45);}
   .checkin-card-head{display:flex; align-items:center; gap:10px; margin-bottom:16px;}
   .checkin-bib{
@@ -1006,11 +1065,11 @@
     background:var(--stamp); color:var(--chalk); border-radius:3px; padding:6px 10px; flex-shrink:0;
   }
   .checkin-name-col{flex:1; display:flex; flex-direction:column; gap:6px; min-width:0;}
-  .checkin-name-input{
+  input.checkin-name-input{
     width:100%; font-family:'Barlow',sans-serif; font-size:14px; border:1px solid var(--paper-line);
     background:var(--paper-2); color:var(--ink); border-radius:2px; padding:7px 9px;
   }
-  .checkin-emergency-input{
+  input.checkin-emergency-input{
     width:100%; font-family:'IBM Plex Mono',monospace; font-size:11px; border:1px dashed var(--stamp);
     background:#faf6ea; color:#8a3a30; border-radius:2px; padding:5px 9px;
   }
@@ -1020,9 +1079,7 @@
     margin-bottom:16px; padding:18px 10px; border-bottom:1px dashed var(--paper-line);
   }
   .checkin-confirm-btn{width:100%; max-width:340px; padding:14px 16px; font-size:14px;}
-  .checkin-confirm-hint{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-muted);}
   .checkin-timing{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:16px; padding-bottom:16px; border-bottom:1px dashed var(--paper-line);}
-  .checkin-timing label{display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-muted); margin-bottom:4px;}
   .checkin-timing input[type=datetime-local]{
     font-family:'Barlow',sans-serif; font-size:12.5px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink);
     border-radius:2px; padding:6px 8px;
@@ -1058,10 +1115,6 @@
   .score-btn:hover{border-color:var(--stamp);}
   .score-btn.active{background:var(--stamp); border-color:var(--stamp); color:var(--chalk);}
   .checkin-timewindow{margin-top:8px; padding-top:8px; border-top:1px dashed var(--paper-line);}
-  .checkin-timewindow label{
-    display:block; font-family:'IBM Plex Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em;
-    color:var(--paper-muted); margin-bottom:4px;
-  }
   .checkin-timewindow input[type=datetime-local]{
     font-family:'Barlow',sans-serif; font-size:12px; border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink);
     border-radius:2px; padding:5px 7px;
@@ -1284,7 +1337,6 @@
     background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:4px;
     padding:12px 16px; margin-bottom:20px; display:flex; flex-direction:column; gap:8px;
   }
-  .overview-settings-hint{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--steel); margin-bottom:4px;}
   .overview-settings-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:4px 0;}
   .overview-settings-row .checkbox-row{margin-bottom:0;}
   .overview-settings-move{display:flex; gap:4px;}
@@ -1377,7 +1429,7 @@
     border-radius:6px; width:min(560px, 92vw); max-height:70vh; display:flex; flex-direction:column;
     box-shadow:0 12px 40px rgba(0,0,0,0.5); overflow:hidden;
   }
-  .cmdp-input{
+  input.cmdp-input{
     width:100%; padding:16px 18px; font-size:15px; background:transparent; color:var(--chalk);
     border:none; border-bottom:1px solid var(--asphalt-3); outline:none;
   }
@@ -1416,7 +1468,6 @@
     border-radius:4px; padding:16px 18px; margin-bottom:18px; display:flex; flex-direction:column; gap:12px;
   }
   .overview-beamer-info{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
-  .overview-beamer-hint{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--steel); line-height:1.4;}
   .sound-hook-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-family:'IBM Plex Mono',monospace; font-size:12px;}
   .sound-hook-label{color:var(--steel); text-transform:uppercase; letter-spacing:0.05em; font-size:10.5px; min-width:140px;}
   .sound-hook-filename{color:var(--chalk);}
@@ -1571,7 +1622,7 @@
 
   /* ---------- settings: data-safety + offline-readiness sections ---------- */
   .data-safety-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--chalk);}
-  .data-safety-row input[type=number]{padding:6px 8px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:'IBM Plex Mono',monospace;}
+  .data-safety-row input[type=number]{font-family:'IBM Plex Mono',monospace; width:90px;}
   .data-safety-warning{color:var(--stamp); font-family:'IBM Plex Mono',monospace; font-size:11.5px; margin-bottom:10px;}
   .offline-event-list{display:flex; flex-direction:column; gap:6px; margin-bottom:12px;}
   .offline-event-row{display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--chalk); flex-wrap:wrap;}
@@ -1586,7 +1637,6 @@
   }
   .bulk-import-header-toggle{display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--chalk);}
   .bulk-import-mapping-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px;}
-  .bulk-import-mapping-grid label{display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--steel); margin-bottom:4px;}
   .bulk-import-mapping-grid select{width:100%;}
   .bulk-import-summary{display:flex; gap:14px; flex-wrap:wrap; font-family:'IBM Plex Mono',monospace; font-size:12.5px;}
   .bulk-import-summary-ok{color:var(--hivis-2);}
@@ -1815,9 +1865,8 @@
   :root[data-theme="outdoor"] body{font-size:15px;}
   :root[data-theme="outdoor"] .btn{font-size:14.5px; padding:13px 20px; min-height:48px; border-width:2px;}
   :root[data-theme="outdoor"] .topbar{border-bottom-width:5px;}
-  :root[data-theme="outdoor"] input[type=text], :root[data-theme="outdoor"] input[type=number],
-  :root[data-theme="outdoor"] input[type=date], :root[data-theme="outdoor"] input[type=datetime-local],
-  :root[data-theme="outdoor"] input[type=tel], :root[data-theme="outdoor"] select,
+  :root[data-theme="outdoor"] input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
+  :root[data-theme="outdoor"] select,
   :root[data-theme="outdoor"] textarea{font-size:14.5px; min-height:44px; border-width:2px;}
   :root[data-theme="outdoor"] .cp-icon-btn, :root[data-theme="outdoor"] .cp-order-btns button,
   :root[data-theme="outdoor"] .bottom-nav-item{min-width:44px; min-height:44px;}

@@ -95,7 +95,25 @@ Vier Gruppen mit Entscheidung:
 | `rider-note` / `rider-note-error` | 4 + 4 | Umbenennen in `.inline-note` / `.inline-note-error`, in `base.css` definieren — der Name „rider" ist im Organizer irreführend |
 | `orga-pin-row` | 1 | Klasse behalten (JS-Hook **und** in `test-suite.js` referenziert), nur Layout-Regel ergänzen |
 
-**Prüfliste ohne Vorentscheidung** (keine Eingabeflächen, je eine Minute Sichtung: Überbleibsel entfernen oder Regel nachziehen): `overview-widget-body`, `beamer-lb-name`, `beamer-lb-time`, `beamer-lb-progress`, `beamer-points-table`, `category-group-row`, `documentation-section`, `event-settings-drawer`, `feature-registry-section`, `game-modes-panel`, `geo-import-row`, `overview-cp-load-name`.
+**Messergebnis (nach Bildschirm-Sichtung, 2026-09-12):** Alle 13 Klassen sind wirkungslose Marker ohne sichtbaren Defekt. Keine braucht eine Regel, keine wird entfernt.
+
+| Klasse | Grund |
+|---|---|
+| `orga-pin-row` | Markup ist `class="zone-row orga-pin-row"`; `.zone-row` liefert das Layout. Die geplante Regel wäre Fehler gewesen (Konkurrenz mit `.zone-row`). Klasse bleibt: JS-Hook in `src/core/map.js:399`, Test-Referenz. |
+| `geo-import-row` | sitzt auf `.zone-row` |
+| `category-group-row` | sitzt auf `.type-row` |
+| `beamer-points-table` | sitzt auf `.beamer-lb-table` |
+| `documentation-section` | sitzt auf `.settings-section` |
+| `event-settings-drawer` | sitzt auf `.settings-section` |
+| `feature-registry-section` | sitzt auf `.settings-section` |
+| `game-modes-panel` | sitzt auf `.settings-section` |
+| `beamer-lb-name`, `beamer-lb-time`, `beamer-lb-progress` | `<td>`-Zellen in `.beamer-lb-table`; `td` ist generisch formatiert (Polsterung, 18px, `--chalk`), Nachbarn wie `.beamer-lb-rank` haben bewusst eigene Regeln, diese drei nicht. |
+| `overview-widget-body` | Struktur-Wrapper in `.overview-widget` |
+| `overview-cp-load-name` | Struktur-Wrapper in `.overview-cp-load-row`; Optik kommt von Nachbarn (`.overview-cp-load-count`) und Header (`h3`). |
+
+Zwölf der dreizehn Klassen haben null JS- oder Test-Hooks; nur `orga-pin-row` wird abgefragt. Entfernen wäre Änderungsrauschen in sechs Dateien ohne sichtbare Wirkung, deshalb bleiben die Namen als lesbare Marker stehen.
+
+**Anmerkung zu Step 3:** Die in der Anforderung geplante CSS-Regel für `orga-pin-row` wurde bewusst nicht hinzugefügt. Das Element trägt bereits das korrektes Layout von `.zone-row`; die geplante Regel hätte konkurriert und die Kartenleiste verändert (Defekt statt Markierung).
 
 **Unangetastet**, weil reine JS-Hooks ohne Optik: `admin-assign-cp`, `newcatgroup-option-input`, `leaderboard-search-input`.
 
@@ -113,3 +131,16 @@ Es gibt keine visuelle Regressionsbasis. Ersatzweise:
 
 - Der genaue Hover-Effekt (Randfarbe vs. leichte Hintergrundaufhellung) wird beim ersten Durchgang am Bildschirm entschieden, nicht vorab festgelegt.
 - Ob die Prüfliste aus §7 in denselben Durchgang gehört oder eine eigene Aufgabe wird, entscheidet ihr Ergebnis: mehr als zwei oder drei echte Nacharbeiten sprechen für eine eigene Runde.
+
+## 10. Offene Restpunkte nach der Umsetzung
+
+Aus dem Schluss-Review des ganzen Branches, bewusst nicht mehr angefasst — keiner ist sichtbar, alle sind hier festgehalten:
+
+- **Zustandsregeln ohne Typenliste.** `input:disabled` und `input:user-invalid` in `base.css` tragen keine `:is()`-Einschränkung und greifen damit auch auf `checkbox`, `radio`, `color`, `file` und `range` — die fünf Typen, die der Kommentar darüber ausdrücklich ausnimmt. Wirkung ist harmlos (Deckkraft, Rahmenfarbe), aber Code und Kommentar widersprechen sich.
+- **Drei tote Farbdeklarationen in der Seitenleiste.** `.zone-name-input`, `.event-loc-notes` und `.logistics-speed-row input` deklarieren weiterhin `border`/`background`/`color` in Papier-Tokens, die der `.sidebar`-Override ohnehin liefert. Gleiche Werte, also kein sichtbarer Unterschied — die Entrümpelung ist in dieser Region nur halb gemacht.
+- **Zwei Hint-Klassen mit palettenfremder Nutzung.** `.riders-hint` steht in der Asphalt-Gruppe, wird aber an fünf Stellen in der Papier-Seitenleiste gerendert (Kontrast dort 2,77:1 bei 10.5px, unter AA); `.settings-hint` steht in der Papier-Gruppe und wird auf Asphalt-Flächen benutzt (4,74:1, besteht). Beide Farbzuordnungen sind unverändert übernommen, aber die Gruppierung nach Palette behauptet jetzt eine Trennung, die diese zwei nicht einhalten.
+- **`type="url"` ist strenger als der Speicherpfad.** `submitRiderAppUrl()` trimmt und speichert nur, also wird `meinhost.de/rider` gespeichert, aber rot als `:user-invalid` markiert. Der Einrichtungsbildschirm in `storage-server.js` benutzt für denselben Wert weiterhin `type="text"`.
+- **`.admin-user-row-sub` wird nur in den Einladungszeilen benutzt**, die Benutzerzeilen tragen an derselben Stelle noch ein Inline-`style` mit identischen Werten.
+- **Rahmenkontrast.** Die Feldgrenze liegt in allen sechs Themes bei 1,2–1,3:1 gegen den Feldhintergrund, unter den 3:1 aus WCAG 1.4.11 für Bedienelement-Grenzen. Der Wert stammt unverändert aus `.settings-form`; neu ist nur seine Reichweite. Zu beheben wäre er am Token `--asphalt-3`, nicht an dieser Grundschicht.
+
+Außerdem beim Abnahmelauf aufgefallen, unabhängig von diesem Vorhaben: `formatMinutesAgo()` in `src/core/data-safety.js` rundet mit `Math.round`, wodurch ein 30–59 Sekunden alter Zeitstempel als „vor 1 Min." statt „gerade eben" erscheint — die Ursache des bekannten Test-Wacklers.
