@@ -8,9 +8,12 @@
 
 /* ---------------- auto-backup ---------------- */
 let autoBackupInterval = null;
+/* Math.floor, nicht Math.round: gerundet wird ein 30 Sekunden alter
+   Zeitstempel zu "vor 1 Min.", obwohl die Minute noch nicht voll ist.
+   Abgeschnitten stimmt die Grenze mit dem Text überein. */
 function formatMinutesAgo(iso){
   if(!iso) return null;
-  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
   return mins < 1 ? t('dataSafety.justNow') : t('dataSafety.minutesAgo', {mins});
 }
 function startAutoBackup(){
