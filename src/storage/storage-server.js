@@ -245,7 +245,7 @@ function renderPhpSetup(error){
         style="width:100%; padding:9px 10px; margin-bottom:6px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
       <div style="color:var(--steel); font-size:11.5px; margin-bottom:14px; line-height:1.5;">${t('phpSetup.apiKeyOptionalHint')}</div>
       <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--steel); margin-bottom:4px;">${t('phpSetup.riderAppUrlLabel')}</label>
-      <input type="text" id="php-setup-rider-url" placeholder="${escapeHtml(t('phpSetup.riderAppUrlPlaceholder'))}"
+      <input type="url" id="php-setup-rider-url" placeholder="${escapeHtml(t('phpSetup.riderAppUrlPlaceholder'))}"
         style="width:100%; padding:9px 10px; margin-bottom:6px; border-radius:3px; border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk); font-family:monospace; font-size:13px;">
       <div style="color:var(--steel); font-size:11.5px; margin-bottom:20px; line-height:1.5;">${t('phpSetup.riderAppUrlHint')}</div>
       <button class="btn btn-primary" style="width:100%;" onclick="submitPhpSetup()">${t('phpSetup.connectButton')}</button>
@@ -266,7 +266,7 @@ async function submitPhpSetup(){
      liefern dann null und der geteilte Kern blendet alles Zugehörige
      aus — eine bestehende Installation bleibt damit ohne Zutun
      unverändert lauffähig. */
-  const riderAppUrl = (document.getElementById('php-setup-rider-url').value || '').trim();
+  const riderAppUrl = normalizeExternalUrl(document.getElementById('php-setup-rider-url').value);
   if(!apiUrl){ renderPhpSetup(t('phpSetup.errorFieldsRequired')); return; }
   savePhpConfig({apiUrl, apiKey, riderAppUrl});
   if(apiKey){

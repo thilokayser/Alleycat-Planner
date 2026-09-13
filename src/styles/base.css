@@ -52,7 +52,7 @@
   input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
   select, textarea{
     font-family:'Barlow',sans-serif; font-size:13px;
-    border:1px solid var(--asphalt-3); background:var(--asphalt); color:var(--chalk);
+    border:1px solid var(--field-line); background:var(--asphalt); color:var(--chalk);
     border-radius:2px; padding:7px 9px;
   }
   textarea{resize:vertical; min-height:44px;}
@@ -61,7 +61,7 @@
      drei Farbwerte umbiegen — Schrift, Polsterung und Radius erbt sie. */
   .sidebar input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]),
   .sidebar select, .sidebar textarea{
-    border-color:var(--paper-line); background:var(--paper-2); color:var(--ink);
+    border-color:var(--field-line-paper); background:var(--paper-2); color:var(--ink);
   }
 
   /* Zustände. Der Fokusring kommt vom globalen :focus-visible oben.
@@ -69,8 +69,15 @@
      :read-only, die Regel würde sonst jedes Auswahlfeld abdunkeln. */
   input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]):hover:not(:disabled),
   select:hover:not(:disabled), textarea:hover:not(:disabled){
-    border-color:var(--steel);
+    border-color:var(--field-line-2);
   }
+  .sidebar input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]):hover:not(:disabled),
+  .sidebar select:hover:not(:disabled), .sidebar textarea:hover:not(:disabled){
+    border-color:var(--field-line-paper-2);
+  }
+  /* :disabled bewusst OHNE Typenliste: Deckkraft und Mauszeiger sollen auch
+     für checkbox, radio, color, file und range gelten — das ist der eine
+     Zustand, der für jedes Bedienelement dasselbe bedeutet. */
   input:disabled, select:disabled, textarea:disabled{
     opacity:0.5; cursor:not-allowed;
   }
@@ -82,7 +89,8 @@
   }
   /* :user-invalid statt :invalid — meldet erst nach einer Eingabe, nicht
      schon beim Öffnen eines leeren Pflichtfelds. */
-  input:user-invalid, select:user-invalid, textarea:user-invalid{
+  input:is([type=date],[type=datetime-local],[type=email],[type=month],[type=number],[type=password],[type=search],[type=tel],[type=text],[type=time],[type=url],[type=week]):user-invalid,
+  select:user-invalid, textarea:user-invalid{
     border-color:var(--stamp);
   }
 
@@ -118,14 +126,23 @@
   .cp-order-mode-row label, .cp-group-by-row label,
   .riders-search-sort-row label, .team-scoring-mode-row label{display:inline; margin-bottom:0;}
 
-  /* Hilfetexte: neun Klassen mit vier verschiedenen Schriftgrößen und zwei
-     Farben, inhaltlich dieselbe Rolle. Namen bleiben, damit kein Markup
-     angefasst werden muss. RULING 5: .checkin-confirm-hint moved to paper group. */
-  .riders-hint, .overview-settings-hint, .overview-beamer-hint{
+  /* Hilfetexte: neun Klassen mit vier verschiedenen Schriftgrößen, inhaltlich
+     dieselbe Rolle. Namen bleiben, damit kein Markup angefasst werden muss.
+     Die Farbe folgt der Fläche, nicht der Klasse — dieselbe Trennung wie bei
+     den Eingabefeldern oben. Vorher war sie je Klasse festgenagelt, wodurch
+     .riders-hint in der Papier-Seitenleiste auf 2,77:1 fiel (unter AA) und
+     .settings-hint auf Asphalt die fremde Palette trug. */
+  .riders-hint, .overview-settings-hint, .overview-beamer-hint,
+  .settings-hint, .addmode-hint, .cp-bulk-hint, .cp-distance-hint, .checkin-confirm-hint{
     font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--steel); line-height:1.5;
   }
   .settings-hint, .addmode-hint, .cp-bulk-hint, .cp-distance-hint, .checkin-confirm-hint{
-    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-muted); line-height:1.4;
+    line-height:1.4;
+  }
+  .sidebar .riders-hint, .sidebar .overview-settings-hint, .sidebar .overview-beamer-hint,
+  .sidebar .settings-hint, .sidebar .addmode-hint, .sidebar .cp-bulk-hint,
+  .sidebar .cp-distance-hint, .sidebar .checkin-confirm-hint{
+    color:var(--paper-muted);
   }
 
   /* Follow-up rules for additional hint declarations */
@@ -143,7 +160,10 @@
     letter-spacing:0.03em;
     margin:0;
   }
-  .mono{font-family:'IBM Plex Mono',monospace;}
+  /* input.mono zusätzlich, weil die Formular-Grundschicht oben mit
+     input:is(<typen>) höher spezifisch ist als eine reine Klasse und die
+     Schriftart sonst zurück auf Barlow fällt. */
+  .mono, input.mono{font-family:'IBM Plex Mono',monospace;}
 
   /* ---------- Topbar ---------- */
   .topbar{
@@ -725,9 +745,10 @@
   .zone-row{background:rgba(0,0,0,0.03); border-radius:3px; padding:8px; display:flex; flex-direction:column; gap:6px;}
   .zone-row-top{display:flex; align-items:center; gap:6px;}
   .zone-color-input{width:24px; height:24px; padding:0; border:1px solid var(--paper-line); border-radius:3px; background:none; cursor:pointer; flex-shrink:0;}
-  .zone-name-input{
-    flex:1; min-width:0; font-family:'Barlow',sans-serif; font-size:12.5px;
-    border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:5px 7px;
+  /* Farben und Radius kommen aus der Formular-Grundschicht plus dem
+     .sidebar-Override; hier stehen nur die Abweichungen. */
+  input.zone-name-input{
+    flex:1; min-width:0; font-size:12.5px; padding:5px 7px;
   }
   .zone-type-badge{font-family:'IBM Plex Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.04em; color:var(--paper-muted); flex-shrink:0;}
   .zone-row-meta{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
@@ -743,8 +764,7 @@
   .event-loc-row-top{display:flex; align-items:center; gap:6px;}
   .event-loc-icon{font-size:15px; flex-shrink:0;}
   .event-loc-notes{
-    font-family:'Barlow',sans-serif; font-size:12px; resize:vertical; min-height:36px;
-    border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:5px 7px;
+    font-size:12px; min-height:36px; padding:5px 7px;
   }
   .event-loc-maps-link{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--stamp); text-decoration:none;}
   .event-loc-maps-link:hover{text-decoration:underline;}
@@ -753,8 +773,7 @@
   .logistics-savings{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--stamp); font-weight:700;}
   .logistics-speed-row{display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--paper-muted);}
   .logistics-speed-row input{
-    width:52px; font-family:'IBM Plex Mono',monospace; font-size:11px;
-    border:1px solid var(--paper-line); background:var(--paper-2); color:var(--ink); border-radius:2px; padding:3px 5px;
+    width:52px; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 5px;
   }
   .logistics-subheading, .settings-subheading{
     font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.06em;
@@ -1803,10 +1822,10 @@
   }
 
   /* ---------- feature registry / settings hub ---------- */
-  .feature-registry-search{
+  input.feature-registry-search{
     width:100%; max-width:360px; padding:9px 12px; margin-bottom:14px;
-    background:var(--asphalt-2); border:1px solid var(--asphalt-3); border-radius:4px;
-    color:var(--chalk); font-family:'IBM Plex Mono',monospace; font-size:12px;
+    background:var(--asphalt-2); border-radius:4px;
+    font-family:'IBM Plex Mono',monospace; font-size:12px;
   }
   .feature-group-heading{
     font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em;

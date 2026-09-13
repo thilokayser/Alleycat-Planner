@@ -1,6 +1,17 @@
 /* ---------------- utils ---------------- */
 function uid(prefix){ return prefix + '-' + Math.random().toString(36).slice(2,9); }
 
+/* Nutzer tippen Adressen ohne Schema ("meinhost.de/rider"). Gespeichert
+   wurde das bisher unverändert, während das Eingabefeld mit type="url"
+   denselben Wert rot als ungültig markierte — Anzeige und Speicherpfad
+   waren verschieden streng. Hier wird das Schema ergänzt, damit beide
+   dasselbe für gültig halten. Leer bleibt leer (= Funktion abgeschaltet). */
+function normalizeExternalUrl(value){
+  const raw = (value || '').trim();
+  if(!raw) return '';
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : 'https://' + raw;
+}
+
 /* ---------------- rider credentials ----------------
    Anders als uid() bewusst NICHT über Math.random(): diese Werte sind
    Zugangsdaten. Ein rider token ist alles, was ein Fahrer-Handy vorzeigt,

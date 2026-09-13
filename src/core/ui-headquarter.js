@@ -1297,7 +1297,8 @@ function renderRiderAppUrlSection(){
 async function submitRiderAppUrl(){
   const el = document.getElementById('settings-rider-app-url');
   if(!el) return;
-  const url = (el.value || '').trim();
+  const url = normalizeExternalUrl(el.value);
+  if(url !== (el.value || '').trim()) el.value = url;
   const ok = await setRiderAppBaseUrl(url);
   showToast({message: ok ? t('featureRegistry.riderAppUrlSaved') : t('featureRegistry.riderAppUrlSaveFailed')});
   renderSettings();
@@ -1431,7 +1432,7 @@ function renderSettingsSectionUsers(){
           ${isFeatureEnabled('user_logout_all_sessions') ? `<button class="btn btn-ghost" onclick="logoutAllSessionsForUser(${u.id}, '${escapeHtml(u.username)}')">${t('auth.usersLogoutAllButton')}</button>` : ''}
           <button class="btn btn-ghost" onclick="deleteUserRow(${u.id}, '${escapeHtml(u.username)}')">${t('auth.usersDeleteButton')}</button>
         </div>
-        <div style="color:var(--steel); font-size:11px; margin-top:4px;">${t('auth.usersLastSeen')}: ${u.lastSeenAt ? escapeHtml(u.lastSeenAt) : t('auth.usersLastSeenNever')}${u.active ? '' : ' · ' + t('auth.usersActiveLabel') + ': ✕'}</div>
+        <div class="admin-user-row-sub">${t('auth.usersLastSeen')}: ${u.lastSeenAt ? escapeHtml(u.lastSeenAt) : t('auth.usersLastSeenNever')}${u.active ? '' : ' · ' + t('auth.usersActiveLabel') + ': ✕'}</div>
         ${resetJustCreated ? `
           <div style="border:1px solid var(--hivis); border-radius:4px; padding:8px 10px; margin-top:8px; background:var(--asphalt); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <span style="color:var(--steel); font-size:11.5px;">${t('auth.resetCodeJustCreatedHint')}</span>

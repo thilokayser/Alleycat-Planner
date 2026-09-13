@@ -132,15 +132,62 @@ Es gibt keine visuelle Regressionsbasis. Ersatzweise:
 - Der genaue Hover-Effekt (Randfarbe vs. leichte Hintergrundaufhellung) wird beim ersten Durchgang am Bildschirm entschieden, nicht vorab festgelegt.
 - Ob die Prüfliste aus §7 in denselben Durchgang gehört oder eine eigene Aufgabe wird, entscheidet ihr Ergebnis: mehr als zwei oder drei echte Nacharbeiten sprechen für eine eigene Runde.
 
-## 10. Offene Restpunkte nach der Umsetzung
+## 10. Restpunkte — am 13.09.2026 nachgezogen
 
-Aus dem Schluss-Review des ganzen Branches, bewusst nicht mehr angefasst — keiner ist sichtbar, alle sind hier festgehalten:
+Der Schluss-Review hatte sechs Punkte bewusst liegen gelassen. Sie sind
+inzwischen alle behoben; hier steht, wie. Dazu kam ein siebter, der beim
+Nacharbeiten auffiel.
 
-- **Zustandsregeln ohne Typenliste.** `input:disabled` und `input:user-invalid` in `base.css` tragen keine `:is()`-Einschränkung und greifen damit auch auf `checkbox`, `radio`, `color`, `file` und `range` — die fünf Typen, die der Kommentar darüber ausdrücklich ausnimmt. Wirkung ist harmlos (Deckkraft, Rahmenfarbe), aber Code und Kommentar widersprechen sich.
-- **Drei tote Farbdeklarationen in der Seitenleiste.** `.zone-name-input`, `.event-loc-notes` und `.logistics-speed-row input` deklarieren weiterhin `border`/`background`/`color` in Papier-Tokens, die der `.sidebar`-Override ohnehin liefert. Gleiche Werte, also kein sichtbarer Unterschied — die Entrümpelung ist in dieser Region nur halb gemacht.
-- **Zwei Hint-Klassen mit palettenfremder Nutzung.** `.riders-hint` steht in der Asphalt-Gruppe, wird aber an fünf Stellen in der Papier-Seitenleiste gerendert (Kontrast dort 2,77:1 bei 10.5px, unter AA); `.settings-hint` steht in der Papier-Gruppe und wird auf Asphalt-Flächen benutzt (4,74:1, besteht). Beide Farbzuordnungen sind unverändert übernommen, aber die Gruppierung nach Palette behauptet jetzt eine Trennung, die diese zwei nicht einhalten.
-- **`type="url"` ist strenger als der Speicherpfad.** `submitRiderAppUrl()` trimmt und speichert nur, also wird `meinhost.de/rider` gespeichert, aber rot als `:user-invalid` markiert. Der Einrichtungsbildschirm in `storage-server.js` benutzt für denselben Wert weiterhin `type="text"`.
-- **`.admin-user-row-sub` wird nur in den Einladungszeilen benutzt**, die Benutzerzeilen tragen an derselben Stelle noch ein Inline-`style` mit identischen Werten.
-- **Rahmenkontrast.** Die Feldgrenze liegt in allen sechs Themes bei 1,2–1,3:1 gegen den Feldhintergrund, unter den 3:1 aus WCAG 1.4.11 für Bedienelement-Grenzen. Der Wert stammt unverändert aus `.settings-form`; neu ist nur seine Reichweite. Zu beheben wäre er am Token `--asphalt-3`, nicht an dieser Grundschicht.
+- **Zustandsregeln ohne Typenliste.** `:user-invalid` trägt jetzt dieselbe
+  `input:is(<12 typen>)`-Einschränkung wie der Rest der Grundschicht — ein
+  roter Rahmen auf einer Checkbox oder einem Farbwähler ergab keinen Sinn.
+  `:disabled` bleibt absichtlich unbeschränkt: Deckkraft und Mauszeiger
+  bedeuten für jedes Bedienelement dasselbe. Das steht jetzt als Kommentar
+  darüber, statt dem Kommentar zu widersprechen.
+- **Drei tote Farbdeklarationen in der Seitenleiste.** `.zone-name-input`,
+  `.event-loc-notes` und `.logistics-speed-row input` deklarieren nur noch
+  ihre Abweichungen. Beim Nachmessen stellte sich heraus, dass die Werte
+  nicht bloß gleich, sondern bei `.zone-name-input` sogar wirkungslos waren
+  — siehe den letzten Punkt.
+- **Zwei Hint-Klassen mit palettenfremder Nutzung.** Die neun Hilfetext-
+  Klassen sind jetzt nach *Fläche* getrennt statt nach Klasse: eine
+  gemeinsame Asphalt-Regel plus ein `.sidebar`-Override auf Papier, genau
+  wie bei den Eingabefeldern. Damit verschwindet der 2,77:1-Fall von
+  `.riders-hint` in der Seitenleiste, und `.settings-hint` trägt auf
+  Asphalt-Flächen die Asphalt-Farbe.
+- **`type="url"` ist strenger als der Speicherpfad.** Neuer Helfer
+  `normalizeExternalUrl()` in `utils.js`: eine Eingabe ohne Schema bekommt
+  `https://` vorangestellt, leer bleibt leer. Benutzt von
+  `submitRiderAppUrl()` und vom Setup-Bildschirm, dessen Feld jetzt
+  ebenfalls `type="url"` ist. Anzeige und Speicher sind damit gleich streng.
+- **`.admin-user-row-sub`** ersetzt jetzt auch in den Benutzerzeilen das
+  Inline-`style` mit identischen Werten.
+- **Rahmenkontrast.** Vier neue Tokens je Theme — `--field-line`,
+  `--field-line-2` (Hover) und die Papier-Gegenstücke. Ruhezustand ≥3:1
+  gegen den Feldhintergrund (WCAG 1.4.11), Hover ≥4,6:1, damit der Hover
+  unterscheidbar bleibt; in hellen Themes lag das alte `--steel` zu dicht
+  am neuen Ruhewert. Gemessen in allen sechs Themes: vorher 1,18–1,42:1,
+  nachher 3,05–3,12:1. `--asphalt-3` bleibt unangetastet, die Tokens wirken
+  nur in der Formular-Grundschicht.
 
-Außerdem beim Abnahmelauf aufgefallen, unabhängig von diesem Vorhaben: `formatMinutesAgo()` in `src/core/data-safety.js` rundet mit `Math.round`, wodurch ein 30–59 Sekunden alter Zeitstempel als „vor 1 Min." statt „gerade eben" erscheint — die Ursache des bekannten Test-Wacklers.
+**Neu gefunden und mitbehoben:** dieselbe Spezifitäts-Asymmetrie, die schon
+fünf Regeln beim Schluss-Review erwischt hatte, traf drei weitere. Eine
+reine Klasse ist (0,1,0), die Grundschicht mit `input:is(<typen>)` ist
+(0,1,1) und gewinnt unabhängig von der Reihenfolge. Betroffen waren
+`.mono` (Schrift fiel auf Barlow zurück — sichtbar am Zugangscode-Feld im
+Checkpoint-Editor), `.zone-name-input` (Größe und Polsterung) und
+`.feature-registry-search` (das komplette Aussehen des Suchfelds in den
+Einstellungen). Alle drei sind jetzt auf `input.<klasse>` angehoben.
+
+Ein einmaliger Sichtprüfung reicht dafür nicht — die Prüfung ist jetzt
+mechanisch: Selektor-Spezifität der Regel gegen (0,1,1) vergleichen, für
+jede Klasse, die im Markup auf einem `<input>` der zwölf Typen sitzt.
+Farbwähler-Klassen (`.zone-color-input`, `.team-color-input`) sind nicht
+betroffen, weil `type=color` nicht in der Typenliste steht.
+
+**Ebenfalls behoben, unabhängig von diesem Vorhaben:**
+`formatMinutesAgo()` in `src/core/data-safety.js` rundet nicht mehr mit
+`Math.round`, sondern schneidet mit `Math.floor` ab. Ein 30–59 Sekunden
+alter Zeitstempel erschien vorher als „vor 1 Min." statt „gerade eben" —
+das war die Ursache des bekannten Test-Wacklers. Die lokale Variante läuft
+damit auf 955/955.
