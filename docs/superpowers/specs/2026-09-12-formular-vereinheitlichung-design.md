@@ -131,3 +131,16 @@ Es gibt keine visuelle Regressionsbasis. Ersatzweise:
 
 - Der genaue Hover-Effekt (Randfarbe vs. leichte Hintergrundaufhellung) wird beim ersten Durchgang am Bildschirm entschieden, nicht vorab festgelegt.
 - Ob die Prüfliste aus §7 in denselben Durchgang gehört oder eine eigene Aufgabe wird, entscheidet ihr Ergebnis: mehr als zwei oder drei echte Nacharbeiten sprechen für eine eigene Runde.
+
+## 10. Offene Restpunkte nach der Umsetzung
+
+Aus dem Schluss-Review des ganzen Branches, bewusst nicht mehr angefasst — keiner ist sichtbar, alle sind hier festgehalten:
+
+- **Zustandsregeln ohne Typenliste.** `input:disabled` und `input:user-invalid` in `base.css` tragen keine `:is()`-Einschränkung und greifen damit auch auf `checkbox`, `radio`, `color`, `file` und `range` — die fünf Typen, die der Kommentar darüber ausdrücklich ausnimmt. Wirkung ist harmlos (Deckkraft, Rahmenfarbe), aber Code und Kommentar widersprechen sich.
+- **Drei tote Farbdeklarationen in der Seitenleiste.** `.zone-name-input`, `.event-loc-notes` und `.logistics-speed-row input` deklarieren weiterhin `border`/`background`/`color` in Papier-Tokens, die der `.sidebar`-Override ohnehin liefert. Gleiche Werte, also kein sichtbarer Unterschied — die Entrümpelung ist in dieser Region nur halb gemacht.
+- **Zwei Hint-Klassen mit palettenfremder Nutzung.** `.riders-hint` steht in der Asphalt-Gruppe, wird aber an fünf Stellen in der Papier-Seitenleiste gerendert (Kontrast dort 2,77:1 bei 10.5px, unter AA); `.settings-hint` steht in der Papier-Gruppe und wird auf Asphalt-Flächen benutzt (4,74:1, besteht). Beide Farbzuordnungen sind unverändert übernommen, aber die Gruppierung nach Palette behauptet jetzt eine Trennung, die diese zwei nicht einhalten.
+- **`type="url"` ist strenger als der Speicherpfad.** `submitRiderAppUrl()` trimmt und speichert nur, also wird `meinhost.de/rider` gespeichert, aber rot als `:user-invalid` markiert. Der Einrichtungsbildschirm in `storage-server.js` benutzt für denselben Wert weiterhin `type="text"`.
+- **`.admin-user-row-sub` wird nur in den Einladungszeilen benutzt**, die Benutzerzeilen tragen an derselben Stelle noch ein Inline-`style` mit identischen Werten.
+- **Rahmenkontrast.** Die Feldgrenze liegt in allen sechs Themes bei 1,2–1,3:1 gegen den Feldhintergrund, unter den 3:1 aus WCAG 1.4.11 für Bedienelement-Grenzen. Der Wert stammt unverändert aus `.settings-form`; neu ist nur seine Reichweite. Zu beheben wäre er am Token `--asphalt-3`, nicht an dieser Grundschicht.
+
+Außerdem beim Abnahmelauf aufgefallen, unabhängig von diesem Vorhaben: `formatMinutesAgo()` in `src/core/data-safety.js` rundet mit `Math.round`, wodurch ein 30–59 Sekunden alter Zeitstempel als „vor 1 Min." statt „gerade eben" erscheint — die Ursache des bekannten Test-Wacklers.
