@@ -5,8 +5,23 @@
    'checkpoint_staff'), Code-Modus X-Checkpoint-Token. Welcher Header
    gilt, steht in cpState.session.headerName (siehe state.js). */
 
+/* Wo rider.php liegt, ist konfigurierbar — Reihenfolge:
+   1. <meta name="alleycat-endpoint" content="..."> im Kopf dieser Datei.
+      Absolut oder relativ zur HTML-Datei. Das ist die eine Zeile, die ein
+      Betreiber anfasst, wenn die App NICHT neben dem Backend liegt.
+   2. Sonst rider.php im selben Ordner wie diese HTML-Datei (Normalfall).
+   Bewusst kein Query-Parameter und kein Feld im Browser: die App trägt
+   Fahrer- und Checkpoint-Token, ein per Link umlenkbarer Endpunkt wäre
+   ein Weg, genau die abzugreifen. */
+function alleycatConfiguredEndpoint(){
+  const meta = document.querySelector('meta[name="alleycat-endpoint"]');
+  const raw = meta && meta.content ? meta.content.trim() : '';
+  if(!raw) return '';
+  try{ return new URL(raw, location.href).href; }
+  catch(e){ console.error('alleycat-endpoint ungültig, nutze Standardpfad', raw); return ''; }
+}
 function cpEndpoint(){
-  return location.href.replace(/[^\/]*(\?.*)?(#.*)?$/, 'rider.php');
+  return alleycatConfiguredEndpoint() || location.href.replace(/[^\/]*(\?.*)?(#.*)?$/, 'rider.php');
 }
 
 async function cpRequest(method, action, params, body, authHeader){

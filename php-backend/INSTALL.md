@@ -84,7 +84,15 @@ Zum späteren Zurücksetzen (z. B. anderes Backend eintragen): die Seite mit `?r
 
 Nur nötig, wenn Fahrer an Checkpoints per QR-Code selbst einchecken sollen. Ohne diesen Schritt funktioniert alles andere unverändert; alle zugehörigen Funktionen bleiben in der Organizer-App einfach ausgeblendet.
 
-1. `node build.js` erzeugt neben den beiden Organizer-Varianten auch **`dist/alleycat-rider.html`** und **`dist/alleycat-checkpoint.html`**. Beide Dateien **in dasselbe Verzeichnis wie die übrigen php-backend-Dateien** hochladen, also direkt neben `rider.php`. Die Apps leiten ihren Endpunkt aus ihrer eigenen Adresse ab — liegen sie woanders, läuft jede Anfrage ins Leere und es erscheint nur "Etwas ist schiefgelaufen".
+1. `node build.js` erzeugt neben den beiden Organizer-Varianten auch **`dist/alleycat-rider.html`** und **`dist/alleycat-checkpoint.html`**. Beide Dateien **in dasselbe Verzeichnis wie die übrigen php-backend-Dateien** hochladen, also direkt neben `rider.php` — dann ist nichts weiter zu konfigurieren.
+
+   Sollen die beiden Dateien **woanders** liegen (eigener Ordner, eigene Subdomain), trägst du das Backend einmal je Datei im Kopf der HTML-Datei ein. Die Zeile steht dort schon, mit leerem `content` und einem Kommentar daneben:
+
+   ```html
+   <meta name="alleycat-endpoint" content="https://deinedomain.tld/php-backend/rider.php">
+   ```
+
+   Absolute Adresse oder relativer Pfad, beides geht. Bleibt das Feld leer, sucht die App `rider.php` im eigenen Ordner. Auf einer **anderen Domain** muss der Browser den Zugriff erlauben — `rider.php` sendet dafür `Access-Control-Allow-Origin: *`, das passt ohne Zutun, solange der Hoster den Header nicht entfernt. Ist der Endpunkt falsch eingetragen, läuft jede Anfrage ins Leere und es erscheint nur "Etwas ist schiefgelaufen".
 2. Die **Fahrer-App-Adresse** eintragen (z. B. `https://deinedomain.tld/php-backend/alleycat-rider.html`) — als Admin unter *Einstellungen → Konto → Benutzer*, oder im Setup-Screen im dritten Feld. Über die Einstellungen eingetragen liegt sie zusätzlich auf dem Server und gilt damit auf allen Geräten; im Setup-Screen eingetragen zunächst nur in diesem Browser. Auf diese Adresse zeigen die QR-Codes auf Spokecards und Checkpoint-Aufstellern.
 3. Im Checkpoint-Editor bei den Checkpoints das Häkchen **QR Check-In** setzen, an denen Fahrer selbst einchecken sollen.
 4. Unter *Manifest → Drucken* die **Checkpoint-QR-Blätter** erzeugen, ausdrucken und laminieren. Die Spokecards tragen ab dann automatisch den Fahrer-Link statt der nackten Startnummer.

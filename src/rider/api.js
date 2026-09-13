@@ -3,13 +3,23 @@
    nicht vor und darf es nie — die Fahrer-App authentifiziert
    ausschließlich über die Token von Spokecard und Checkpoint.          */
 
-/* rider.php liegt relativ zu dieser HTML-Datei. Das ist die EINZIGE
-   Annahme der Fahrer-App über Pfade. Sie steht hier ausdrücklich, damit
-   ein späteres Verschieben der Datei nicht rätselhaft scheitert: liegt
-   die App woanders als das Backend, muss diese Funktion angepasst
-   werden. */
+/* Wo rider.php liegt, ist konfigurierbar — Reihenfolge:
+   1. <meta name="alleycat-endpoint" content="..."> im Kopf dieser Datei.
+      Absolut oder relativ zur HTML-Datei. Das ist die eine Zeile, die ein
+      Betreiber anfasst, wenn die App NICHT neben dem Backend liegt.
+   2. Sonst rider.php im selben Ordner wie diese HTML-Datei (Normalfall).
+   Bewusst kein Query-Parameter und kein Feld im Browser: die App trägt
+   Fahrer- und Checkpoint-Token, ein per Link umlenkbarer Endpunkt wäre
+   ein Weg, genau die abzugreifen. */
+function alleycatConfiguredEndpoint(){
+  const meta = document.querySelector('meta[name="alleycat-endpoint"]');
+  const raw = meta && meta.content ? meta.content.trim() : '';
+  if(!raw) return '';
+  try{ return new URL(raw, location.href).href; }
+  catch(e){ console.error('alleycat-endpoint ungültig, nutze Standardpfad', raw); return ''; }
+}
 function riderEndpoint(){
-  return location.href.replace(/[^\/]*(\?.*)?(#.*)?$/, 'rider.php');
+  return alleycatConfiguredEndpoint() || location.href.replace(/[^\/]*(\?.*)?(#.*)?$/, 'rider.php');
 }
 
 /* Vereinheitlicht, was die Aufrufer sehen. Netzwerkfehler und
